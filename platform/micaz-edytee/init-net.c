@@ -55,24 +55,6 @@
 #include "dev/ds2401.h"
 #include "sys/node-id.h"
 
-#if NETSTACK_CONF_WITH_IPV6
-#include "net/ipv6/uip-ds6.h"
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-
-#if NETSTACK_CONF_WITH_IPV4
-#include "net/ip/uip.h"
-#include "net/ipv4/uip-fw.h"
-#include "net/uip-fw-drv.h"
-#include "net/ipv4/uip-over-mesh.h"
-static struct uip_fw_netif slipif =
-  {UIP_FW_NETIF(192,168,1,2, 255,255,255,255, slip_send)};
-static struct uip_fw_netif meshif =
-  {UIP_FW_NETIF(172,16,0,0, 255,255,0,0, uip_over_mesh_send)};
-
-static uint8_t is_gateway;
-
-#endif /* NETSTACK_CONF_WITH_IPV4 */
-
 #define UIP_OVER_MESH_CHANNEL 8
 
 /*---------------------------------------------------------------------------*/
@@ -125,7 +107,7 @@ void
 init_net(void)
 {
 
-  set_rime_addr();
+  //set_rime_addr();
   cc2420_init();
   {
     uint8_t longaddr[8];
@@ -142,55 +124,6 @@ init_net(void)
     cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, longaddr);
   }
 
-#if NETSTACK_CONF_WITH_IPV6
-  memcpy(&uip_lladdr.addr, ds2401_id, sizeof(uip_lladdr.addr));
-  /* Setup nullmac-like MAC for 802.15.4 */
-  /* sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
-  /* printf(" %s channel %u\n", sicslowmac_driver.name, CC2420_CONF_CHANNEL); */
-
-  /* Setup X-MAC for 802.15.4 */
-  queuebuf_init();
-  NETSTACK_RDC.init();
-  NETSTACK_MAC.init();
-  NETSTACK_NETWORK.init();
-
-  printf_P(PSTR("%s %s, channel check rate %d Hz, radio channel %d\n"),
-         NETSTACK_MAC.name, NETSTACK_RDC.name,
-         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
-                         NETSTACK_RDC.channel_check_interval()),
-         CC2420_CONF_CHANNEL);
-
-  process_start(&tcpip_process, NULL);
-
-  printf_P(PSTR("Tentative link-local IPv6 address "));
-  {
-    uip_ds6_addr_t *lladdr;
-    int i;
-    lladdr = uip_ds6_get_link_local(-1);
-    for(i = 0; i < 7; ++i) {
-      printf_P(PSTR("%02x%02x:"), lladdr->ipaddr.u8[i * 2],
-             lladdr->ipaddr.u8[i * 2 + 1]);
-    }
-    printf_P(PSTR("%02x%02x\n"), lladdr->ipaddr.u8[14], lladdr->ipaddr.u8[15]);
-  }
-
-  if(!UIP_CONF_IPV6_RPL) {
-    uip_ipaddr_t ipaddr;
-    int i;
-    uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
-    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-    uip_ds6_addr_add(&ipaddr, 0, ADDR_TENTATIVE);
-    printf_P(PSTR("Tentative global IPv6 address "));
-    for(i = 0; i < 7; ++i) {
-      printf_P(PSTR("%02x%02x:"),
-             ipaddr.u8[i * 2], ipaddr.u8[i * 2 + 1]);
-    }
-    printf_P(PSTR("%02x%02x\n"),
-           ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
-  }
-
-#else /* NETSTACK_CONF_WITH_IPV6 */
-
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
@@ -200,46 +133,5 @@ init_net(void)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          CC2420_CONF_CHANNEL);
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-
-
-#if NETSTACK_CONF_WITH_IPV4
-  uip_ipaddr_t hostaddr, netmask;
- 
-  uip_init();
-  uip_fw_init();
-
-  process_start(&tcpip_process, NULL);
-  process_start(&slip_process, NULL);
-  process_start(&uip_fw_process, NULL);
-  
-  slip_set_input_callback(set_gateway);
-
-  /* Construct ip address from four bytes. */
-  uip_ipaddr(&hostaddr, 172, 16, linkaddr_node_addr.u8[0],
-                                  linkaddr_node_addr.u8[1]);
-  /* Construct netmask from four bytes. */
-  uip_ipaddr(&netmask, 255,255,0,0);
-
-  uip_ipaddr_copy(&meshif.ipaddr, &hostaddr);
-  /* Set the IP address for this host. */
-  uip_sethostaddr(&hostaddr);
-  /* Set the netmask for this host. */
-  uip_setnetmask(&netmask);
-  
-  uip_over_mesh_set_net(&hostaddr, &netmask);
-
-  /* Register slip interface with forwarding module. */
-  //uip_fw_register(&slipif);
-  uip_over_mesh_set_gateway_netif(&slipif);
-  /* Set slip interface to be a default forwarding interface . */
-  uip_fw_default(&meshif);
-  uip_over_mesh_init(UIP_OVER_MESH_CHANNEL);
-  printf_P(PSTR("uIP started with IP address %d.%d.%d.%d\n"),
-	       uip_ipaddr_to_quad(&hostaddr));
-#endif /* NETSTACK_CONF_WITH_IPV4 */
-
-  
-  
 }
 /*---------------------------------------------------------------------------*/

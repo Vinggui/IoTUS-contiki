@@ -48,31 +48,12 @@
 #include "platform-conf.h"
 
 
-#if NETSTACK_CONF_WITH_IPV6
-#define NETSTACK_CONF_WITH_IPV6 1
-#endif
-#if NETSTACK_CONF_WITH_IPV6
-/* Network setup for IPv6 */
-#define NETSTACK_CONF_NETWORK sicslowpan_driver
-//#define NETSTACK_CONF_MAC     csma_driver
-#define NETSTACK_CONF_MAC     nullmac_driver
-//#define NETSTACK_CONF_RDC     nullrdc_driver
-#define NETSTACK_CONF_RDC     sicslowmac_driver
-#define NETSTACK_CONF_FRAMER  framer_802154
-
-#define CC2420_CONF_AUTOACK              1
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
-#define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
-#define CXMAC_CONF_ANNOUNCEMENTS         0
-
-#else /* NETSTACK_CONF_WITH_IPV6 */
-
 /* Network setup for non-IPv6 (rime). */
 
-#define NETSTACK_CONF_NETWORK rime_driver
-#define NETSTACK_CONF_MAC     csma_driver
-#define NETSTACK_CONF_RDC     cxmac_driver
-#define NETSTACK_CONF_FRAMER  framer_802154
+#define NETSTACK_CONF_NETWORK edytee_net_driver
+#define NETSTACK_CONF_MAC     edytee_mac_driver
+#define NETSTACK_CONF_RDC     edytee_rdc_driver
+#define NETSTACK_CONF_FRAMER  framer_edytee_802154
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
@@ -86,7 +67,7 @@
 
 #define COLLECT_NBR_TABLE_CONF_MAX_NEIGHBORS      32
 
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
