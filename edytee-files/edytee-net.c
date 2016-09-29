@@ -18,6 +18,7 @@
 #include "net/netstack.h"
 #include "net/mac/mac.h"
 #include "net/packetbuf.h"
+#include "net/queuebuf.h"
 
 #include "lib/list.h"
 
