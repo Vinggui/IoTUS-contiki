@@ -48,26 +48,20 @@
 #include "dev/slip.h"
 #include "dev/leds.h"
 #include "net/netstack.h"
-#include "net/mac/frame802154.h"
 #include "net/linkaddr.h"
 #include "net/queuebuf.h"
 
 #include "dev/ds2401.h"
 #include "sys/node-id.h"
 
-#define UIP_OVER_MESH_CHANNEL 8
-
 /*---------------------------------------------------------------------------*/
 static void
-set_rime_addr(void)
+set_network_addr(void)
 {
   linkaddr_t addr;
   int i;
 
   memset(&addr, 0, sizeof(linkaddr_t));
-#if NETSTACK_CONF_WITH_IPV6
-  memcpy(addr.u8, ds2401_id, sizeof(addr.u8));
-#else
   if(node_id == 0) {
     for(i = 0; i < sizeof(linkaddr_t); ++i) {
       addr.u8[i] = ds2401_id[7 - i];
@@ -76,7 +70,7 @@ set_rime_addr(void)
     addr.u8[0] = node_id & 0xff;
     addr.u8[1] = node_id >> 8;
   }
-#endif
+
   linkaddr_set_node_addr(&addr);
   printf_P(PSTR("Rime started with address "));
   for(i = 0; i < sizeof(addr.u8) - 1; i++) {
@@ -85,29 +79,11 @@ set_rime_addr(void)
   printf_P(PSTR("%d\n"), addr.u8[i]);
 }
 
-/*--------------------------------------------------------------------------*/
-#if NETSTACK_CONF_WITH_IPV4
-static void
-set_gateway(void)
-{
-  if(!is_gateway) {
-    leds_on(LEDS_RED);
-    printf_P(PSTR("%d.%d: making myself the IP network gateway.\n\n"),
-	              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1]);
-    printf_P(PSTR("IPv4 address of the gateway: %d.%d.%d.%d\n\n"),
-	              uip_ipaddr_to_quad(&uip_hostaddr));
-    uip_over_mesh_set_gateway(&linkaddr_node_addr);
-    uip_over_mesh_make_announced_gateway();
-    is_gateway = 1;
-  }
-}
-#endif /* NETSTACK_CONF_WITH_IPV4 */
-/*---------------------------------------------------------------------------*/
 void
 init_net(void)
 {
 
-  //set_rime_addr();
+  set_network_addr();
   cc2420_init();
   {
     uint8_t longaddr[8];
