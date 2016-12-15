@@ -9,6 +9,7 @@
 #define EDYTEE_COMM_H_
 
 #include "contiki-conf.h"
+#include "edytee-radio-params.h"
 
 //************************************************************************
 //                  General defines
@@ -49,7 +50,7 @@ typedef enum {
     MESSAGE_TO_NODE_NO_PATH, MESSAGE_TO_NODE_NO_PATH, NULL, msg, len)
 
 //************************************************************************
-//                  Variables
+//                  Structs
 //************************************************************************
 
 typedef union {
@@ -57,8 +58,13 @@ typedef union {
   unsigned char mini_u8[ADDR_MINI_SIZE];
 } addr_att_t;
 
+typedef struct Packet_Fields_t {
+    char payload[RADIO_MAX_PAYLOAD];
+} packet_fields_t;
+
 extern addr_att_t node_addr_att;
 extern addr_att_t addr_att_null;
+extern packet_fields_t packet_buff;
 //************************************************************************
 //                  Prototypes
 //************************************************************************

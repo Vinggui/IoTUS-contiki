@@ -8,6 +8,7 @@
  */
 
 addr_att_t node_addr_att;
+packet_fields_t packet_buff;
 const addr_att_t addr_att_null = { { 0, 0 } };
 
 void send_wireless_packet(destination_type dest_type, addr_att_t *recv_address,

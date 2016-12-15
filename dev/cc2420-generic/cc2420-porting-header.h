@@ -7,6 +7,8 @@
 
 #ifndef DEV_CC2420_GENERIC_CC2420_PORTING_HEADER_H_
 #define DEV_CC2420_GENERIC_CC2420_PORTING_HEADER_H_
+#include "edytee-comm.h"
+
 
 #ifdef PACKETBUF_H_
     #define USE_PACKETBUF 1
@@ -20,7 +22,7 @@
     #define PORTABLE_ADD_LLTX_ATT()
     #define PORTABLE_CLEAR_PACKET_BUFF()
     #define PORTABLE_TIMESTAMP_PACKET_BUFF(timestamp)
-    #define PORTABLE_PACKET_BUFF_DATAPTR()
+    #define PORTABLE_PACKET_BUFF_DATAPTR()      packet_buff.payload
     #define PORTABLE_PACKET_BUFF_SIZE     1
     #define PORTABLE_PACKET_BUFF_SET_DATALEN(len)   len
     #define PORTABLE_ADD_BADSYNCH_ATT()

@@ -48,8 +48,11 @@
 #include "dev/slip.h"
 #include "dev/leds.h"
 #include "net/netstack.h"
+
+#if USE_PACKETBUF == 1
 #include "net/linkaddr.h"
 #include "net/queuebuf.h"
+#endif
 
 #include "dev/ds2401.h"
 #include "sys/node-id.h"
