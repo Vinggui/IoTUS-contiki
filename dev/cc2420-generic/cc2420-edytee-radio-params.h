@@ -8,6 +8,6 @@
 #ifndef DEV_CC2420_CC2420_EDYTEE_RADIO_PARAMS_H_
 #define DEV_CC2420_CC2420_EDYTEE_RADIO_PARAMS_H_
 
-#define RADIO_MIN_ID_SIZE                                   2//Bytes
+#define RADIO_MINI_ID_SIZE                                   2//Bytes
 
 #endif /* DEV_CC2420_CC2420_EDYTEE_RADIO_PARAMS_H_ */

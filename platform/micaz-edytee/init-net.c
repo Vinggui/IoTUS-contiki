@@ -72,7 +72,7 @@ set_network_addr(void)
   }
 
   linkaddr_set_node_addr(&addr);
-  printf_P(PSTR("Rime started with address "));
+  printf_P(PSTR("Network started with address "));
   for(i = 0; i < sizeof(addr.u8) - 1; i++) {
     printf_P(PSTR("%d."), addr.u8[i]);
   }

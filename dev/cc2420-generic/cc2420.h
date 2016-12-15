@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, University of Colombo School of Computing
+ * Copyright (c) 2007, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,92 +28,68 @@
  *
  * This file is part of the Contiki operating system.
  *
- * @(#)$$
  */
-
 
 /**
  * \file
- *         Main file of the MICAz port.
- *
+ *         CC2420 driver header file
  * \author
- *         Kasun Hewage <kasun.ch@gmail.com>
+ *         Adam Dunkels <adam@sics.se>
+ *         Joakim Eriksson <joakime@sics.se>
+ *         Konrad Krentz <konrad.krentz@gmail.com>
  */
 
-#include <stdio.h>
-#include <avr/pgmspace.h>
+#ifndef CC2420_H_
+#define CC2420_H_
 
 #include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
-#include "dev/rs232.h"
-#include "dev/watchdog.h"
-#include "dev/slip.h"
+#include "dev/spi.h"
+#include "dev/radio.h"
+#include "cc2420_const.h"
+#include "lib/aes-128.h"
 
-#include "init-net.h"
-#include "dev/ds2401.h"
-#include "sys/node-id.h"
+int cc2420_init(void);
 
-/*---------------------------------------------------------------------------*/
-void
-init_usart(void)
-{
-  /* First rs232 port for debugging */
-  rs232_init(RS232_PORT_0, USART_BAUD_115200,
-             USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+#define CC2420_MAX_PACKET_LEN      127
 
-  rs232_redirect_stdout(RS232_PORT_0);
+int cc2420_set_channel(int channel);
+int cc2420_get_channel(void);
 
-}
-/*---------------------------------------------------------------------------*/
-int
-main(void)
-{
+void cc2420_set_pan_addr(unsigned pan,
+                                unsigned addr,
+                                const uint8_t *ieee_addr);
 
-  leds_init();
+extern signed char cc2420_last_rssi;
+extern uint8_t cc2420_last_correlation;
 
-  leds_on(LEDS_RED);
+int cc2420_rssi(void);
 
-  /* Initialize USART */
-  init_usart();
-  
-  /* Clock */
-  clock_init();
+extern const struct radio_driver cc2420_driver;
 
-  leds_on(LEDS_GREEN);
+/**
+ * \param power Between 1 and 31.
+ */
+void cc2420_set_txpower(uint8_t power);
+int cc2420_get_txpower(void);
+#define CC2420_TXPOWER_MAX  31
+#define CC2420_TXPOWER_MIN   0
 
-  ds2401_init();
-  
-  node_id_restore();
+/**
+ * Interrupt function, called from the simple-cc2420-arch driver.
+ *
+ */
+int cc2420_interrupt(void);
 
-  random_init(ds2401_id[0] + node_id);
+/* XXX hack: these will be made as Chameleon packet attributes */
+extern rtimer_clock_t cc2420_time_of_arrival,
+  cc2420_time_of_departure;
+extern int cc2420_authority_level_of_sender;
 
-  rtimer_init();
+int cc2420_on(void);
+int cc2420_off(void);
 
-  /* Process subsystem */
-  process_init();
+void cc2420_set_cca_threshold(int value);
 
-  process_start(&etimer_process, NULL);
+extern const struct aes_128_driver cc2420_aes_128_driver;
 
-  ctimer_init();
-
-  leds_on(LEDS_YELLOW);
-
-  init_net();
-  
-  printf_P(PSTR(CONTIKI_VERSION_STRING " started. Node id %u\n"), node_id);
-
-  leds_off(LEDS_ALL);
-
-  /* Autostart processes */
-  autostart_start(autostart_processes);
-
-  /* Main scheduler loop */
-  do {
-
-    process_run();
-
-  }while(1);
-
-  return 0;
-}
+#endif /* CC2420_H_ */

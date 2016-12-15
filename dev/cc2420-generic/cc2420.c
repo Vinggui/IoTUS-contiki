@@ -45,9 +45,12 @@
 #include "dev/spi.h"
 #include "cc2420.h"
 #include "cc2420_const.h"
+#include "cc2420-porting-header.h"
 
+#if USE_PACKETBUF == 1
 #include "net/packetbuf.h"
 #include "net/rime/rimestats.h"
+#endif
 
 #include "net/netstack.h"
 
@@ -127,8 +130,10 @@ static const struct output_config output_power[] = {
 
 void cc2420_arch_init(void);
 
+#if USE_PACKETBUF == 1
 /* XXX hack: these will be made as Chameleon packet attributes */
 rtimer_clock_t cc2420_time_of_arrival, cc2420_time_of_departure;
+#endif
 
 int cc2420_authority_level_of_sender;
 
@@ -691,11 +696,11 @@ cc2420_transmit(unsigned short payload_len)
   GET_LOCK();
 
   txpower = 0;
-  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+  if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
     /* Remember the current transmission power */
     txpower = cc2420_get_txpower();
     /* Set the specified transmission power */
-    set_txpower(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) - 1);
+    set_txpower(PORTABLE_GET_RADIO_TXPOWER() - 1);
   }
 
   /* The TX FIFO can only hold one packet. Make sure to not overrun
@@ -759,7 +764,7 @@ cc2420_transmit(unsigned short payload_len)
 	off();
       }
 
-      if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+      if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
         /* Restore the transmission power */
         set_txpower(txpower & 0xff);
       }
@@ -771,10 +776,10 @@ cc2420_transmit(unsigned short payload_len)
 
   /* If we send with cca (cca_on_send), we get here if the packet wasn't
      transmitted because of other channel activity. */
-  RIMESTATS_ADD(contentiondrop);
+  PORTABLE_ADD_CONTENTION_ATT();
   PRINTF("cc2420: do_send() transmission never started\n");
 
-  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+  if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
     /* Restore the transmission power */
     set_txpower(txpower & 0xff);
   }
@@ -792,7 +797,7 @@ cc2420_prepare(const void *payload, unsigned short payload_len)
 
   PRINTF("cc2420: sending %d bytes\n", payload_len);
 
-  RIMESTATS_ADD(lltx);
+  PORTABLE_ADD_LLTX_ATT();
 
   /* Wait for any previous transmission to finish. */
   /*  while(status() & BV(CC2420_TX_ACTIVE));*/
@@ -938,11 +943,10 @@ PROCESS_THREAD(cc2420_process, ev, data)
 
     PRINTF("cc2420_process: calling receiver callback\n");
 
-    packetbuf_clear();
-    packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-    
-    packetbuf_set_datalen(len);
+    PORTABLE_CLEAR_PACKET_BUFF();
+    PORTABLE_TIMESTAMP_PACKET_BUFF(last_packet_timestamp);
+    len = cc2420_read(PORTABLE_PACKET_BUFF_DATAPTR(), PORTABLE_PACKET_BUFF_SIZE);
+    PORTABLE_PACKET_BUFF_SET_DATALEN(len);
     
     NETSTACK_RDC.input();
   }
@@ -966,11 +970,11 @@ cc2420_read(void *buf, unsigned short bufsize)
 
   if(len > CC2420_MAX_PACKET_LEN) {
     /* Oops, we must be out of sync. */
-    RIMESTATS_ADD(badsynch);
+    PORTABLE_ADD_BADSYNCH_ATT();
   } else if(len <= FOOTER_LEN) {
-    RIMESTATS_ADD(tooshort);
+    PORTABLE_ADD_TOOSHORT_ATT();
   } else if(len - FOOTER_LEN > bufsize) {
-    RIMESTATS_ADD(toolong);
+    PORTABLE_ADD_TOOLONG_ATT();
   } else {
     getrxdata((uint8_t *) buf, len - FOOTER_LEN);
     getrxdata(footer, FOOTER_LEN);
@@ -982,13 +986,12 @@ cc2420_read(void *buf, unsigned short bufsize)
         /* Not in poll mode: packetbuf should not be accessed in interrupt context.
          * In poll mode, the last packet RSSI and link quality can be obtained through
          * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
-        packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
-        packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
+        PORTABLE_PACKET_BUFF_SET_RSSI(cc2420_last_rssi);
+        PORTABLE_PACKET_BUFF_SET_LINK_QUALITY(cc2420_last_correlation);
       }
-
-      RIMESTATS_ADD(llrx);
+      PORTABLE_ADD_LLRX_ATT();
     } else {
-      RIMESTATS_ADD(badcrc);
+      PORTABLE_ADD_BADCRC_ATT();
       len = FOOTER_LEN;
     }
 

@@ -37,6 +37,8 @@
  *
  * \author
  *         Kasun Hewage <kasun.ch@gmail.com>
+ * \modified
+ *         Vinicius Galvao <vinicius_galvao@msn.com>
  */
 
 #ifndef CONTIKI_CONF_H_
@@ -54,6 +56,10 @@
 #define NETSTACK_CONF_MAC     edytee_mac_driver
 #define NETSTACK_CONF_RDC     edytee_rdc_driver
 #define NETSTACK_CONF_FRAMER  framer_edytee_802154
+
+#define WITH_NULL_LLSEC                  1
+#define USE_PACKETBUF                    0
+#define USE_EDYTEE_COMM                  1
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
@@ -96,59 +102,10 @@
 #define PROCESS_CONF_NUMEVENTS 8
 #define PROCESS_CONF_STATS 1
 
-#ifdef NETSTACK_CONF_WITH_IPV6
-
-#define LINKADDR_CONF_SIZE              8
-
-#define UIP_CONF_LL_802154              1
-#define UIP_CONF_LLH_LEN                0
-
-#define UIP_CONF_ROUTER                 0
-
-/* configure number of neighbors and routes */
-#define NBR_TABLE_CONF_MAX_NEIGHBORS    4
-#define UIP_CONF_MAX_ROUTES             4
-
-#define RPL_CONF_MAX_PARENTS            4
-#define RPL_CONF_MAX_DAG_PER_INSTANCE   1
-
-#define UIP_CONF_ND6_SEND_RA		0
-#define UIP_CONF_ND6_REACHABLE_TIME     600000
-#define UIP_CONF_ND6_RETRANS_TIMER      10000
-
-#define NETSTACK_CONF_WITH_IPV6                   1
-#define UIP_CONF_IPV6_QUEUE_PKT         0
-#define UIP_CONF_IPV6_CHECKS            1
-#define UIP_CONF_IPV6_REASSEMBLY        0
-#define UIP_CONF_NETIF_MAX_ADDRESSES    3
-#define UIP_CONF_IP_FORWARD             0
-#define UIP_CONF_BUFFER_SIZE            200
-
-#define SICSLOWPAN_CONF_COMPRESSION             SICSLOWPAN_COMPRESSION_HC06
-#ifndef SICSLOWPAN_CONF_FRAG
-#define SICSLOWPAN_CONF_FRAG                    1
-#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS        3
-#define SICSLOWPAN_CONF_MAXAGE                  8
-#endif /* SICSLOWPAN_CONF_FRAG */
-#define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS       2
-#else /* NETSTACK_CONF_WITH_IPV6 */
-#define UIP_CONF_IP_FORWARD      1
-#define UIP_CONF_BUFFER_SIZE     128
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-
-#define UIP_CONF_ICMP_DEST_UNREACH 1
-
-#if !NETSTACK_CONF_WITH_IPV4 && !NETSTACK_CONF_WITH_IPV6
-#define QUEUEBUF_CONF_NUM          8
-#else
-#define QUEUEBUF_CONF_NUM          2
-#endif
 
 #define TIMESYNCH_CONF_ENABLED 1
 #define CC2420_CONF_TIMESTAMPS 1
 #define CC2420_CONF_SYMBOL_LOOP_COUNT 500
-
-#define WITH_NULLMAC 0
 
 #define CCIF
 #define CLIF
@@ -156,26 +113,6 @@
 /* The process names are not used to save RAM */
 #define PROCESS_CONF_NO_PROCESS_NAMES 1
 
-#define UIP_CONF_ICMP_DEST_UNREACH 1
-
-#define UIP_CONF_DHCP_LIGHT
-#define UIP_CONF_LLH_LEN         0
-#define UIP_CONF_RECEIVE_WINDOW  48
-#define UIP_CONF_TCP_MSS         48
-#define UIP_CONF_MAX_CONNECTIONS 4
-#define UIP_CONF_MAX_LISTENPORTS 8
-#define UIP_CONF_UDP_CONNS       12
-#define UIP_CONF_FWCACHE_SIZE    15
-#define UIP_CONF_BROADCAST       1
-//#define UIP_ARCH_IPCHKSUM        1
-#define UIP_CONF_UDP             1
-#define UIP_CONF_UDP_CHECKSUMS   1
-#define UIP_CONF_PINGADDRCONF    0
-#define UIP_CONF_LOGGING         0
-
-#define UIP_CONF_TCP_SPLIT       0
-
-typedef unsigned short uip_stats_t;
 typedef unsigned long off_t;
 
 #endif /* CONTIKI_CONF_H_ */

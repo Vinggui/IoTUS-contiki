@@ -47,5 +47,5 @@ endif
 
 MODULES += core/net \
            core/net/mac \
-           core/net/llsec dev/cc2420 \
+           core/net/llsec dev/cc2420-generic \
            edytee-files

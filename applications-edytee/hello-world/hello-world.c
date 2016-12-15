@@ -39,6 +39,7 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
+#include "edytee-comm.h"
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
