@@ -50,8 +50,6 @@
 #include "platform-conf.h"
 
 
-/* Network setup for non-IPv6 (rime). */
-
 #define NETSTACK_CONF_NETWORK edytee_net_driver
 #define NETSTACK_CONF_MAC     edytee_mac_driver
 #define NETSTACK_CONF_RDC     edytee_rdc_driver
@@ -60,6 +58,8 @@
 #define WITH_NULL_LLSEC                  1
 #define USE_PACKETBUF                    0
 #define USE_EDYTEE_COMM                  1
+#define UIP_CONF_TCP                     0
+#define UIP_CONF_UDP                     0
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8

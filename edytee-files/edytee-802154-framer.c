@@ -96,7 +96,7 @@ parse(void)
   return FRAMER_FAILED;
 }
 /*---------------------------------------------------------------------------*/
-const struct framer framer_edytee_802154_mac = {
+const struct framer framer_edytee_802154 = {
   hdr_length,
   create,
   parse

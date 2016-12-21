@@ -7,12 +7,15 @@ SENSOR_BOARD_SOURCEFILES = mts300.c
 CONTIKI_TARGET_SOURCEFILES += adc.c rs232.c cfs-eeprom.c contiki-micaz-main.c \
                               leds-arch.c cc2420.c init-net.c node-id.c \
                               clock.c spi.c cc2420-arch.c rtimer-arch.c ds2401.c \
-                              battery-sensor.c slip.c slip_uart0.c
+                              battery-sensor.c slip_uart0.c
 
 CONTIKI_TARGET_SOURCEFILES += $(SENSOR_BOARD_SOURCEFILES)
 
 CONTIKIAVR=$(CONTIKI)/cpu/avr
 CONTIKIBOARD=.
+
+CONTIKI_NO_NET=1
+CONTIKI_WITH_IPV6=0
 
 # MicaZ runs on Clock rate 7.3728 MHz
 CONTIKI_PLAT_DEFS = -DF_CPU=7372800UL -DAUTO_CRC_PADDING=2

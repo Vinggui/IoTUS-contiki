@@ -18,3 +18,15 @@ void send_wireless_packet(destination_type dest_type, addr_att_t *recv_address,
       //unicast_send(&uc, &addr);
     }
 }
+
+void addr_copy(addr_att_t *dest, const addr_att_t *src) {
+    memcpy(dest, src, ADDR_SIZE);
+}
+/*---------------------------------------------------------------------------*/
+int addr_cmp(const addr_att_t *addr1, const addr_att_t *addr2) {
+    return (memcmp(addr1, addr2, ADDR_SIZE) == 0);
+}
+/*---------------------------------------------------------------------------*/
+void set_node_addr_att(addr_att_t *t) {
+    linkaddr_copy(&node_addr_att, t);
+}

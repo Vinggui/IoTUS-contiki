@@ -77,5 +77,8 @@ void Wireless_sent(int status, int num_tx);
 void send_wireless_packet(destination_type dest_type, addr_att_t *recv_address,
         const char *path, const char *msg, uint16_t len);
 
+void set_node_addr_att(addr_att_t *t);
+void addr_copy(addr_att_t *dest, const addr_att_t *src);
+int addr_cmp(const addr_att_t *addr1, const addr_att_t *addr2);
 
 #endif /* EDYTEE_COMM_H_ */
