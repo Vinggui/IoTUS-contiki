@@ -43,7 +43,9 @@ void
 netstack_init(void)
 {
   NETSTACK_RADIO.init();
+#ifndef USE_NEW_NETSTACK
   NETSTACK_RDC.init();
+#endif
   NETSTACK_LLSEC.init();
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();

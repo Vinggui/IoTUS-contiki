@@ -72,6 +72,11 @@ ifeq ($(CONTIKI_WITH_IPV4),1)
   MODULES += core/net/ipv4 core/net/ip
 endif
 
+ifeq ($(CONTIKI_WITHOUT_NETWORK),1)
+  HAS_STACK = 1
+  CONTIKI_WITH_RIME = 0
+endif
+
 ifeq ($(CONTIKI_WITH_RIME),1)
   HAS_STACK = 1
   CFLAGS += -DNETSTACK_CONF_WITH_RIME=1 
