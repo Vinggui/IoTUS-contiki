@@ -48,7 +48,6 @@
 #include "dev/leds.h"
 #include "dev/rs232.h"
 #include "dev/watchdog.h"
-#include "dev/slip.h"
 
 #include "init-net.h"
 #include "dev/ds2401.h"

@@ -10,6 +10,7 @@
 
 #include "contiki-conf.h"
 #include "edytee-radio-params.h"
+#include "net/packetbuf.h"
 
 //************************************************************************
 //                  General defines
@@ -53,32 +54,17 @@ typedef enum {
 //                  Structs
 //************************************************************************
 
-typedef union {
-  unsigned char u8[ADDR_SIZE];
-  unsigned char mini_u8[ADDR_MINI_SIZE];
-} addr_att_t;
 
-typedef struct Packet_Fields_t {
-    char payload[RADIO_MAX_PAYLOAD];
-} packet_fields_t;
-
-extern addr_att_t node_addr_att;
-extern addr_att_t addr_att_null;
-extern packet_fields_t packet_buff;
 //************************************************************************
 //                  Prototypes
 //************************************************************************
 
 //Functions that must be available from the application layer
-void wireless_recv(const addr_att_t *from);
+void wireless_recv(const linkaddr_t *from);
 void Wireless_sent(int status, int num_tx);
 
 //Available function to the application layer
-void send_wireless_packet(destination_type dest_type, addr_att_t *recv_address,
+void send_wireless_packet(destination_type dest_type, linkaddr_t *recv_address,
         const char *path, const char *msg, uint16_t len);
-
-void set_node_addr_att(addr_att_t *t);
-void addr_copy(addr_att_t *dest, const addr_att_t *src);
-int addr_cmp(const addr_att_t *addr1, const addr_att_t *addr2);
 
 #endif /* EDYTEE_COMM_H_ */

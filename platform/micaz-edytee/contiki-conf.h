@@ -52,15 +52,15 @@
 
 #define NETSTACK_CONF_NETWORK edytee_net_driver
 #define NETSTACK_CONF_MAC     edytee_mac_driver
-#define NETSTACK_CONF_RDC     edytee_rdc_driver
+//#define NETSTACK_CONF_RDC     edytee_rdc_driver
 #define NETSTACK_CONF_FRAMER  framer_edytee_802154
 
 #define WITH_NULL_LLSEC                  1
-#define USE_PACKETBUF                    0
 #define CONTIKI_WITHOUT_NETWORK          1
 #define USE_NEW_NETSTACK                 1
 #define UIP_CONF_TCP                     0
 #define UIP_CONF_UDP                     0
+#define WITH_NULLMAC 0
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
@@ -114,6 +114,8 @@
 /* The process names are not used to save RAM */
 #define PROCESS_CONF_NO_PROCESS_NAMES 1
 
+
+typedef unsigned short uip_stats_t;
 typedef unsigned long off_t;
 
 #endif /* CONTIKI_CONF_H_ */

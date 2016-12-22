@@ -1,4 +1,4 @@
-CONTIKI_TARGET_DIRS = . dev dev/sensors
+CONTIKI_TARGET_DIRS = . dev dev/sensors dev/cc2420-generic ./edytee-files
 CONTIKI_CORE=contiki-micaz-edytee
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
@@ -7,8 +7,8 @@ SENSOR_BOARD_SOURCEFILES = mts300.c
 CONTIKI_TARGET_SOURCEFILES += adc.c rs232.c cfs-eeprom.c contiki-micaz-main.c \
                               leds-arch.c cc2420.c init-net.c node-id.c \
                               clock.c spi.c cc2420-arch.c rtimer-arch.c ds2401.c \
-                              battery-sensor.c slip_uart0.c
-
+                              battery-sensor.c slip.c slip_uart0.c
+                              
 CONTIKI_TARGET_SOURCEFILES += $(SENSOR_BOARD_SOURCEFILES)
 
 CONTIKIAVR=$(CONTIKI)/cpu/avr
@@ -48,7 +48,5 @@ ifneq ($(strip $(HAVE_PRGBOARD_FILE)), )
   include $(PRGBOARD_FILE)
 endif 
 
-MODULES += core/net \
-           core/net/mac \
-           core/net/llsec dev/cc2420-generic \
-           edytee-files
+MODULES += core/net dev/cc2420-generic \
+           core/net/llsec edytee-files

@@ -427,7 +427,10 @@ uip_udpchksum(void)
 void
 uip_init(void)
 {
+
+#if UIP_TCP || UIP_UDP
   int c;
+#endif
 
   uip_ds6_init();
   uip_icmp6_init();

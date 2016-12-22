@@ -47,8 +47,8 @@
 #include "cc2420_const.h"
 #include "cc2420-porting-header.h"
 
-#if USE_PACKETBUF == 1
 #include "net/packetbuf.h"
+#ifdef CONTIKI_WITHOUT_NETWORK
 #include "net/rime/rimestats.h"
 #endif
 
@@ -696,11 +696,11 @@ cc2420_transmit(unsigned short payload_len)
   GET_LOCK();
 
   txpower = 0;
-  if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
+  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
     /* Remember the current transmission power */
     txpower = cc2420_get_txpower();
     /* Set the specified transmission power */
-    set_txpower(PORTABLE_GET_RADIO_TXPOWER() - 1);
+    set_txpower(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) - 1);
   }
 
   /* The TX FIFO can only hold one packet. Make sure to not overrun
@@ -764,7 +764,7 @@ cc2420_transmit(unsigned short payload_len)
 	off();
       }
 
-      if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
+      if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
         /* Restore the transmission power */
         set_txpower(txpower & 0xff);
       }
@@ -779,7 +779,7 @@ cc2420_transmit(unsigned short payload_len)
   PORTABLE_ADD_CONTENTION_ATT();
   PRINTF("cc2420: do_send() transmission never started\n");
 
-  if(PORTABLE_GET_RADIO_TXPOWER() > 0) {
+  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
     /* Restore the transmission power */
     set_txpower(txpower & 0xff);
   }
@@ -943,10 +943,10 @@ PROCESS_THREAD(cc2420_process, ev, data)
 
     PRINTF("cc2420_process: calling receiver callback\n");
 
-    PORTABLE_CLEAR_PACKET_BUFF();
-    PORTABLE_TIMESTAMP_PACKET_BUFF(last_packet_timestamp);
-    len = cc2420_read(PORTABLE_PACKET_BUFF_DATAPTR(), PORTABLE_PACKET_BUFF_SIZE);
-    PORTABLE_PACKET_BUFF_SET_DATALEN(len);
+    packetbuf_clear();
+    packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
+    len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+    packetbuf_set_datalen(len);
     
     NETSTACK_RDC.input();
   }
@@ -986,8 +986,8 @@ cc2420_read(void *buf, unsigned short bufsize)
         /* Not in poll mode: packetbuf should not be accessed in interrupt context.
          * In poll mode, the last packet RSSI and link quality can be obtained through
          * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
-        PORTABLE_PACKET_BUFF_SET_RSSI(cc2420_last_rssi);
-        PORTABLE_PACKET_BUFF_SET_LINK_QUALITY(cc2420_last_correlation);
+        packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
+        packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
       }
       PORTABLE_ADD_LLRX_ATT();
     } else {

@@ -49,6 +49,9 @@
 #include "dev/leds.h"
 #include "net/netstack.h"
 #include "edytee-802154-framer.h"
+#include "net/linkaddr.h"
+#include "net/packetbuf.h"
+#include "net/queuebuf.h"
 
 #include "cc2420-porting-header.h"
 
@@ -59,12 +62,12 @@
 static void
 set_network_addr(void)
 {
-  PORTABLE_ADDRESS_STRUCT addr;
+    linkaddr_t addr;
   int i;
 
-  memset(&addr, 0, sizeof(PORTABLE_ADDRESS_STRUCT));
+  memset(&addr, 0, sizeof(linkaddr_t));
   if(node_id == 0) {
-    for(i = 0; i < sizeof(PORTABLE_ADDRESS_STRUCT); ++i) {
+    for(i = 0; i < sizeof(linkaddr_t); ++i) {
       addr.u8[i] = ds2401_id[7 - i];
     }
   } else {
@@ -72,7 +75,7 @@ set_network_addr(void)
     addr.u8[1] = node_id >> 8;
   }
 
-  PORTABLE_SET_NODE_ADDRESS(&addr);
+  linkaddr_set_node_addr(&addr);
   printf_P(PSTR("Network started with address "));
   for(i = 0; i < sizeof(addr.u8) - 1; i++) {
     printf_P(PSTR("%d."), addr.u8[i]);
@@ -90,10 +93,10 @@ init_net(void)
     uint8_t longaddr[8];
     uint16_t shortaddr;
     
-    shortaddr = (PORTABLE_NODE_ADDRESS.u8[0] << 8) +
-            PORTABLE_NODE_ADDRESS.u8[1];
+    shortaddr = (linkaddr_node_addr.u8[0] << 8) +
+            linkaddr_node_addr.u8[1];
     memset(longaddr, 0, sizeof(longaddr));
-    PORTABLE_ADDRESS_COPY((PORTABLE_ADDRESS_STRUCT *)&longaddr, &PORTABLE_NODE_ADDRESS);
+    linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
     printf_P(PSTR("MAC %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n"),
              longaddr[0], longaddr[1], longaddr[2], longaddr[3],
              longaddr[4], longaddr[5], longaddr[6], longaddr[7]);

@@ -6,6 +6,7 @@
  */
 
 #include "edytee-mac.h"
+#include "cc2420-porting-header.h"
 #include "net/netstack.h"
 #include "net/ip/uip.h"
 #include "net/ip/tcpip.h"
