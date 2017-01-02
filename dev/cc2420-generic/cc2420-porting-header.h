@@ -9,10 +9,6 @@
 #define DEV_CC2420_GENERIC_CC2420_PORTING_HEADER_H_
 #include "edytee-comm.h"
 
-#if defined(USE_NEW_NETSTACK) && USE_NEW_NETSTACK == 1
-#define NETSTACK_RDC                        NETSTACK_MAC//Skip this RDC layer
-#endif
-
 #if CONTIKI_WITHOUT_NETWORK == 1
     #define PORTABLE_ADD_CONTENTION_ATT()
     #define PORTABLE_ADD_LLTX_ATT()

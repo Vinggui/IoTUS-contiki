@@ -11,31 +11,19 @@
 #include "net/netstack.h"
 #include <string.h>
 
-/*---------------------------------------------------------------------------*/
-static void
-send_packet(mac_callback_t sent, void *ptr)
-{
-  int ret;
-  if(NETSTACK_RADIO.send(packetbuf_hdrptr(), packetbuf_totlen()) == RADIO_TX_OK) {
-    ret = MAC_TX_OK;
-  } else {
-    ret =  MAC_TX_ERR;
-  }
-  mac_call_sent_callback(sent, ptr, ret, 1);
-}
-/*---------------------------------------------------------------------------*/
-static void
-send_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
-{
-  if(buf_list != NULL) {
-    queuebuf_to_packetbuf(buf_list->buf);
-    send_packet(sent, ptr);
-  }
-}
+#define DEBUG 1
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...)         printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
+
 /*---------------------------------------------------------------------------*/
 static void
 packet_input(void)
 {
+  PRINTF("RDC received packet\n");
   NETSTACK_MAC.input();
 }
 /*---------------------------------------------------------------------------*/
@@ -52,6 +40,31 @@ off(int keep_radio_on)
     return NETSTACK_RADIO.on();
   } else {
     return NETSTACK_RADIO.off();
+  }
+}
+/*---------------------------------------------------------------------------*/
+static void
+send_packet(mac_callback_t sent, void *ptr)
+{
+  on();
+  int ret;
+  if(NETSTACK_RADIO.send(packetbuf_hdrptr(), packetbuf_totlen()) == RADIO_TX_OK) {
+      PRINTF("RDC sent packet\n");
+    ret = MAC_TX_OK;
+  } else {
+      PRINTF("RDC failed in sending packet\n");
+    ret =  MAC_TX_ERR;
+  }
+  off(0);
+  //mac_call_sent_callback(sent, ptr, ret, 1);
+}
+/*---------------------------------------------------------------------------*/
+static void
+send_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
+{
+  if(buf_list != NULL) {
+    queuebuf_to_packetbuf(buf_list->buf);
+    send_packet(sent, ptr);
   }
 }
 /*---------------------------------------------------------------------------*/

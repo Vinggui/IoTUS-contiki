@@ -46,6 +46,11 @@
 PROCESS(hello_world_process, "Hello world process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
+
+void wireless_sent(int status, const linkaddr_t *dest, int num_tx) {
+    printf("message sent\n");
+}
+
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
 
@@ -58,11 +63,18 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     etimer_set(&timer, CLOCK_CONF_SECOND);
     printf("Hello, world\n");
 
+    linkaddr_t addr;
+    addr.u8[0]=2;
+    addr.u8[1]=0;
+
     for(;;) {
         PROCESS_WAIT_EVENT();
 
     printf("Hi\n");
     leds_toggle(LEDS_ALL);
+    if(linkaddr_node_addr.u8[0] == 1) {
+        send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
+    }
     etimer_reset(&timer);
 
     }

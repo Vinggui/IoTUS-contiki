@@ -50,6 +50,7 @@
 static void
 input(void)
 {
+  PRINTF("NET received packet\n");
   //struct rime_sniffer *s;
   //struct channel *c;
 

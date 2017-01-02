@@ -61,7 +61,7 @@ typedef enum {
 
 //Functions that must be available from the application layer
 void wireless_recv(const linkaddr_t *from);
-void Wireless_sent(int status, int num_tx);
+void wireless_sent(int status, const linkaddr_t *dest, int num_tx);
 
 //Available function to the application layer
 void send_wireless_packet(destination_type dest_type, linkaddr_t *recv_address,
