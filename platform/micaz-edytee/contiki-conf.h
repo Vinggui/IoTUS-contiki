@@ -57,7 +57,6 @@
 
 #define WITH_NULL_LLSEC                  1
 #define CONTIKI_WITHOUT_NETWORK          1
-#define USE_NEW_NETSTACK                 0
 #define UIP_CONF_TCP                     0
 #define UIP_CONF_UDP                     0
 #define WITH_NULLMAC 0

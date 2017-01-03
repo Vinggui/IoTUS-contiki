@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, University of Colombo School of Computing
+ * Copyright (c) 2006, Technical University of Munich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,92 +29,40 @@
  * This file is part of the Contiki operating system.
  *
  * @(#)$$
+ *
  */
-
 
 /**
  * \file
- *         Main file of the MICAz port.
+ *       Sample loadable module
  *
  * \author
- *         Kasun Hewage <kasun.ch@gmail.com>
+ *       Simon Barner <barner@in.tum.de>
  */
-
 #include <stdio.h>
-#include <avr/pgmspace.h>
-
-#include "contiki.h"
-#include "contiki-lib.h"
-#include "dev/leds.h"
 #include "dev/rs232.h"
-#include "dev/watchdog.h"
+#include "contiki.h"
 
-#include "init-net.h"
-#include "dev/ds2401.h"
-#include "sys/node-id.h"
-
-/*---------------------------------------------------------------------------*/
-void
-init_usart(void)
+PROCESS(test_process1, "Test process");
+PROCESS_THREAD(test_process1, ev, data)
 {
-  /* First rs232 port for debugging */
-  rs232_init(RS232_PORT_0, USART_BAUD_115200,
-             USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  static struct etimer etimer;
 
-  rs232_redirect_stdout(RS232_PORT_0);
+  PROCESS_BEGIN();
 
+  rs232_print (RS232_PORT_1, "test_process 1 starting\n");
+
+  while(1) {
+    etimer_set(&etimer, CLOCK_SECOND);
+    PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+    rs232_print (RS232_PORT_1, "Tick\n");
+    etimer_set(&etimer, CLOCK_SECOND);
+    PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+    rs232_print (RS232_PORT_1, "Tack\n");
+  }
+
+  PROCESS_END();
 }
-/*---------------------------------------------------------------------------*/
-int
-main(void)
-{
 
-  leds_init();
 
-  leds_on(LEDS_RED);
-
-  /* Initialize USART */
-  init_usart();
-  
-  /* Clock */
-  clock_init();
-
-  leds_on(LEDS_GREEN);
-
-  ds2401_init();
-  
-  node_id_burn(1);
-
-  node_id_restore();
-
-  random_init(ds2401_id[0] + node_id);
-
-  rtimer_init();
-
-  /* Process subsystem */
-  process_init();
-
-  process_start(&etimer_process, NULL);
-
-  ctimer_init();
-
-  leds_on(LEDS_YELLOW);
-
-  init_net();
-  
-  printf_P(PSTR(CONTIKI_VERSION_STRING " started. Node id %u\n"), node_id);
-
-  leds_off(LEDS_ALL);
-
-  /* Autostart processes */
-  autostart_start(autostart_processes);
-
-  /* Main scheduler loop */
-  do {
-
-    process_run();
-
-  }while(1);
-
-  return 0;
-}
+CLIF struct process * const autostart_processes[] = {&test_process1};

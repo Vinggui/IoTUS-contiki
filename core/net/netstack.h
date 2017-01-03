@@ -68,15 +68,15 @@
 #endif /* NETSTACK_MAC */
 
 
-#if defined(USE_NEW_NETSTACK) && USE_NEW_NETSTACK == 0
-        #ifndef NETSTACK_RDC
-        #ifdef NETSTACK_CONF_RDC
-        #define NETSTACK_RDC NETSTACK_CONF_RDC
-        #else /* NETSTACK_CONF_RDC */
-        #define NETSTACK_RDC     nullrdc_driver
-        #endif /* NETSTACK_CONF_RDC */
-        #endif /* NETSTACK_RDC */
-#endif
+
+#ifndef NETSTACK_RDC
+#ifdef NETSTACK_CONF_RDC
+#define NETSTACK_RDC NETSTACK_CONF_RDC
+#else /* NETSTACK_CONF_RDC */
+#define NETSTACK_RDC     nullrdc_driver
+#endif /* NETSTACK_CONF_RDC */
+#endif /* NETSTACK_RDC */
+
 
 
 #ifndef NETSTACK_RDC_CHANNEL_CHECK_RATE
@@ -111,9 +111,7 @@
 
 #include "net/llsec/llsec.h"
 #include "net/mac/mac.h"
-#if defined(USE_NEW_NETSTACK) && USE_NEW_NETSTACK == 0
 #include "net/mac/rdc.h"
-#endif
 #include "net/mac/framer.h"
 #include "dev/radio.h"
 
@@ -132,9 +130,7 @@ struct network_driver {
 
 extern const struct network_driver NETSTACK_NETWORK;
 extern const struct llsec_driver   NETSTACK_LLSEC;
-#if defined(USE_NEW_NETSTACK) && USE_NEW_NETSTACK == 0
 extern const struct rdc_driver     NETSTACK_RDC;
-#endif
 extern const struct mac_driver     NETSTACK_MAC;
 extern const struct radio_driver   NETSTACK_RADIO;
 extern const struct framer         NETSTACK_FRAMER;
