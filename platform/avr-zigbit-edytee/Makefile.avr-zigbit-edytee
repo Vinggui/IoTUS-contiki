@@ -1,6 +1,6 @@
 CONTIKIDIRS += ${addprefix $(CONTIKI)/core/, net/mac net/mac/sicslowmac . }
 
-CONTIKI_TARGET_DIRS = . ./edytee-files apps  /core/net/mac/ /core/net/mac/sicslowmac/
+CONTIKI_TARGET_DIRS = . edytee-files apps  /core/net/mac/ /core/net/mac/sicslowmac/
 CONTIKI_CORE = contiki-avr-zigbit-edytee
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
@@ -20,4 +20,4 @@ MCU = atmega1281
 
 include $(CONTIKIAVR)/Makefile.avr
 include $(CONTIKIAVR)/radio/Makefile.radio
-MODULES += edytee-files
+MODULES += core/net edytee-files core/net/llsec
