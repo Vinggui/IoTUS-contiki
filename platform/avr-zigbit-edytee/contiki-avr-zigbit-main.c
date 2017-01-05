@@ -41,8 +41,8 @@
 #include "loader/symbols-def.h"
 #include "loader/symtab.h"
 
-#define ANNOUNCE_BOOT 0    //adds about 600 bytes to program size
-#define DEBUG 0
+#define ANNOUNCE_BOOT 1    //adds about 600 bytes to program size
+#define DEBUG 1
 #if DEBUG
 #define PRINTF(FORMAT,args...) printf_P(PSTR(FORMAT),##args)
 #define PRINTSHORT(FORMAT,args...) printf_P(PSTR(FORMAT),##args)
@@ -98,7 +98,7 @@ init_lowlevel(void)
 {
 
   /* Second rs232 port for debugging */
-  rs232_init(RS232_PORT_1, USART_BAUD_38400,
+  rs232_init(RS232_PORT_1, USART_BAUD_57600,
              USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
 
   /* Redirect stdout to second port */

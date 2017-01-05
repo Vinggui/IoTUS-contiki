@@ -49,6 +49,7 @@
 #define F_CPU          8000000UL
 #endif
 
+#include "platform-conf.h"
 #include <stdint.h>
 #include <avr/eeprom.h>
 

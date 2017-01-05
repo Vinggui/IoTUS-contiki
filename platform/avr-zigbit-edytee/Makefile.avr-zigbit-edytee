@@ -1,11 +1,11 @@
 CONTIKIDIRS += ${addprefix $(CONTIKI)/core/, net/mac net/mac/sicslowmac . }
 
-CONTIKI_TARGET_DIRS = . edytee-files apps  /core/net/mac/ /core/net/mac/sicslowmac/
+CONTIKI_TARGET_DIRS = . dev edytee-files apps  /core/net/mac/ /core/net/mac/sicslowmac/
 CONTIKI_CORE = contiki-avr-zigbit-edytee
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
 CONTIKI_TARGET_SOURCEFILES +=	rs232.c cfs-eeprom.c eeprom.c random.c mmem.c \
-				contiki-avr-zigbit-main.c sicslowmac.c \
+				contiki-avr-zigbit-main.c leds-arch.c sicslowmac.c \
 				linkaddr.c queuebuf.c packetbuf.c
 
 CONTIKIAVR = $(CONTIKI)/cpu/avr
