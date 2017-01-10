@@ -60,7 +60,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND);
+    etimer_set(&timer, CLOCK_CONF_SECOND*4);
     printf("Hello, world\n");
 
     linkaddr_t addr;

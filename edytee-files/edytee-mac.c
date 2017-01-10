@@ -10,6 +10,9 @@
 #include "net/packetbuf.h"
 #include "net/netstack.h"
 
+Device_Mode device_mode;
+Device_Status device_status;
+
 /*---------------------------------------------------------------------------*/
 static void
 send_packet(mac_callback_t sent, void *ptr)
