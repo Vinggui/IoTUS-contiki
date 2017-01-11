@@ -10,7 +10,7 @@
 #include "net/packetbuf.h"
 #include "net/netstack.h"
 
-Device_Mode device_mode;
+
 Device_Status device_status;
 
 /*---------------------------------------------------------------------------*/
@@ -47,6 +47,16 @@ channel_check_interval(void)
 static void
 init(void)
 {
+    device_status = NETWORK_STATUS_DISCONNECTED;
+#if WIRELESS_COMM_ROLE == NODE_MODE_DISCONNECTED
+    return;
+#else
+    //First set all variable to the right start point
+#if WIRELESS_COMM_ROLE != NODE_MODE_ROOT
+    init_leaf_functions();
+#endif /*WIRELESS_COMM_ROLE == NODE_MODE_ROOT*/
+
+#endif /*WIRELESS_COMM_ROLE == NODE_MODE_DISCONNECTED*/
 }
 /*---------------------------------------------------------------------------*/
 const struct mac_driver edytee_mac_driver = {

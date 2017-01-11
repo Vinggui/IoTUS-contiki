@@ -15,6 +15,8 @@
 #define WIRELESS_COMM_ROLE                  NODE_ROLE_GENERIC
 //Node mini address type
 #define WIRELESS_COMM_MINI_ADDRESS_TYPE     NODE_MINI_ADDRESS_GENERIC
+//Node mini address size
+#define WIRELESS_COMM_MINI_ADDRESS_SIZE     1
 
 //Node channel to connect
 #define WIRELESS_COMM_MAIN_CHANNEL_TYPE     NODE_CHANNEL_GENERIC

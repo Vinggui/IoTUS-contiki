@@ -8,24 +8,27 @@
 #ifndef NEDYTEE_MAC_H_
 #define NEDYTEE_MAC_H_
 
-#include "net/mac/mac.h"
+#include "edytee-comm.h"
 #include "dev/radio.h"
+#include "net/mac/mac.h"
+#include "wireless-comm-configs.h"
 
 typedef enum {
-    OP_MODE_DISCONNECTED=0,
-    OP_MODE_LEAF,
-    OP_MODE_ROUTER
-} Device_Mode;
-
-
-typedef enum {
-    STATUS_DISCONNECTED=0,
-    STATUS_SEARCHING_CLUSTER,
-    STATUS_REGISTERING,
-    STATUS_CONNECTED_AS_LEAF,
-    STATUS_CONNECTED_AS_ROUTER,
-    STATUS_CONNECTED_AS_LEADER_ONLY
+    NETWORK_STATUS_DISCONNECTED=0,
+    NETWORK_STATUS_SEARCHING_CLUSTER,
+    NETWORK_STATUS_REGISTERING,
+    NETWORK_STATUS_CONNECTED_AS_LEAF,
+    NETWORK_STATUS_CONNECTED_AS_ROUTER,
+    NETWORK_STATUS_CONNECTED_AS_LEADER_ONLY
 } Device_Status;
+
+
+//Verify configurations of the operating mode
+#ifndef  WIRELESS_COMM_ROLE
+#pragma message ("WIRELESS_COMM_ROLE parameter not defined. Using generic setup.")
+#define WIRELESS_COMM_ROLE          NODE_MODE_GENERIC
+#endif
+
 
 extern const struct mac_driver edytee_mac_driver;
 

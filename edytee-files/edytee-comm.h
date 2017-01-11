@@ -15,10 +15,12 @@
 //************************************************************************
 //                  General defines
 //************************************************************************
-#define NODE_ROLE_GENERIC                   0
-#define NODE_ROLE_LEADER                    1
-#define NODE_ROLE_LEAF                      2
-#define NODE_ROLE_ROOT                      3
+#define NODE_MODE_DISCONNECTED              0
+#define NODE_MODE_LEAF                      1
+#define NODE_MODE_ROUTER                    2
+#define NODE_MODE_GENERIC                   3
+#define NODE_MODE_ROOT                      4
+
 
 #define NODE_MINI_ADDRESS_GENERIC           0
 #define NODE_MINI_ADDRESS_DEFINED           1
