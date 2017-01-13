@@ -73,7 +73,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     printf("Hi\n");
     leds_toggle(LEDS_ALL);
     if(linkaddr_node_addr.u8[0] == 1) {
-        send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
+        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
     }
     etimer_reset(&timer);
 

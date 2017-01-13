@@ -24,6 +24,16 @@
 #define WIRELESS_COMM_MINI_ADDRESS_SIZE             1
 #endif /*WIRELESS_COMM_MINI_ADDRESS_SIZE*/
 
+#ifndef WIRELESS_COMM_MAIN_CHANNEL_TYPE
+#   pragma message ("WIRELESS_COMM_MAIN_CHANNEL_TYPE not defined. Using NODE_CHANNEL_GENERIC.")
+#   define WIRELESS_COMM_MAIN_CHANNEL_TYPE     NODE_CHANNEL_GENERIC
+#elif WIRELESS_COMM_MAIN_CHANNEL_TYPE != NODE_CHANNEL_GENERIC
+#   ifndef WIRELESS_COMM_MAIN_CHANNEL
+#       error "WIRELESS_COMM_MAIN_CHANNEL not defined!"
+#   endif
+#endif /*WIRELESS_COMM_MAIN_CHANNEL_TYPE*/
+
+void start_leaf_operations_period(void *ptr);
 void init_leaf_functions(void);
 
 #endif /* EDYTEE_FILES_EDYTEE_LEAF_FUNCTIONS_H_ */

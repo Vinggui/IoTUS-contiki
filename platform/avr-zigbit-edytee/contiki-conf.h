@@ -50,8 +50,11 @@
 #endif
 
 #include "platform-conf.h"
+#include "edytee-contiki-conf.h"
 #include <stdint.h>
 #include <avr/eeprom.h>
+
+#include "edytee-contiki-conf.h"
 
 /* Skip the last four bytes of the EEPROM, to leave room for things
  * like the avrdude erase count and bootloader signaling. */
@@ -91,21 +94,12 @@ void clock_adjust_ticks(clock_time_t howmany);
 #define LINKADDR_CONF_SIZE       8
 
 /* No radio cycling */
-#define NETSTACK_CONF_NETWORK       edytee_net_driver
-#define NETSTACK_CONF_MAC           edytee_mac_driver
-#define NETSTACK_CONF_RDC           edytee_rdc_driver
-#define NETSTACK_CONF_FRAMER        framer_edytee_802154
 #define NETSTACK_CONF_RADIO         rf230_driver
 #define CHANNEL_802_15_4            26
 #define RF230_CONF_AUTOACK          1
 #define RF230_CONF_FRAME_RETRIES    2
 
 #define WITH_NULL_LLSEC                  1
-#define CONTIKI_WITHOUT_NETWORK          1
-#define UIP_CONF_TCP                     0
-#define UIP_CONF_UDP                     0
-#define WITH_NULLMAC 0
-
 
 /* These names are deprecated, use C99 names. */
 /*

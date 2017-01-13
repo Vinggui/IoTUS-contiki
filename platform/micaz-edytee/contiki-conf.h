@@ -48,18 +48,9 @@
 #include "avrdef.h"
 
 #include "platform-conf.h"
-
-
-#define NETSTACK_CONF_NETWORK edytee_net_driver
-#define NETSTACK_CONF_MAC     edytee_mac_driver
-#define NETSTACK_CONF_RDC     edytee_rdc_driver
-#define NETSTACK_CONF_FRAMER  framer_edytee_802154
+#include "edytee-contiki-conf.h"
 
 #define WITH_NULL_LLSEC                  1
-#define CONTIKI_WITHOUT_NETWORK          1
-#define UIP_CONF_TCP                     0
-#define UIP_CONF_UDP                     0
-#define WITH_NULLMAC 0
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
@@ -73,9 +64,6 @@
 
 #define COLLECT_NBR_TABLE_CONF_MAX_NEIGHBORS      32
 
-
-
-#define PACKETBUF_CONF_ATTRS_INLINE 1
 
 #ifdef RF_CHANNEL
 #define CC2420_CONF_CHANNEL RF_CHANNEL
