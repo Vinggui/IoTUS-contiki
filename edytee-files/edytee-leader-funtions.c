@@ -27,6 +27,9 @@ void start_own_cluster_period(void *ptr) {
     packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
     packetbuf_set_attr(PACKETBUF_ATTR_CHANNEL, 21);
     packetbuf_set_attr(PACKETBUF_ATTR_PACKET_TYPE, PACKET_TYPE_BEACON);
+
+    NETSTACK_FRAMER.create();
+
     packetbuf_compact();
 
     int ret;

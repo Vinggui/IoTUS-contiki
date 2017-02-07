@@ -45,7 +45,7 @@ void start_leaf_operations_period(void *ptr) {//ptr is the mac_ctimer
     //verify state of operation
     if(NETWORK_STATUS_DISCONNECTED == device_status) {
 #if WIRELESS_COMM_MAIN_CHANNEL_TYPE == NODE_CHANNEL_GENERIC
-        //time to scan all channels for the best leader available
+        //Scan all channels for the best leader available
         main_channel = RADIO_FIRST_CHANNEL;
         NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, RADIO_FIRST_CHANNEL);
 #else

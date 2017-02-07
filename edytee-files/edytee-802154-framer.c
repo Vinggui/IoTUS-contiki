@@ -36,10 +36,11 @@
  *         Joakim Eriksson <joakime@sics.se>
  */
 
+#include "edytee-mac.h"
 #include "net/mac/framer-nullmac.h"
 #include "net/packetbuf.h"
 
-#define DEBUG 0
+#define DEBUG 1
 
 #if DEBUG
 #include <stdio.h>
@@ -53,6 +54,8 @@
 struct edytee_mac_hdr {
   linkaddr_t receiver;
   linkaddr_t sender;
+  uint8_t packet_type;
+  uint8_t packet_type2;
 };
 
 /*---------------------------------------------------------------------------*/
@@ -70,7 +73,16 @@ create(void)
   if(packetbuf_hdralloc(sizeof(struct edytee_mac_hdr))) {
     hdr = packetbuf_hdrptr();
     linkaddr_copy(&(hdr->sender), &linkaddr_node_addr);
-    linkaddr_copy(&(hdr->receiver), packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+
+    if(PACKET_TYPE_BEACON == packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE)) {
+        linkaddr_copy(&(hdr->receiver), &linkaddr_null);
+    } else {
+        linkaddr_copy(&(hdr->receiver), packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+    }
+
+    hdr->packet_type = PACKET_TYPE_BEACON;
+    hdr->packet_type2 = 0x84;
+
     return sizeof(struct edytee_mac_hdr);
   }
   PRINTF("PNULLMAC-UT: too large header: %u\n", sizeof(struct edytee_mac_hdr));
