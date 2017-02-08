@@ -98,6 +98,11 @@ parse(void)
     packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &(hdr->sender));
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &(hdr->receiver));
 
+    if(hdr->packet_type == PACKET_TYPE_BEACON) {
+        packetbuf_set_attr(PACKETBUF_ATTR_PACKET_TYPE, PACKET_TYPE_BEACON);
+        PRINTF("This is a MAC BEACON\n");
+    }
+
     PRINTF("PNULLMAC-IN: ");
     PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
     PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));

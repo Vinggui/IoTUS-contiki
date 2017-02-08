@@ -41,6 +41,12 @@ static void channel_beacon_search_cb(void *ptr) {
 #endif /*WIRELESS_COMM_MAIN_CHANNEL_TYPE == NODE_CHANNEL_GENERIC*/
 }
 
+void treat_beacon_signal_captured(void) {
+    if(NETWORK_STATUS_DISCONNECTED == device_status) {
+        PRINTF("Channel found\n");
+    }
+}
+
 void start_leaf_operations_period(void *ptr) {//ptr is the mac_ctimer
     //verify state of operation
     if(NETWORK_STATUS_DISCONNECTED == device_status) {

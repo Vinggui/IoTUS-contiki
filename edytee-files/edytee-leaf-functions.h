@@ -34,6 +34,7 @@
 #endif /*WIRELESS_COMM_MAIN_CHANNEL_TYPE*/
 
 void start_leaf_operations_period(void *ptr);
+void treat_beacon_signal_captured(void);
 void init_leaf_functions(void);
 
 #endif /* EDYTEE_FILES_EDYTEE_LEAF_FUNCTIONS_H_ */

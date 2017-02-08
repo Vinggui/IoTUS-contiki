@@ -33,6 +33,14 @@ send_packet(mac_callback_t sent, void *ptr)
 static void
 packet_input(void)
 {
+    if(NETSTACK_FRAMER.parse()) {
+        if(PACKET_TYPE_BEACON == packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE)) {
+#if WIRELESS_COMM_ROLE != NODE_MODE_ROOT
+            //We probably were searching new cluster, so this is a possible one
+            treat_beacon_signal_captured();
+#endif
+        }
+    }
   NETSTACK_LLSEC.input();
 }
 /*---------------------------------------------------------------------------*/
