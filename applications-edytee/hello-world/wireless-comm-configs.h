@@ -12,7 +12,7 @@
 //Main parameters
 
 //Node Role in this network
-#define WIRELESS_COMM_ROLE                  NODE_MODE_ROOT
+#define WIRELESS_COMM_ROLE                  NODE_MODE_LEAF
 //Node mini address type
 #define WIRELESS_COMM_MINI_ADDRESS_TYPE     NODE_MINI_ADDRESS_GENERIC
 //Node mini address size
