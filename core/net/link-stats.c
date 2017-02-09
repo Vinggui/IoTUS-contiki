@@ -51,7 +51,6 @@
 /* Maximum value for the freshness counter */
 #define FRESHNESS_MAX                   16
 /* Statistics with no update in FRESHNESS_EXPIRATION_TIMEOUT is not fresh */
-
 #define FRESHNESS_EXPIRATION_TIME       (10 * 60 * (clock_time_t)CLOCK_SECOND)
 
 /* EWMA (exponential moving average) used to maintain statistics over time */
@@ -207,8 +206,6 @@ void
 link_stats_init(void)
 {
   nbr_table_register(link_stats, NULL);
-
   ctimer_set(&periodic_timer, 60 * (clock_time_t)CLOCK_SECOND * FRESHNESS_HALF_LIFE,
-
       periodic, NULL);
 }
