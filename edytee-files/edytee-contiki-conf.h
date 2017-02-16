@@ -9,10 +9,10 @@
 #define EDYTEE_FILES_EDYTEE_CONTIKI_CONF_H_
 
 
-#define CONTIKI_WITHOUT_NETWORK          1
-#define UIP_CONF_TCP                     0
-#define UIP_CONF_UDP                     0
-#define WITH_NULLMAC 0
+#define CONTIKI_WITHOUT_NETWORK             1
+#define UIP_CONF_TCP                        0
+#define UIP_CONF_UDP                        0
+#define WITH_NULLMAC                        0
 
 
 #define NETSTACK_CONF_NETWORK edytee_net_driver
