@@ -9,8 +9,13 @@
 #include "platform-conf.h"
 #endif /* PLATFORM_CONF_H */
 
+#if CONTIKI_COMM_STACK == IoTUS
 #include "edytee-contiki-conf.h"
 #define WITH_NULL_LLSEC                  1
+#else /*CONTIKI_COMM_STACK == "IoTUS"*/
+/*This allows contiki to operate regularly if the new stack flag is not set*/
+#include "contiki-conf-compatibility.h"
+#endif /*CONTIKI_COMM_STACK == "IoTUS"*/
 
 
 #ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
@@ -26,8 +31,6 @@
  * use 15ms instead. */
 #define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 15000
 
-
-#define PACKETBUF_CONF_ATTRS_INLINE 1
 
 #ifdef RF_CHANNEL
 #define CC2420_CONF_CHANNEL RF_CHANNEL
@@ -58,10 +61,6 @@
 #ifndef ELFLOADER_CONF_TEXTMEMORY_SIZE
 #define ELFLOADER_CONF_TEXTMEMORY_SIZE 0x800
 #endif /* ELFLOADER_CONF_TEXTMEMORY_SIZE */
-
-
-#define AODV_COMPLIANCE
-#define AODV_NUM_RT_ENTRIES 32
 
 #define WITH_ASCII 1
 

@@ -45,13 +45,6 @@ typedef enum {
 #define ADDR_MINI_SIZE 1
 #endif /* ADDR_SIZE */
 
-
-#define SEND_TO_ROOT(msg,len)           send_wireless_packet(\
-        MESSAGE_TO_ROOT, addr_att_null, NULL, msg, len)
-
-#define SEND_PACKET(addr, msg,len)      send_wireless_packet(\
-    MESSAGE_TO_NODE_NO_PATH, MESSAGE_TO_NODE_NO_PATH, NULL, msg, len)
-
 //************************************************************************
 //                  Structs
 //************************************************************************
@@ -62,11 +55,12 @@ typedef enum {
 //************************************************************************
 
 //Functions that must be available from the application layer
-void wireless_recv(const linkaddr_t *from);
-void wireless_sent(int status, const linkaddr_t *dest, int num_tx);
+void edytee_recv_msg(const linkaddr_t *from);
+void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx);
 
 //Available function to the application layer
-void send_wireless_packet(destination_type dest_type, linkaddr_t *recv_address,
-        const char *path, const char *msg, uint16_t len);
+inline int edytee_send_to_sink(const char *msg, uint16_t len);
+int edytee_send_msg(linkaddr_t *recv_address, const char *msg, uint16_t len);
+int edytee_close_connection(uint8_t handler);
 
 #endif /* EDYTEE_COMM_H_ */

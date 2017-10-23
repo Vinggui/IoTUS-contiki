@@ -1,0 +1,4 @@
+#Makefile for the new architeture developed into contiki
+#This makefile is called by the makefile of the mote platform
+
+MODULES += edytee-files

@@ -39,15 +39,15 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
-#include "edytee-comm.h"
-
 #include <stdio.h> /* For printf() */
+
+#include "../../edytee-files/edytee.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Hello world process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
-void wireless_sent(int status, const linkaddr_t *dest, int num_tx) {
+void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
     printf("message sent\n");
 }
 

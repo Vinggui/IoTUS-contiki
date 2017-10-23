@@ -7,7 +7,7 @@
 
 #ifndef WIRELESS_COMM_CONFIGS_H_
 #define WIRELESS_COMM_CONFIGS_H_
-#include "edytee-comm.h"
+#include "../../edytee-files/edytee.h"
 
 //Main parameters
 

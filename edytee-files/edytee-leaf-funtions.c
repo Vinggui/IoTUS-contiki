@@ -5,8 +5,8 @@
  *      Author: vinicius
  */
 
+#include "edytee.h"
 #include "edytee-leaf-functions.h"
-#include "edytee-comm.h"
 #include "edytee-mac.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"

@@ -10,7 +10,18 @@ endif
 
 include $(CONTIKI)/platform/sky/Makefile.common
 
+ifneq (,$(findstring IoTUS,$(CONTIKI_COMM_STACK)))
 MODULES += core/net \
            core/net/llsec \
            dev/cc2420-generic dev/sht11 dev/ds2411 \
-           edytee-files 
+
+include $(CONTIKI)/iotus-arch/Makefile.iotus
+
+else
+#For compatibility issues, this code will be preserved
+MODULES += core/net/mac \
+           core/net \
+           core/net/mac/contikimac core/net/mac/cxmac \
+           core/net/llsec core/net/llsec/noncoresec \
+           dev/cc2420 dev/sht11 dev/ds2411
+endif

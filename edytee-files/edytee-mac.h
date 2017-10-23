@@ -8,9 +8,9 @@
 #ifndef NEDYTEE_MAC_H_
 #define NEDYTEE_MAC_H_
 
-#include "edytee-comm.h"
 #include "edytee-radio-params.h"
 #include "dev/radio.h"
+#include "edytee.h"
 #include "net/mac/mac.h"
 #include "wireless-comm-configs.h"
 

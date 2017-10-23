@@ -7,7 +7,7 @@
 
 #ifndef DEV_CC2420_GENERIC_CC2420_PORTING_HEADER_H_
 #define DEV_CC2420_GENERIC_CC2420_PORTING_HEADER_H_
-#include "edytee-comm.h"
+#include "../../edytee-files/edytee.h"
 
 #if CONTIKI_WITHOUT_NETWORK == 1
     #define PORTABLE_ADD_CONTENTION_ATT()
