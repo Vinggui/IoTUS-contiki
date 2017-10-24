@@ -43,9 +43,7 @@
 
 #include "contiki-conf.h"
 #include "net/mac/mac.h"
-#ifndef WITH_NULL_LLSEC
 #include "net/llsec/llsec802154.h"
-#endif
 
 #ifdef RDC_CONF_WITH_DUPLICATE_DETECTION
 #define RDC_WITH_DUPLICATE_DETECTION RDC_CONF_WITH_DUPLICATE_DETECTION

@@ -9,13 +9,13 @@
 #include "platform-conf.h"
 #endif /* PLATFORM_CONF_H */
 
-#if CONTIKI_COMM_STACK == IoTUS
-#include "edytee-contiki-conf.h"
-#define WITH_NULL_LLSEC                  1
-#else /*CONTIKI_COMM_STACK == "IoTUS"*/
+#ifdef CONTIKI_COMM_NEW_STACK
+#include "iotus-conf.h"
+#include "iotus-core.h"
+#else /*CONTIKI_COMM_NEW_STACK*/
 /*This allows contiki to operate regularly if the new stack flag is not set*/
 #include "contiki-conf-compatibility.h"
-#endif /*CONTIKI_COMM_STACK == "IoTUS"*/
+#endif /*CONTIKI_COMM_NEW_STACK*/
 
 
 #ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE

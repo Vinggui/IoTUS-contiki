@@ -10,10 +10,10 @@ endif
 
 include $(CONTIKI)/platform/sky/Makefile.common
 
-ifneq (,$(findstring IoTUS,$(CONTIKI_COMM_STACK)))
+ifneq (,$(findstring IoTUS,$(CONTIKI_COMM_NEW_STACK)))
 MODULES += core/net \
            core/net/llsec \
-           dev/cc2420-generic dev/sht11 dev/ds2411 \
+           iotus-arch/radio-layer-drivers/cc2420-generic dev/sht11 dev/ds2411 \
 
 include $(CONTIKI)/iotus-arch/Makefile.iotus
 

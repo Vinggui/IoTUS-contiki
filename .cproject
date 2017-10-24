@@ -18,7 +18,7 @@
 					<folderInfo id="cdt.managedbuild.toolchain.gnu.base.2009293178.1610827466" name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.base.460040683" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.687600494" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
-							<builder buildPath="/media/vinicius/Data/Doutorado/contiki/new-examples/hello-world-iotus" id="cdt.managedbuild.target.gnu.builder.base.590270970" incrementalBuildTarget="all TARGET=sky" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base"/>
+							<builder buildPath="/media/vinicius/Data/Doutorado/contiki/new-examples/hello-world-iotus" cleanBuildTarget="clean TARGET=sky" id="cdt.managedbuild.target.gnu.builder.base.590270970" incrementalBuildTarget="all TARGET=sky" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1838472495" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1903916407" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.104931565" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">

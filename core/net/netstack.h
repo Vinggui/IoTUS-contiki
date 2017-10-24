@@ -67,8 +67,6 @@
 #endif /* NETSTACK_CONF_MAC */
 #endif /* NETSTACK_MAC */
 
-
-
 #ifndef NETSTACK_RDC
 #ifdef NETSTACK_CONF_RDC
 #define NETSTACK_RDC NETSTACK_CONF_RDC
@@ -76,8 +74,6 @@
 #define NETSTACK_RDC     nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
 #endif /* NETSTACK_RDC */
-
-
 
 #ifndef NETSTACK_RDC_CHANNEL_CHECK_RATE
 #ifdef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE

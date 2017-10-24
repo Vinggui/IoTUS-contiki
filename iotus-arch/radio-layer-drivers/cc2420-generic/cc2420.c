@@ -45,10 +45,13 @@
 #include "dev/spi.h"
 #include "cc2420.h"
 #include "cc2420_const.h"
+#include "cc2420-porting-header.h"
 
+#if CONTIKI_COMM_STACK != IoTUS
 #include "net/packetbuf.h"
 #include "net/rime/rimestats.h"
 #include "net/netstack.h"
+#endif
 
 #define WITH_SEND_CCA 1
 
@@ -83,7 +86,7 @@ enum write_ram_order {
   WRITE_RAM_REVERSE
 };
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -126,8 +129,10 @@ static const struct output_config output_power[] = {
 
 void cc2420_arch_init(void);
 
+#if USE_PACKETBUF == 1
 /* XXX hack: these will be made as Chameleon packet attributes */
 rtimer_clock_t cc2420_time_of_arrival, cc2420_time_of_departure;
+#endif
 
 int cc2420_authority_level_of_sender;
 
@@ -770,7 +775,7 @@ cc2420_transmit(unsigned short payload_len)
 
   /* If we send with cca (cca_on_send), we get here if the packet wasn't
      transmitted because of other channel activity. */
-  RIMESTATS_ADD(contentiondrop);
+  PORTABLE_ADD_CONTENTION_ATT();
   PRINTF("cc2420: do_send() transmission never started\n");
 
   if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
@@ -791,7 +796,7 @@ cc2420_prepare(const void *payload, unsigned short payload_len)
 
   PRINTF("cc2420: sending %d bytes\n", payload_len);
 
-  RIMESTATS_ADD(lltx);
+  PORTABLE_ADD_LLTX_ATT();
 
   /* Wait for any previous transmission to finish. */
   /*  while(status() & BV(CC2420_TX_ACTIVE));*/
@@ -940,10 +945,14 @@ PROCESS_THREAD(cc2420_process, ev, data)
     packetbuf_clear();
     packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
     len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-    
     packetbuf_set_datalen(len);
     
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
+    //Keep old contiki archtecture...
     NETSTACK_RDC.input();
+#endif
   }
 
   PROCESS_END();
@@ -965,11 +974,11 @@ cc2420_read(void *buf, unsigned short bufsize)
 
   if(len > CC2420_MAX_PACKET_LEN) {
     /* Oops, we must be out of sync. */
-    RIMESTATS_ADD(badsynch);
+    PORTABLE_ADD_BADSYNCH_ATT();
   } else if(len <= FOOTER_LEN) {
-    RIMESTATS_ADD(tooshort);
+    PORTABLE_ADD_TOOSHORT_ATT();
   } else if(len - FOOTER_LEN > bufsize) {
-    RIMESTATS_ADD(toolong);
+    PORTABLE_ADD_TOOLONG_ATT();
   } else {
     getrxdata((uint8_t *) buf, len - FOOTER_LEN);
     getrxdata(footer, FOOTER_LEN);
@@ -984,10 +993,9 @@ cc2420_read(void *buf, unsigned short bufsize)
         packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
         packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
       }
-
-      RIMESTATS_ADD(llrx);
+      PORTABLE_ADD_LLRX_ATT();
     } else {
-      RIMESTATS_ADD(badcrc);
+      PORTABLE_ADD_BADCRC_ATT();
       len = FOOTER_LEN;
     }
 

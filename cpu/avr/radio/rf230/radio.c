@@ -70,7 +70,7 @@
 #include "radio.h"
 #include "hal.h"
 #include "process.h"
-//#include "sicslowmac.h"
+#include "sicslowmac.h"
 #include "frame.h"
 
 /*============================ MACROS ========================================*/

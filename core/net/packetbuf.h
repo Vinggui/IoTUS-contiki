@@ -54,11 +54,7 @@
 
 #include "contiki-conf.h"
 #include "net/linkaddr.h"
-
-#if WITH_NULL_LLSEC == 0
 #include "net/llsec/llsec802154.h"
-#endif
-
 #include "net/mac/tsch/tsch-conf.h"
 
 /**

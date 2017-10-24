@@ -40,11 +40,14 @@
 #include "dev/watchdog.h"
 #include "dev/xmem.h"
 #include "lib/random.h"
+
+#ifndef CONTIKI_COMM_NEW_STACK
+//This bracket is not necessary for the new architecture
 #include "net/netstack.h"
-#include "edytee-802154-framer.h"
 #include "net/linkaddr.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"
+#endif/*CONTIKI_COMM_NEW_STACK*/
 
 #include "sys/node-id.h"
 #include "cfs-coffee-arch.h"
@@ -182,6 +185,8 @@ main(int argc, char **argv)
   //set_rime_addr();
   
   cc2420_init();
+#ifndef CONTIKI_COMM_NEW_STACK
+//This bracket is not necessary for the new architecture
   {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -196,6 +201,7 @@ main(int argc, char **argv)
     
     cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, longaddr);
   }
+#endif /*CONTIKI_COMM_NEW_STACK*/
 
   PRINTF(CONTIKI_VERSION_STRING " started. ");
   if(node_id > 0) {
@@ -208,6 +214,10 @@ main(int argc, char **argv)
 	 ds2411_id[0], ds2411_id[1], ds2411_id[2], ds2411_id[3],
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
+#ifdef CONTIKI_COMM_NEW_STACK
+  start_new_comm_stack();
+#else /*CONTIKI_COMM_NEW_STACK*/
+  //This bracket preserves the old contiki architecture
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
   NETSTACK_LLSEC.init();
@@ -218,6 +228,7 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          CC2420_CONF_CHANNEL);
+#endif /*CONTIKI_COMM_NEW_STACK*/
 
   leds_off(LEDS_GREEN);
 
