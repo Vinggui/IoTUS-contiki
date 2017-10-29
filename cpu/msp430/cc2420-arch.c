@@ -29,7 +29,10 @@
  */
 
 #include "contiki.h"
+
+#ifndef CONTIKI_COMM_NEW_STACK
 #include "contiki-net.h"
+#endif
 
 #include "dev/spi.h"
 #include "cc2420.h"

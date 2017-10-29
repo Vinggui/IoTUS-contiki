@@ -36,7 +36,10 @@
 
 #include "contiki-version.h"
 #include "contiki-conf.h"
+
+#ifndef CONTIKI_COMM_NEW_STACK
 #include "contiki-default-conf.h"
+#endif
 
 #include "sys/process.h"
 #include "sys/autostart.h"

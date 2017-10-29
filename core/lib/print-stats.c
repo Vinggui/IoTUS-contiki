@@ -39,7 +39,10 @@
 
 #include "lib/print-stats.h"
 
+#ifndef CONTIKI_COMM_NEW_STACK
 #include "net/rime/rime.h"
+#endif
+
 #include "sys/energest.h"
 
 #include <stdio.h>
@@ -68,7 +71,7 @@ print_stats(void)
 	 RIMESTATS_GET(contentiondrop), RIMESTATS_GET(sendingdrop),
 	 RIMESTATS_GET(lltx), RIMESTATS_GET(llrx));
 #endif /* RIMESTATS_CONF_ENABLED */
-#if ENERGEST_CONF_ON
+#if ENERGEST_CONF_ON && !defined(CONTIKI_COMM_NEW_STACK)
   PRINTA("E %d.%d clock %lu cpu %lu lpm %lu irq %lu gled %lu yled %lu rled %lu tx %lu listen %lu sensors %lu serial %lu\n",
 	 linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1],
 	 clock_seconds(),

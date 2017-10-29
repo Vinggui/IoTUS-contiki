@@ -695,12 +695,16 @@ cc2420_transmit(unsigned short payload_len)
   GET_LOCK();
 
   txpower = 0;
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
   if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
     /* Remember the current transmission power */
     txpower = cc2420_get_txpower();
     /* Set the specified transmission power */
     set_txpower(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) - 1);
   }
+#endif
 
   /* The TX FIFO can only hold one packet. Make sure to not overrun
    * FIFO by waiting for transmission to start here and synchronizing
@@ -762,11 +766,14 @@ cc2420_transmit(unsigned short payload_len)
 	 * since STXON[CCA] -> TX_ACTIVE -> RX_ACTIVE */
 	off();
       }
-
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
       if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
         /* Restore the transmission power */
         set_txpower(txpower & 0xff);
       }
+#endif
 
       RELEASE_LOCK();
       return RADIO_TX_OK;
@@ -778,10 +785,14 @@ cc2420_transmit(unsigned short payload_len)
   PORTABLE_ADD_CONTENTION_ATT();
   PRINTF("cc2420: do_send() transmission never started\n");
 
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
   if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
     /* Restore the transmission power */
     set_txpower(txpower & 0xff);
   }
+#endif
 
   RELEASE_LOCK();
   return RADIO_TX_COLLISION;
@@ -942,14 +953,14 @@ PROCESS_THREAD(cc2420_process, ev, data)
 
     PRINTF("cc2420_process: calling receiver callback\n");
 
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
     packetbuf_clear();
     packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
     len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
     packetbuf_set_datalen(len);
     
-#if CONTIKI_COMM_STACK == IoTUS
-    //TODO Inform upper layer about packet
-#else
     //Keep old contiki archtecture...
     NETSTACK_RDC.input();
 #endif
@@ -987,11 +998,15 @@ cc2420_read(void *buf, unsigned short bufsize)
       cc2420_last_rssi = footer[0] + RSSI_OFFSET;
       cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
       if(!poll_mode) {
+#if CONTIKI_COMM_STACK == IoTUS
+    //TODO Inform upper layer about packet
+#else
         /* Not in poll mode: packetbuf should not be accessed in interrupt context.
          * In poll mode, the last packet RSSI and link quality can be obtained through
          * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
         packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
         packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
+#endif
       }
       PORTABLE_ADD_LLRX_ATT();
     } else {
