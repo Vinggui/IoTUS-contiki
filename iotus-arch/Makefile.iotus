@@ -1,4 +1,53 @@
-#Makefile for the new architeture developed into contiki
-#This makefile is called by the makefile of the mote platform
+# Makefile for the new architeture developed into contiki
+# This makefile is called by the makefile of the mote platform
+
+IOTUS_FOLDER = $(CONTIKI)/iotus-arch
+DATA_LINK_FOLDER = $(IOTUS_FOLDER)/data-link-layer-protocols
+ROUTING_FOLDER = $(IOTUS_FOLDER)/routing-layer-protocols
+
+# Verify if user defined a type of compilation mode
+ifdef IOTUS_COMPILE_MODE
+  COMPILE_MODE_UPPERCASE := ${strip ${shell echo $(IOTUS_COMPILE_MODE) | sed y!$(LOWERCASE)!$(UPPERCASE)!}}
+  ifneq (,$(findstring DYNAMIC,$(COMPILE_MODE_UPPERCASE)))
+    ${info IoTUS net stack compiling in "Dynamic" mode.}
+    ifndef IOTUS_DYNAMIC_MODE_PROFILES
+      ${error In IoTUS dynamic mode, IOTUS_DYNAMIC_MODE_PROFILES must be defined!}
+    endif
+    COMPILE_MODE_DYN_UPPERCASE := ${strip ${shell echo $(IOTUS_DYNAMIC_MODE_PROFILES) | sed y!$(LOWERCASE)!$(UPPERCASE)!}}
+    ${info Using the following profiles: $(COMPILE_MODE_DYN_UPPERCASE)}
+    
+    include $(IOTUS_FOLDER)/iotus-profiles-list
+    
+    # Get the list of protocols to be compiled
+    $(foreach profile, $(COMPILE_MODE_DYN_UPPERCASE), \
+      $(eval DATA_LINK_PROTOCOLS_FULL_LIST += $$($(profile)_DATA_LINK)) \
+      $(eval ROUTING_PROTOCOLS_FULL_LIST += $$($(profile)_ROUTING)) \
+    )
+    
+    # Remove duplicates
+    DATA_LINK_PROTOCOLS_LIST = $(sort $(DATA_LINK_PROTOCOLS_FULL_LIST))
+    ROUTING_PROTOCOLS_LIST = $(sort $(ROUTING_PROTOCOLS_FULL_LIST))
+    
+    # Add every service and its dependencies to the list of compilation
+    $(foreach protocol, $(DATA_LINK_PROTOCOLS_LIST), \
+      ${eval include $(DATA_LINK_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+    )
+    $(foreach protocol, $(ROUTING_PROTOCOLS_LIST), \
+      ${eval include $(ROUTING_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+    )
+    
+    ${info Services are: $(IOTUS_SERVICE_DEPENDENCIES_LIST)}
+    
+  else
+    ifneq (,$(findstring STATIC,$(COMPILE_MODE_UPPERCASE)))
+      ${info IoTUS net stack compiling in "static" mode.}
+    else
+      ${error IoTUS net stack requires IOTUS_COMPILE_MODE defined as DYNAMIC or STATIC!}
+    endif
+  endif
+else
+  ${error IoTUS net stack requires IOTUS_COMPILE_MODE defined as DYNAMIC or STATIC!}
+endif
 
 MODULES += iotus-arch
+

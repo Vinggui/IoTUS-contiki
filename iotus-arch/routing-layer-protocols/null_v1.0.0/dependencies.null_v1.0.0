@@ -1,0 +1,4 @@
+# This file should contain all the dependencies that this
+# protocol requires to work.
+
+IOTUS_SERVICE_DEPENDENCIES_LIST += packet beacon teste isso

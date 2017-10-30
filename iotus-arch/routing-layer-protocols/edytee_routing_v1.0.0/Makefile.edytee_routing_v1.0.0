@@ -1,0 +1,3 @@
+# $Id: Makefile.null-v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
+
+IOTUS_SERVICE_FILES= 
