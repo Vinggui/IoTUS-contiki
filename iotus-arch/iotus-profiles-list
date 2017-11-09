@@ -1,39 +1,60 @@
 # This file contains all useful profiles of the iotus stack, loaded by its makefile
 
 ####################### null Profile #######################
+# Transport protocols
+NULL_TRANSPORT = null_v1.0.0
+
 # Routing protocols
 NULL_ROUTING = null_v1.0.0
+
 # Data link protocols
 NULL_DATA_LINK = null_v1.0.0
 
 
 ####################### ENERGY AWARE Profile #######################
+# Transport protocols
+ENERGY_AWARE_TRANSPORT = \
+  null_v1.0.0
+
 # Routing protocols
 ENERGY_AWARE_ROUTING = \
+  null_v1.0.0 \
   edytee_routing_v1.0.0
 
 # Data link protocols
 ENERGY_AWARE_DATA_LINK = \
+  null_v1.0.0 \
   edytee_MAC_v1.0.0
 
 
 
 ####################### LOW LATENCY Profile #######################
+# Transport protocols
+LOW_LATENCY_TRANSPORT = 
+
 #  Routing protocols
 LOW_LATENCY_ROUTING = 
+
 # Data link protocols
-LOW_LATENCY_DATA_LINK += 
+LOW_LATENCY_DATA_LINK = 
 
 
 ####################### HIGH MOBILITY Profile #######################
+# Transport protocols
+HIGH_MOBILITY_TRANSPORT = 
+
 # Routing protocols
 HIGH_MOBILITY_ROUTING = 
+
 # Data link protocols
 HIGH_MOBILITY_DATA_LINK = 
-####################################################################
 
 
 ####################### ALL Profile #######################
+# Transport protocols
+ALL_TRANSPORT = \
+  null_v1.0.0
+
 # Routing protocols
 ALL_ROUTING = \
   null_v1.0.0 \

@@ -2,8 +2,34 @@
 # This makefile is called by the makefile of the mote platform
 
 IOTUS_FOLDER = $(CONTIKI)/iotus-arch
-DATA_LINK_FOLDER = $(IOTUS_FOLDER)/data-link-layer-protocols
+TRANSPORT_FOLDER = $(IOTUS_FOLDER)/transport-layer-protocols
 ROUTING_FOLDER = $(IOTUS_FOLDER)/routing-layer-protocols
+DATA_LINK_FOLDER = $(IOTUS_FOLDER)/data-link-layer-protocols
+SERVICES_FOLDER = $(IOTUS_FOLDER)/services
+
+# Funtions for this makefile
+reverse = $(if $(1),$(call reverse,$(wordlist 2,$(words $(1)),$(1)))) $(firstword $(1))
+
+# Recursivily add dependencies
+recursirve_add_dependencies = $(if $(1),\
+  $(foreach service,$(1),\
+    ${eval IOTUS_SERVICE_DEPENDENCIES_LIST = }\
+    ${eval include $(SERVICES_FOLDER)/$(service)/dependencies.$(service)} \
+    ${eval NEW_SERVICES_TO_INCLUDE = $(filter-out $(IOTUS_SERVICES_LIST),$(IOTUS_SERVICE_DEPENDENCIES_LIST))}\
+    ${eval IOTUS_SERVICES_LIST = $(NEW_SERVICES_TO_INCLUDE) $(IOTUS_SERVICES_LIST)} \
+    ${call recursirve_add_dependencies,$(NEW_SERVICES_TO_INCLUDE)}\
+  ))
+
+# Verify if user defined which layer will be used
+ifndef IOTUS_USING_TRANSPORT
+  ${error Application makefile must define IOTUS_USING_TRANSPORT equals to 0 or 1}
+endif
+ifndef IOTUS_USING_ROUTING
+  ${error Application makefile must define IOTUS_USING_ROUTING equals to 0 or 1}
+endif
+ifndef IOTUS_USING_DATA_LINK
+  ${error Application makefile must define IOTUS_USING_DATA_LINK equals to 0 or 1}
+endif
 
 # Verify if user defined a type of compilation mode
 ifdef IOTUS_COMPILE_MODE
@@ -11,32 +37,71 @@ ifdef IOTUS_COMPILE_MODE
   ifneq (,$(findstring DYNAMIC,$(COMPILE_MODE_UPPERCASE)))
     ${info IoTUS net stack compiling in "Dynamic" mode.}
     ifndef IOTUS_DYNAMIC_MODE_PROFILES
-      ${error In IoTUS dynamic mode, IOTUS_DYNAMIC_MODE_PROFILES must be defined!}
+      # If profiles are no defined, then he list of protocols has to be defined
+      ifeq ($(IOTUS_USING_TRANSPORT),1)
+        ifndef TRANSPORT_PROTOCOLS_LIST
+          ${error In IoTUS dynamic mode, IOTUS_DYNAMIC_MODE_PROFILES or the list of TRANSPORT_PROTOCOLS_LIST protocols must be defined}
+        endif
+      endif
+      
+      ifeq ($(IOTUS_USING_ROUTING),1)
+        ifndef ROUTING_PROTOCOLS_LIST
+          ${error In IoTUS dynamic mode, IOTUS_DYNAMIC_MODE_PROFILES or the list of ROUTING_PROTOCOLS_LIST protocols must be defined}
+        endif
+      endif
+
+      ifeq ($(IOTUS_USING_DATA_LINK),1)
+        ifndef DATA_LINK_PROTOCOLS_LIST
+          ${error In IoTUS dynamic mode, IOTUS_DYNAMIC_MODE_PROFILES or the list of DATA_LINK_PROTOCOLS_LIST protocols must be defined}
+        endif
+      endif
     endif
-    COMPILE_MODE_DYN_UPPERCASE := ${strip ${shell echo $(IOTUS_DYNAMIC_MODE_PROFILES) | sed y!$(LOWERCASE)!$(UPPERCASE)!}}
-    ${info Using the following profiles: $(COMPILE_MODE_DYN_UPPERCASE)}
-    
+
     include $(IOTUS_FOLDER)/iotus-profiles-list
     
-    # Get the list of protocols to be compiled
-    $(foreach profile, $(COMPILE_MODE_DYN_UPPERCASE), \
-      $(eval DATA_LINK_PROTOCOLS_FULL_LIST += $$($(profile)_DATA_LINK)) \
-      $(eval ROUTING_PROTOCOLS_FULL_LIST += $$($(profile)_ROUTING)) \
-    )
-    
-    # Remove duplicates
-    DATA_LINK_PROTOCOLS_LIST = $(sort $(DATA_LINK_PROTOCOLS_FULL_LIST))
-    ROUTING_PROTOCOLS_LIST = $(sort $(ROUTING_PROTOCOLS_FULL_LIST))
+    ifdef IOTUS_DYNAMIC_MODE_PROFILES
+      COMPILE_MODE_DYN_UPPERCASE := ${strip ${shell echo $(IOTUS_DYNAMIC_MODE_PROFILES) | sed y!$(LOWERCASE)!$(UPPERCASE)!}}
+      ${info Using the following profiles: $(COMPILE_MODE_DYN_UPPERCASE)}    
+      
+      # Get the list of protocols to be compiled
+      $(foreach profile, $(COMPILE_MODE_DYN_UPPERCASE), \
+        $(eval TRANSPORT_PROTOCOLS_FULL_LIST += $$($(profile)_TRANSPORT)) \
+        $(eval ROUTING_PROTOCOLS_FULL_LIST += $$($(profile)_ROUTING)) \
+        $(eval DATA_LINK_PROTOCOLS_FULL_LIST += $$($(profile)_DATA_LINK)) \
+      )
+      
+      # Remove duplicates
+      TRANSPORT_PROTOCOLS_LIST = $(sort $(TRANSPORT_PROTOCOLS_FULL_LIST))
+      ROUTING_PROTOCOLS_LIST = $(sort $(ROUTING_PROTOCOLS_FULL_LIST))
+      DATA_LINK_PROTOCOLS_LIST = $(sort $(DATA_LINK_PROTOCOLS_FULL_LIST))
+    endif
     
     # Add every service and its dependencies to the list of compilation
-    $(foreach protocol, $(DATA_LINK_PROTOCOLS_LIST), \
-      ${eval include $(DATA_LINK_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+    $(foreach protocol, $(TRANSPORT_PROTOCOLS_LIST), \
+      ${eval include $(TRANSPORT_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+      ${eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)} \
     )
     $(foreach protocol, $(ROUTING_PROTOCOLS_LIST), \
       ${eval include $(ROUTING_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+      ${eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)} \
+    )
+    $(foreach protocol, $(DATA_LINK_PROTOCOLS_LIST), \
+      ${eval include $(DATA_LINK_FOLDER)/$(protocol)/dependencies.$(protocol)} \
+      ${eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)} \
     )
     
-    ${info Services are: $(IOTUS_SERVICE_DEPENDENCIES_LIST)}
+    # Clean duplicates in service list
+    IOTUS_SERVICES_LIST = $(sort $(IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL))
+
+    # Expand the service list to their own dependencies
+    ${call recursirve_add_dependencies,$(IOTUS_SERVICES_LIST)}
+
+    ${info Services used are: $(IOTUS_SERVICES_LIST)}
+
+    # Go for the compilation step of each service
+    $(foreach service, $(IOTUS_SERVICES_LIST), \
+      ${eval include $(SERVICES_FOLDER)/$(service)/Makefile.$(service)} \
+    )
     
   else
     ifneq (,$(findstring STATIC,$(COMPILE_MODE_UPPERCASE)))

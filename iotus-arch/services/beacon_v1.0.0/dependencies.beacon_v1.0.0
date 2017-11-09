@@ -1,6 +1,4 @@
 # This file should contain all the dependencies that this
 # service requires to work.
 
-IOTUS_SERVICE_DEPENDENCIES_LIST += \
-  packet_v1.0.0 \
-  beacon_v1.0.0
+IOTUS_SERVICE_DEPENDENCIES_LIST = null_v1.0.0
