@@ -8,49 +8,34 @@
  */
 
 /*
- * iotus-core.c
+ * edytee-MAC.c
  *
- *  Created on: Oct 23, 2017
+ *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
 
-#include "contiki.h"
 
-static const struct process available_transport_protocols_array = {1,3,4};
-
-PROCESS(iotus_core_process, "Core IoTUS Process");
-
-
-void start_new_comm_stack (void)
-{
-  //TODO Create the start of the iotus core system
-}
-
-
+PROCESS(edytee_MAC, "EDyTEE MAC Protocol");
 
 /* Implementation of the IoTus core process */
-PROCESS_THREAD(iotus_core_process, ev, data)
+PROCESS_THREAD(edytee_MAC, ev, data)
 {
   /* variables are declared static to ensure their values are kept
    * between kernel calls.
    */
-  //static struct stimer refreshingIICTimer;
 
   /* Any process must start with this. */
   PROCESS_BEGIN();
 
   /* Initiate the lists of module */
 
-  //PROCESS_PAUSE();
-
   //Main loop here
-  for(;;) {
-    PROCESS_PAUSE();
-  }
+  //for(;;) {
+  //  PROCESS_PAUSE();
+  //}
   // any process must end with this, even if it is never reached.
   PROCESS_END();
 }
-
 
 
 /* The following stuff ends the \defgroup block at the beginning of

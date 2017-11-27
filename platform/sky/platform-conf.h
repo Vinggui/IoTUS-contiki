@@ -39,6 +39,8 @@
 #ifndef PLATFORM_CONF_H_
 #define PLATFORM_CONF_H_
 
+#define IOTUS_RADIO_FULL_ADDRESS 2
+
 /*
  * Definitions below are dictated by the hardware and not really
  * changeable!
