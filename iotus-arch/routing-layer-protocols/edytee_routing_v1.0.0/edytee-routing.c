@@ -39,8 +39,27 @@ PROCESS_THREAD(edytee_routing_process, ev, data)
 }
 
 
+static void
+start(void)
+{
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{}
+
+struct iotus_routing_protocol_struct edytee_routing_routing_protocol = {
+  start,
+  run,
+  close
+};
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 
 /** @} */
-

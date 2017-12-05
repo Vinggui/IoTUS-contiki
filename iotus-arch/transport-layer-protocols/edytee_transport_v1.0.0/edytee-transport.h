@@ -24,4 +24,7 @@
 
 PROCESS_NAME(edytee_transport);
 
+export struct iotus_transport_protocol_struct edytee_transport_transport_protocol;
+
+
 #endif /* IOTUS_ARCH_TRANSPORT_LAYER_PROTOCOLS_EDYTEE_TRANSPORT_V1_0_0_EDYTEE_TRANSPORT_H_ */

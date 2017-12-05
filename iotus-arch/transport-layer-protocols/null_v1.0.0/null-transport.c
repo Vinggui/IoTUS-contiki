@@ -38,8 +38,27 @@ PROCESS_THREAD(null_transport, ev, data)
 }
 
 
+static void
+start(void)
+{
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{}
+
+struct iotus_transport_protocol_struct null_transport_transport_protocol = {
+  start,
+  run,
+  close
+};
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 
 /** @} */
-

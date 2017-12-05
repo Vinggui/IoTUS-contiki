@@ -15,6 +15,7 @@
  */
 
 
+
 PROCESS(edytee_MAC, "EDyTEE MAC Protocol");
 
 /* Implementation of the IoTus core process */
@@ -38,8 +39,28 @@ PROCESS_THREAD(edytee_MAC, ev, data)
 }
 
 
+static void
+start(void)
+{
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{}
+
+struct iotus_data_link_protocol_struct edytee_MAC_data_link_protocol = {
+  start,
+  run,
+  close
+};
+
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 
 /** @} */
-

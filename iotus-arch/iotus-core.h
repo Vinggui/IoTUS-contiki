@@ -26,12 +26,29 @@ enum iotus_transport_protocols IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS;
 enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS;
 enum iotus_data_link_protocols IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS;
 
-struct iotus_service_struct {
+struct iotus_transport_protocol_struct {
   void (* start)(void);
   void (* run)(void);
   void (* close)(void);
 };
 
+struct iotus_routing_protocol_struct {
+  void (* start)(void);
+  void (* run)(void);
+  void (* close)(void);
+};
+
+struct iotus_data_link_protocol_struct {
+  void (* start)(void);
+  void (* run)(void);
+  void (* close)(void);
+};
+
+struct iotus_service_module_struct {
+  void (* start)(void);
+  void (* run)(void);
+  void (* close)(void);
+};
 
 //************************************************************************
 //                  Prototypes

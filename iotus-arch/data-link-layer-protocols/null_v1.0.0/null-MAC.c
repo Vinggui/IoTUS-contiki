@@ -38,8 +38,28 @@ PROCESS_THREAD(null_MAC, ev, data)
 }
 
 
+static void
+start(void)
+{
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{}
+
+struct iotus_data_link_protocol_struct null_MAC_data_link_protocol = {
+  start,
+  run,
+  close
+};
+
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 
 /** @} */
-

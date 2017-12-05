@@ -16,7 +16,10 @@
 
 #include "contiki.h"
 
-static const struct process available_transport_protocols_array = {1,3,4};
+static const struct iotus_module_struct available_transport_protocols_array = IOTUS_PROTOCOL_TRANSPORT_LIST;
+static const struct iotus_module_struct available_routing_protocols_array = IOTUS_PROTOCOL_ROUTING_LIST;
+static const struct iotus_module_struct available_data_link_protocols_array = IOTUS_PROTOCOL_DATA_LINK_LIST;
+
 
 PROCESS(iotus_core_process, "Core IoTUS Process");
 
@@ -57,4 +60,3 @@ PROCESS_THREAD(iotus_core_process, ev, data)
    the file: */
 
 /** @} */
-

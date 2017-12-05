@@ -37,9 +37,28 @@ PROCESS_THREAD(edytee_transport, ev, data)
   PROCESS_END();
 }
 
+static void
+start(void)
+{
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{}
+
+struct iotus_transport_protocol_struct edytee_transport_transport_protocol = {
+  start,
+  run,
+  close
+};
 
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 
 /** @} */
-

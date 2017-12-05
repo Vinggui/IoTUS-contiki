@@ -23,5 +23,7 @@
 #define IOTUS_ARCH_MAC_LAYER_PROTOCOLS_NULL_MAC_V1_0_0_NULL_MAC_H_
 
 PROCESS_NAME(null_MAC);
+export struct iotus_data_link_protocol_struct null_MAC_data_link_protocol;
+
 
 #endif /* IOTUS_ARCH_MAC_LAYER_PROTOCOLS_NULL_MAC_V1_0_0_NULL_MAC_H_ */

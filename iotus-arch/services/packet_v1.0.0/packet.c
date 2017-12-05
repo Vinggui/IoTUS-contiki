@@ -51,7 +51,7 @@ struct header_piece {
  * Also, the header_piece has the common initial as the msg, so
  * just use as the cast type to set common fields.
  */
-static void* 
+static void*
 malloc_piece(uint16_t dataSize, uint16_t pieceSize) {
   void *newPiecePointer = malloc(pieceSize);
 
@@ -180,9 +180,9 @@ packet_create_header_piece(uint16_t headerSize, uint8_t isSingleBit,
 
 
 static void
-start()
+start(void)
 {
-  /* Initiate the lists of module */
+  // Initiate the lists of module
   LIST(packetMsgList);
   list_init(packetMsgList);
   LIST(packetHeaderList);
@@ -191,17 +191,15 @@ start()
 
 
 static void
-run()
+run(void)
 {
 }
 
 static void
-close()
-{
-  /* TODO empty every list */
-}
+close(void)
+{}
 
-struct iotus_service_struct packet_service_module = {
+struct iotus_service_module_struct packet_service_module = {
   start,
   run,
   close
