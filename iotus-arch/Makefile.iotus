@@ -115,6 +115,8 @@ ifdef IOTUS_CONF_COMPILE_MODE
     # Expand the service list to their own dependencies
     ${call add_sub_dependencies,IOTUS_SERVICES_LIST}
     ${info Services used are $(IOTUS_SERVICES_LIST)}
+    teste = $(shell expr 1 + 2 )
+
 
     # Go for the compilation step of each service
     $(foreach service, $(IOTUS_SERVICES_LIST), \
@@ -127,21 +129,21 @@ ifdef IOTUS_CONF_COMPILE_MODE
       ${eval include $(TRANSPORT_FOLDER)/$(protocol)/Makefile.$(protocol)} \
       ${eval IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)} \
       ${eval IOTUS_PROTOCOL_TRANSPORT_LIST += $(IOTUS_PROTOCOL_NAME)_transport_protocol} \
-			${info Servicos do $(protocol): $(IOTUS_TRANSPORT_$(protocol)_SPECIFIC_SERVICES)} \
+      ${info Servicos do $(protocol): $(IOTUS_TRANSPORT_$(protocol)_SPECIFIC_SERVICES)} \
     )
     $(foreach protocol, $(IOTUS_CONF_ROUTING_PROTOCOLS_LIST), \
       ${eval IOTUS_PROTOCOL_NAME = } \
       ${eval include $(ROUTING_FOLDER)/$(protocol)/Makefile.$(protocol)} \
       ${eval IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)} \
       ${eval IOTUS_PROTOCOL_ROUTING_LIST += $(IOTUS_PROTOCOL_NAME)_routing_protocol} \
-			${info Servicos do $(protocol): $(IOTUS_ROUTING_$(protocol)_SPECIFIC_SERVICES)} \
+      ${info Servicos do $(protocol): $(IOTUS_ROUTING_$(protocol)_SPECIFIC_SERVICES)} \
     )
     $(foreach protocol, $(IOTUS_CONF_DATA_LINK_PROTOCOLS_LIST), \
       ${eval IOTUS_PROTOCOL_NAME = } \
       ${eval include $(DATA_LINK_FOLDER)/$(protocol)/Makefile.$(protocol)} \
       ${eval IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)} \
       ${eval IOTUS_PROTOCOL_DATA_LINK_LIST += $(IOTUS_PROTOCOL_NAME)_data_link_protocol} \
-			${info Servicos do $(protocol): $(IOTUS_DATA_LINK_$(protocol)_SPECIFIC_SERVICES)} \
+      ${info Servicos do $(protocol): $(IOTUS_DATA_LINK_$(protocol)_SPECIFIC_SERVICES)} \
     )
 
     IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS_WCOMMA = \{$(subst $(space),$(comma),$(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))\}

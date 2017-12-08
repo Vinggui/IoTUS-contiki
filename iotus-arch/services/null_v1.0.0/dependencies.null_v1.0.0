@@ -1,4 +1,4 @@
 # This file should contain all the dependencies that this
 # service requires to work.
 
-IOTUS_SERVICE_DEPENDENCIES_LIST = mecaco
+IOTUS_SERVICE_DEPENDENCIES_LIST = 
