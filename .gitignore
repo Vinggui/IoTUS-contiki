@@ -9,7 +9,7 @@
 *.ihex
 *.pyc
 *.redbee-econotag
-*.econotag 
+*.econotag
 *.native
 *.z1
 *.minimal-net
@@ -134,3 +134,6 @@ LOG_OPENOCD
 #Eclipse files
 .cproject
 .project
+
+# atom files
+*.atom-build.yml

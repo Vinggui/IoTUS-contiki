@@ -51,7 +51,9 @@ run(void)
 
 static void
 close(void)
-{}
+{
+  
+}
 
 struct iotus_transport_protocol_struct null_transport_transport_protocol = {
   start,

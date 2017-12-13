@@ -1,2 +1,2 @@
 
-cmd: cd /home/vinicius/doutorado/contiki/new-examples/hello-world-iotus && make all TARGET=sky
+cmd: cd /mnt/c/linux/doutorado/contiki/new-examples/hello-world-iotus && make all TARGET=sky
