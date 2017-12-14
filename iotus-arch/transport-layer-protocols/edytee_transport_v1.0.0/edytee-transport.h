@@ -22,9 +22,11 @@
 #ifndef IOTUS_ARCH_TRANSPORT_LAYER_PROTOCOLS_EDYTEE_TRANSPORT_V1_0_0_EDYTEE_TRANSPORT_H_
 #define IOTUS_ARCH_TRANSPORT_LAYER_PROTOCOLS_EDYTEE_TRANSPORT_V1_0_0_EDYTEE_TRANSPORT_H_
 
+#include "iotus-core.h"
+
 PROCESS_NAME(edytee_transport);
 
-export struct iotus_transport_protocol_struct edytee_transport_transport_protocol;
+extern const struct iotus_transport_protocol_struct edytee_transport_protocol;
 
 
 #endif /* IOTUS_ARCH_TRANSPORT_LAYER_PROTOCOLS_EDYTEE_TRANSPORT_V1_0_0_EDYTEE_TRANSPORT_H_ */

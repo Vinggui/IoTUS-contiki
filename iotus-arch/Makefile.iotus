@@ -6,10 +6,16 @@ TRANSPORT_FOLDER = $(IOTUS_FOLDER)/transport-layer-protocols
 ROUTING_FOLDER = $(IOTUS_FOLDER)/routing-layer-protocols
 DATA_LINK_FOLDER = $(IOTUS_FOLDER)/data-link-layer-protocols
 SERVICES_FOLDER = $(IOTUS_FOLDER)/services
+IOTUS_DYNAMIC_HEADER_FILE = dyn-iotus-include-list.h
 
 comma=,
 empty=
 space=$(empty) $(empty)
+quotes="
+define linefeed
+
+
+endef
 
 # Funtions for this makefile
 reverse = $(if $(1),$(call reverse,$(wordlist 2,$(words $(1)),$(1)))) $(firstword $(1))
@@ -86,96 +92,93 @@ ifdef IOTUS_CONF_COMPILE_MODE
       IOTUS_CONF_DATA_LINK_PROTOCOLS_LIST = $(sort $(DATA_LINK_PROTOCOLS_FULL_LIST))
     endif
 
+    ############################################################################
     # Add every service and its dependencies to the list of compilation
-    # Take care with this code, it can be really tricky and able to bugs
-    $(foreach protocol, $(IOTUS_CONF_TRANSPORT_PROTOCOLS_LIST), \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST = ) \
-      $(eval include $(TRANSPORT_FOLDER)/$(protocol)/dependencies.$(protocol)) \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(eval temp_protocol_dedicated_list = $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(call add_sub_dependencies,temp_protocol_dedicated_list) \
-      $(eval IOTUS_TRANSPORT_$(protocol)_SPECIFIC_SERVICES = $(temp_protocol_dedicated_list)) \
-    )
-    $(foreach protocol, $(IOTUS_CONF_ROUTING_PROTOCOLS_LIST), \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST = ) \
-      $(eval include $(ROUTING_FOLDER)/$(protocol)/dependencies.$(protocol)) \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(eval temp_protocol_dedicated_list = $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(call add_sub_dependencies,temp_protocol_dedicated_list) \
-      $(eval IOTUS_ROUTING_$(protocol)_SPECIFIC_SERVICES = $(temp_protocol_dedicated_list)) \
-    )
-    $(foreach protocol, $(IOTUS_CONF_DATA_LINK_PROTOCOLS_LIST), \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST = ) \
-      $(eval include $(DATA_LINK_FOLDER)/$(protocol)/dependencies.$(protocol)) \
-      $(eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(eval temp_protocol_dedicated_list = $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
-      $(call add_sub_dependencies,temp_protocol_dedicated_list) \
-      $(eval IOTUS_DATA_LINK_$(protocol)_SPECIFIC_SERVICES = $(temp_protocol_dedicated_list)) \
-    )
+    add_protocols_dependencies = \
+      $(foreach protocol, $(IOTUS_CONF_$(1)_PROTOCOLS_LIST), \
+        $(eval IOTUS_SERVICE_DEPENDENCIES_LIST = ) \
+        $(eval include $($(1)_FOLDER)/$(protocol)/dependencies.$(protocol)) \
+        $(eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
+        $(eval temp_protocol_dedicated_list = $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
+        $(call add_sub_dependencies,temp_protocol_dedicated_list) \
+        $(eval IOTUS_$(1)_$(protocol)_SPECIFIC_SERVICES = $(temp_protocol_dedicated_list)) \
+      )
+
+    # Execute this for Transport
+    $(call add_protocols_dependencies,TRANSPORT)
+    # Execute this for Routing
+    $(call add_protocols_dependencies,ROUTING)
+    # Execute this for Data link
+    $(call add_protocols_dependencies,DATA_LINK)
+    ############################################################################
 
     # Clean duplicates in service list
     IOTUS_SERVICES_LIST = $(sort $(IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL))
 
     # Expand the service list to their own dependencies
     $(call add_sub_dependencies,IOTUS_SERVICES_LIST)
+
     service_counter = 0
     # Go for the compilation step of each service
     $(foreach service, $(IOTUS_SERVICES_LIST), \
+      $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
       $(eval include $(SERVICES_FOLDER)/$(service)/Makefile.$(service)) \
+      $(if $(IOTUS_MODULE_MAIN_HEADER_FILE),\
+        $(eval temp_modules_main_header_list += $(IOTUS_MODULE_MAIN_HEADER_FILE)), \
+        $(error IOTUS_MODULE_MAIN_HEADER_FILE for service $(service) is not defined!) \
+      ) \
       $(eval service_counter = $(shell expr $(service_counter) + 1 )) \
     )
 
     # Determine the size of the buffer that each buffer will have to hold for every service
-    IOTUS_BUFFER_SIZE = $(shell expr \( 7 + $(service_counter) \) / 8)
+    IOTUS_DEPENDENCIES_BUFFER_SIZE = $(shell expr \( 7 + $(service_counter) \) / 8)
+    CFLAGS += -DIOTUS_DEPENDENCIES_BUFFER_SIZE=$(IOTUS_DEPENDENCIES_BUFFER_SIZE)
 
     #######################################################################################
     # Add every protocol`s makefiles and set their own define of service that will be used
-    $(foreach protocol, $(IOTUS_CONF_TRANSPORT_PROTOCOLS_LIST), \
-      $(eval IOTUS_PROTOCOL_NAME = ) \
-      $(eval include $(TRANSPORT_FOLDER)/$(protocol)/Makefile.$(protocol)) \
-      $(if $(filter $(IOTUS_PROTOCOL_NAME),$(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS)),\
-        $(error Transport protocol name $(IOTUS_PROTOCOL_NAME) is not unique!)\
-      ) \
-      $(eval IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)) \
-      $(eval IOTUS_PROTOCOL_TRANSPORT_LIST += $(IOTUS_PROTOCOL_NAME)_transport_protocol) \
-      $(eval buffer_creator_counter = 0) \
-      $(eval temp_buffer_creator=0b) \
-      $(foreach service_used,$(IOTUS_SERVICES_LIST), \
-        $(if $(filter 8,$(buffer_creator_counter)),\
-          $(eval temp_buffer_creator=$(temp_buffer_creator),0b)\
-          $(eval buffer_creator_counter = 0)\
-        )\
-        $(eval buffer_creator_counter = $(shell expr $(buffer_creator_counter) + 1)) \
-        $(if $(filter $(service_used),$(IOTUS_TRANSPORT_$(protocol)_SPECIFIC_SERVICES)), \
-          $(eval temp_buffer_creator=$(temp_buffer_creator)1), \
-          $(eval temp_buffer_creator=$(temp_buffer_creator)0) \
+    add_protocols_makefile = \
+      $(foreach protocol, $(IOTUS_CONF_$(1)_PROTOCOLS_LIST), \
+        $(eval IOTUS_PROTOCOL_NAME = ) \
+        $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
+        $(eval include $($(1)_FOLDER)/$(protocol)/Makefile.$(protocol)) \
+        $(if $(IOTUS_PROTOCOL_NAME),,\
+          $(error IOTUS_PROTOCOL_NAME for $(protocol) is not defined!)\
         ) \
-      ) \
-      $(call complete_buffer_with_zero,$(buffer_creator_counter),temp_buffer_creator) \
-      $(eval IOTUS_MODULE_SERVICE_ARRAY_$(IOTUS_PROTOCOL_NAME)=$(temp_buffer_creator)) \
-    )
+        $(if $(IOTUS_MODULE_MAIN_HEADER_FILE),\
+          $(eval temp_modules_main_header_list += $(IOTUS_MODULE_MAIN_HEADER_FILE)), \
+          $(error IOTUS_MODULE_MAIN_HEADER_FILE for $(protocol) is not defined!) \
+        ) \
+        $(if $(filter $(IOTUS_PROTOCOL_NAME),$(IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS)),\
+          $(error $(1) protocol name $(IOTUS_PROTOCOL_NAME) is not unique!)\
+        ) \
+        $(eval IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)) \
+        $(eval IOTUS_PROTOCOL_$(1)_LIST += $(IOTUS_PROTOCOL_NAME)_protocol) \
+        $(eval buffer_creator_counter = 0) \
+        $(eval temp_buffer_creator={0b) \
+        $(foreach service_used,$(IOTUS_SERVICES_LIST), \
+          $(if $(filter 8,$(buffer_creator_counter)),\
+            $(eval temp_buffer_creator=$(temp_buffer_creator),0b)\
+            $(eval buffer_creator_counter = 0)\
+          )\
+          $(eval buffer_creator_counter = $(shell expr $(buffer_creator_counter) + 1)) \
+          $(if $(filter $(service_used),$(IOTUS_$(1)_$(protocol)_SPECIFIC_SERVICES)), \
+            $(eval temp_buffer_creator=$(temp_buffer_creator)1), \
+            $(eval temp_buffer_creator=$(temp_buffer_creator)0) \
+          ) \
+        ) \
+        $(call complete_buffer_with_zero,$(buffer_creator_counter),temp_buffer_creator) \
+        $(if $(IOTUS_LAYER_$(1)_SERVICE_ARRAY),\
+          $(eval IOTUS_LAYER_$(1)_SERVICE_ARRAY=$(IOTUS_LAYER_$(1)_SERVICE_ARRAY),$(temp_buffer_creator)}), \
+          $(eval IOTUS_LAYER_$(1)_SERVICE_ARRAY=$(temp_buffer_creator)}) \
+        ) \
+      )
 
-    ############################################################################
-    $(foreach protocol, $(IOTUS_CONF_ROUTING_PROTOCOLS_LIST), \
-      $(eval IOTUS_PROTOCOL_NAME = ) \
-      $(eval include $(ROUTING_FOLDER)/$(protocol)/Makefile.$(protocol)) \
-      $(if $(filter $(IOTUS_PROTOCOL_NAME),$(IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS)), \
-        $(error Routing protocol name $(IOTUS_PROTOCOL_NAME) is not unique!) \
-      ) \
-      $(eval IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)) \
-      $(eval IOTUS_PROTOCOL_ROUTING_LIST += $(IOTUS_PROTOCOL_NAME)_routing_protocol) \
-    )
-
-    ############################################################################
-    $(foreach protocol, $(IOTUS_CONF_DATA_LINK_PROTOCOLS_LIST), \
-      $(eval IOTUS_PROTOCOL_NAME = ) \
-      $(eval include $(DATA_LINK_FOLDER)/$(protocol)/Makefile.$(protocol)) \
-      $(if $(filter $(IOTUS_PROTOCOL_NAME),$(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS)), \
-        $(error Data link protocol name $(IOTUS_PROTOCOL_NAME) is not unique!) \
-      ) \
-      $(eval IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS += $(IOTUS_PROTOCOL_NAME)) \
-      $(eval IOTUS_PROTOCOL_DATA_LINK_LIST += $(IOTUS_PROTOCOL_NAME)_data_link_protocol) \
-    )
+    # Execute this for Transport
+    $(call add_protocols_makefile,TRANSPORT)
+    # Execute this for Routing
+    $(call add_protocols_makefile,ROUTING)
+    # Execute this for Data link
+    $(call add_protocols_makefile,DATA_LINK)
     #######################################################################################
 
     $(info Transport protocols used are: $(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))
@@ -183,25 +186,38 @@ ifdef IOTUS_CONF_COMPILE_MODE
     $(info Data link protocols used are: $(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS))
     $(info Services used are: $(IOTUS_SERVICES_LIST))
 
+    # Create the dynamic header file that will carry all the protocols and services includes
+    temp_list_all_modules = $(addsuffix $(quotes),\
+      $(addprefix \#include:$(quotes),\
+        $(sort $(temp_modules_main_header_list)) \
+      )\
+    )
+    COMPLETE_PROTOCOL_SERVICE_LIST=$(subst :,$(space),\
+      $(subst $(space),$(linefeed),\
+        $(temp_list_all_modules)\
+      )\
+    )
+    CFLAGS += -DIOTUS_DYNAMIC_HEADER_FILE=\"$(IOTUS_DYNAMIC_HEADER_FILE)\"
 
-    IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))\)
-    IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS))\)
-    IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS))\)
+    $(file >$(IOTUS_FOLDER)/$(IOTUS_DYNAMIC_HEADER_FILE),$(COMPLETE_PROTOCOL_SERVICE_LIST))
 
-    IOTUS_PROTOCOL_TRANSPORT_LIST_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_TRANSPORT_LIST))\)
-    IOTUS_PROTOCOL_ROUTING_LIST_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_ROUTING_LIST))\)
-    IOTUS_PROTOCOL_DATA_LINK_LIST_WCOMMA = \($(subst $(space),$(comma),$(IOTUS_PROTOCOL_DATA_LINK_LIST))\)
+    ######################################################################################
+    setup_defines_into_iotus_core = \
+      $(eval IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS_WCOMMA = \{$(subst $(space),$(comma),$(IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS))\}) \
+      $(eval IOTUS_PROTOCOL_$(1)_LIST_WCOMMA = \{$(subst $(space),$(comma),$(addprefix \&,$(IOTUS_PROTOCOL_$(1)_LIST)))\}) \
+      $(eval CFLAGS += -DIOTUS_PROTOCOL_$(1)_ENUM_OPTIONS=$(IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS_WCOMMA)) \
+      $(eval CFLAGS += -DIOTUS_PROTOCOL_$(1)_LIST=$(IOTUS_PROTOCOL_$(1)_LIST_WCOMMA)) \
+      $(eval temp_var_adding_brackets=\{$(IOTUS_LAYER_$(1)_SERVICE_ARRAY)\}) \
+      $(eval CFLAGS += -DIOTUS_LAYER_$(1)_SERVICE_ARRAY=$(temp_var_adding_brackets)) \
 
-    # Create the enum list for the user selection
-    CFLAGS += -DIOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS=$(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS_WCOMMA)
-    CFLAGS += -DIOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS=$(IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS_WCOMMA)
-    CFLAGS += -DIOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS=$(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS_WCOMMA)
 
-    # Create the list of structs that will be available for function call
-    CFLAGS += -DIOTUS_PROTOCOL_TRANSPORT_LIST=$(IOTUS_PROTOCOL_TRANSPORT_LIST_WCOMMA)
-    CFLAGS += -DIOTUS_PROTOCOL_ROUTING_LIST=$(IOTUS_PROTOCOL_ROUTING_LIST_WCOMMA)
-    CFLAGS += -DIOTUS_PROTOCOL_DATA_LINK_LIST=$(IOTUS_PROTOCOL_DATA_LINK_LIST_WCOMMA)
-
+    # Execute this for Transport
+    $(call setup_defines_into_iotus_core,TRANSPORT)
+    # Execute this for Routing
+    $(call setup_defines_into_iotus_core,ROUTING)
+    # Execute this for Data link
+    $(call setup_defines_into_iotus_core,DATA_LINK)
+    ######################################################################################
   else
     ifneq (,$(findstring STATIC,$(COMPILE_MODE_UPPERCASE)))
       $(info IoTUS net stack compiling in "static" mode.)

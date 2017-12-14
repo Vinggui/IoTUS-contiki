@@ -5,6 +5,7 @@ MODULES += iotus-arch/routing-layer-protocols/edytee_routing_v1.0.0
 
 CONTIKI_TARGET_SOURCEFILES += edytee-routing.c
 
-IOTUS_SERVICE_FILES= 
+IOTUS_SERVICE_FILES=
 
+IOTUS_MODULE_MAIN_HEADER_FILE = edytee-routing.h
 IOTUS_PROTOCOL_NAME = edytee_routing

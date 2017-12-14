@@ -13,7 +13,8 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
-
+ #include "iotus-core.h"
+ #include "edytee-transport.h"
 
 PROCESS(edytee_transport, "EDyTEE Transport Protocol");
 
@@ -52,7 +53,7 @@ static void
 close(void)
 {}
 
-struct iotus_transport_protocol_struct edytee_transport_transport_protocol = {
+const struct iotus_transport_protocol_struct edytee_transport_protocol = {
   start,
   run,
   close

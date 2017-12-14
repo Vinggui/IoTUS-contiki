@@ -4,4 +4,5 @@ MODULES += iotus-arch/services/packet_v1.0.0
 
 CONTIKI_TARGET_SOURCEFILES += packet.c
 
+IOTUS_MODULE_MAIN_HEADER_FILE = packet.h
 IOTUS_SERVICE_NAME = packet

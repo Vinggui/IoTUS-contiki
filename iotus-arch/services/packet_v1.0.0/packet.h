@@ -29,7 +29,7 @@ packet_create_msg_piece(uint8_t headerSize, uint16_t payloadSize,
     const uint8_t* header, const uint8_t* payload);
 
 void
-packet_delete_msg_piece(void *msgPiece)*
+packet_delete_msg_piece(void *msgPiece);
 
 #endif /* IOTUS_ARCH_SERVICES_PACKET_SIMPLE_PACKET_H_ */
 

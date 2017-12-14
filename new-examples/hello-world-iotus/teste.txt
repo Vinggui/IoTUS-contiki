@@ -1,0 +1,11 @@
+IoTUS net stack compiling in "Dynamic" mode.
+Using the following profiles- ALL ENERGY_AWARE
+Transport protocols used are: null_transport
+Routing protocols used are: edytee_routing null_routing
+Data link protocols used are: edytee_MAC null_MAC
+Services used are: packet_v1.0.0
+merrda {0b10000000}
+merrda {0b10000000},{0b00000000}
+merrda {0b10000000},{0b10000000}
+  CC        ../../iotus-arch/iotus-core.c
+../../Makefile.include:279: recipe for target 'contiki-sky.a' failed

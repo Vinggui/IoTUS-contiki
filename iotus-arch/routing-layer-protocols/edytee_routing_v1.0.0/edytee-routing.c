@@ -54,7 +54,7 @@ static void
 close(void)
 {}
 
-struct iotus_routing_protocol_struct edytee_routing_routing_protocol = {
+const struct iotus_routing_protocol_struct edytee_routing_protocol = {
   start,
   run,
   close

@@ -8,17 +8,17 @@
  */
 
 /*
- * null-transport.c
+ * null-MAC.c
  *
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
+#include "contiki.h"
 
-
-PROCESS(null_transport, "Null Transport Protocol");
+PROCESS(null_MAC_proc, "Null MAC Protocol");
 
 /* Implementation of the IoTus core process */
-PROCESS_THREAD(null_transport, ev, data)
+PROCESS_THREAD(null_MAC_proc, ev, data)
 {
   /* variables are declared static to ensure their values are kept
    * between kernel calls.
@@ -51,15 +51,14 @@ run(void)
 
 static void
 close(void)
-{
-  
-}
+{}
 
-struct iotus_transport_protocol_struct null_transport_transport_protocol = {
+const struct iotus_data_link_protocol_struct null_MAC_protocol = {
   start,
   run,
   close
 };
+
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 

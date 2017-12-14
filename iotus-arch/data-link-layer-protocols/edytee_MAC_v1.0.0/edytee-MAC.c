@@ -13,13 +13,12 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
+#include "contiki.h"
 
-
-
-PROCESS(edytee_MAC, "EDyTEE MAC Protocol");
+PROCESS(edytee_MAC_proc, "EDyTEE MAC Protocol");
 
 /* Implementation of the IoTus core process */
-PROCESS_THREAD(edytee_MAC, ev, data)
+PROCESS_THREAD(edytee_MAC_proc, ev, data)
 {
   /* variables are declared static to ensure their values are kept
    * between kernel calls.
@@ -54,7 +53,7 @@ static void
 close(void)
 {}
 
-struct iotus_data_link_protocol_struct edytee_MAC_data_link_protocol = {
+const struct iotus_data_link_protocol_struct edytee_MAC_protocol = {
   start,
   run,
   close

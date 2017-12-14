@@ -22,8 +22,7 @@
 #ifndef IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_
 #define IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_
 
-PROCESS_NAME(null_routing);
-export struct iotus_routing_protocol_struct null_rounting_routing_protocol;
+extern struct iotus_routing_protocol_struct null_routing_protocol;
 
 
 #endif /* IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_ */

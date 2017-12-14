@@ -2,65 +2,65 @@
 
 ####################### null Profile #######################
 # Transport protocols
-NULL_TRANSPORT = null_v1.0.0
+NULL_TRANSPORT = null_transport_v1.0.0
 
 # Routing protocols
-NULL_ROUTING = null_v1.0.0
+NULL_ROUTING = null_routing_v1.0.0
 
 # Data link protocols
-NULL_DATA_LINK = null_v1.0.0
+NULL_DATA_LINK = null_MAC_v1.0.0
 
 
 ####################### ENERGY AWARE Profile #######################
 # Transport protocols
 ENERGY_AWARE_TRANSPORT = \
-  null_v1.0.0
+  null_transport_v1.0.0
 
 # Routing protocols
 ENERGY_AWARE_ROUTING = \
-  null_v1.0.0 \
+  null_routing_v1.0.0 \
   edytee_routing_v1.0.0
 
 # Data link protocols
 ENERGY_AWARE_DATA_LINK = \
-  null_v1.0.0 \
+  null_MAC_v1.0.0 \
   edytee_MAC_v1.0.0
 
 
 
 ####################### LOW LATENCY Profile #######################
 # Transport protocols
-LOW_LATENCY_TRANSPORT = 
+LOW_LATENCY_TRANSPORT =
 
 #  Routing protocols
-LOW_LATENCY_ROUTING = 
+LOW_LATENCY_ROUTING =
 
 # Data link protocols
-LOW_LATENCY_DATA_LINK = 
+LOW_LATENCY_DATA_LINK =
 
 
 ####################### HIGH MOBILITY Profile #######################
 # Transport protocols
-HIGH_MOBILITY_TRANSPORT = 
+HIGH_MOBILITY_TRANSPORT =
 
 # Routing protocols
-HIGH_MOBILITY_ROUTING = 
+HIGH_MOBILITY_ROUTING =
 
 # Data link protocols
-HIGH_MOBILITY_DATA_LINK = 
+HIGH_MOBILITY_DATA_LINK =
 
 
 ####################### ALL Profile #######################
 # Transport protocols
 ALL_TRANSPORT = \
-  null_v1.0.0
+  null_transport_v1.0.0
 
 # Routing protocols
 ALL_ROUTING = \
-  null_v1.0.0 \
+  null_routing_v1.0.0 \
   edytee_routing_v1.0.0
 
 # Data link protocols
 ALL_DATA_LINK = \
-  null_v1.0.0 \
+  null_MAC_v1.0.0 \
   edytee_MAC_v1.0.0
