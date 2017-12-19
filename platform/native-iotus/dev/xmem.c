@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2004, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,59 +28,60 @@
  *
  * This file is part of the Contiki operating system.
  *
+ * Author: Adam Dunkels <adam@sics.se>
+ *
  */
 
-/**
- * \file
- *         A very simple Contiki application showing how Contiki programs look
- * \author
- *         Adam Dunkels <adam@sics.se>
- */
+#include "contiki-conf.h"
+#include "dev/xmem.h"
 
-#include "contiki.h"
-#include "dev/leds.h"
-#include <stdio.h> /* For printf() */
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+
+#define XMEM_SIZE 1024 * 1024
+
+static unsigned char xmem[XMEM_SIZE];
 /*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Test process");
-AUTOSTART_PROCESSES(&hello_world_process);
+int
+xmem_pwrite(const void *buf, int size, unsigned long offset)
+{
+  /*  int f;
+  char name[400];
+
+  snprintf(name, sizeof(name), "xmem.%d.%d", node_x(), node_y());
+  f = open(name, O_WRONLY | O_APPEND | O_CREAT, 0644);
+  lseek(f, addr, SEEK_SET);
+  write(f, buf, size);
+  close(f);*/
+
+  /*  printf("xmem_write(offset 0x%02x, buf %p, size %l);\n", offset, buf, size);*/
+
+  memcpy(&xmem[offset], buf, size);
+  return size;
+}
 /*---------------------------------------------------------------------------*/
+int
+xmem_pread(void *buf, int size, unsigned long offset)
+{
+  /*  printf("xmem_read(addr 0x%02x, buf %p, size %d);\n", addr, buf, size);*/
+  memcpy(buf, &xmem[offset], size);
+  return size;
+}
+/*---------------------------------------------------------------------------*/
+int
+xmem_erase(long nbytes, unsigned long offset)
+{
+  /*  printf("xmem_read(addr 0x%02x, buf %p, size %d);\n", addr, buf, size);*/
+  memset(&xmem[offset], 0, nbytes);
+  return nbytes;
+}
+/*---------------------------------------------------------------------------*/
+void
+xmem_init(void)
+{
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
-    printf("message sent\n");
-}*/
-
-PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
-
-    //leds_init();
-    //leds_off(LEDS_ALL);
-
-
-    //static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
-
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
-    start_new_comm_stack(0,0,0);
-
-    for(;;) {
-        PROCESS_WAIT_EVENT();
-
-    printf("Hi\n");
-    //leds_toggle(LEDS_ALL);
-    //if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-    //}
-    //etimer_reset(&timer);
-
-    }
-
-
-
-    PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

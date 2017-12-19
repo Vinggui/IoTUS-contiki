@@ -38,6 +38,7 @@ struct msg_piece {
   COMMON_STRUCT_PIECES(struct msg_piece);
   void *callbackHandler;
   uint16_t timeout;
+  uint8_t priority;
   uint8_t destination[IOTUS_RADIO_FULL_ADDRESS];
 };
 
@@ -139,7 +140,7 @@ packet_delete_piece(void *piecePointer) {
 
 void*
 packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
-    uint8_t allowFragmentation, uint16_t timeout, const uint8_t* payload,
+    uint8_t allowFragmentation, uint8_t requestedBasicServices, uint16_t timeout, const uint8_t* payload,
     const uint8_t *destination, void *callbackFunction)
 {
   void* newMsg = malloc_piece(payloadSize, sizeof(struct msg_piece));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2008, Swedish Institute of Computer Science
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,55 +32,46 @@
 
 /**
  * \file
- *         A very simple Contiki application showing how Contiki programs look
+ *	Coffee architecture-dependent header for the native platform.
  * \author
- *         Adam Dunkels <adam@sics.se>
+ * 	Nicolas Tsiftes <nvt@sics.se>
  */
 
-#include "contiki.h"
-#include "dev/leds.h"
-#include <stdio.h> /* For printf() */
-/*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Test process");
-AUTOSTART_PROCESSES(&hello_world_process);
-/*---------------------------------------------------------------------------*/
+#ifndef CFS_COFFEE_ARCH_H
+#define CFS_COFFEE_ARCH_H
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
-    printf("message sent\n");
-}*/
+#include "contiki-conf.h"
+#include "dev/xmem.h"
 
-PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
+#define COFFEE_SECTOR_SIZE		65536UL
+#define COFFEE_PAGE_SIZE		256UL
+#define COFFEE_START			0
+#define COFFEE_SIZE			((1024UL * 1024UL) - COFFEE_START)
+#define COFFEE_NAME_LENGTH		16
+#define COFFEE_DYN_SIZE			16384
+#define COFFEE_MAX_OPEN_FILES		6
+#define COFFEE_FD_SET_SIZE		8
+#define COFFEE_LOG_DIVISOR		4
+#define COFFEE_LOG_SIZE			8192
+#define COFFEE_LOG_TABLE_LIMIT		256
+#define COFFEE_MICRO_LOGS		0
 
-    //leds_init();
-    //leds_off(LEDS_ALL);
+#define COFFEE_WRITE(buf, size, offset)				\
+		xmem_pwrite((char *)(buf), (size), COFFEE_START + (offset))
 
+#define COFFEE_READ(buf, size, offset)				\
+  		xmem_pread((char *)(buf), (size), COFFEE_START + (offset))
 
-    //static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
+#define COFFEE_ERASE(sector)					\
+  		xmem_erase(COFFEE_SECTOR_SIZE, COFFEE_START + (sector) * COFFEE_SECTOR_SIZE)
 
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
-    start_new_comm_stack(0,0,0);
+#define READ_HEADER(hdr, page)						\
+  COFFEE_READ((hdr), sizeof (*hdr), (page) * COFFEE_PAGE_SIZE)
 
-    for(;;) {
-        PROCESS_WAIT_EVENT();
+#define WRITE_HEADER(hdr, page)						\
+  COFFEE_WRITE((hdr), sizeof (*hdr), (page) * COFFEE_PAGE_SIZE)
 
-    printf("Hi\n");
-    //leds_toggle(LEDS_ALL);
-    //if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-    //}
-    //etimer_reset(&timer);
+/* Coffee types. */
+typedef int16_t coffee_page_t;
 
-    }
-
-
-
-    PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
+#endif /* !COFFEE_ARCH_H */

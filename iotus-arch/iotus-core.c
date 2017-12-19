@@ -13,12 +13,21 @@
  *  Created on: Oct 23, 2017
  *      Author: vinicius
  */
+#include <stdio.h>
+#include <stdlib.h>
 #include "contiki.h"
 #include "iotus-core.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
 */
 #include IOTUS_DYNAMIC_HEADER_FILE
+
+#define DEBUG 1
+#if DEBUG
+#define PRINTF(...) printf(__VA_ARGS__)
+#else /* DEBUG */
+#define PRINTF(...)
+#endif /* DEBUG */
 
 static const struct iotus_transport_protocol_struct *available_transport_protocols_array[] =
 IOTUS_PROTOCOL_TRANSPORT_LIST;
@@ -38,9 +47,9 @@ IOTUS_LAYER_DATA_LINK_SERVICE_ARRAY;
 PROCESS(iotus_core_process, "Core IoTUS Process");
 
 
-void start_new_comm_stack (void)
+void start_new_comm_stack (iotus_transport_protocols transport, iotus_routing_protocols routing, iotus_data_link_protocols data_link)
 {
-  //TODO Create the start of the iotus core system
+  printf("teste!!!\n");
 }
 
 

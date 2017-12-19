@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2005, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,61 +26,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This file is part of the Contiki operating system.
+ * This file is part of the Configurable Sensor Network Application
+ * Architecture for sensor nodes running the Contiki operating system.
  *
+ *
+ * -----------------------------------------------------------------
+ *
+ * Author  : Adam Dunkels, Joakim Eriksson, Niclas Finne
+ * Created : 2005-11-01
+ * Updated : $Date: 2006/06/17 22:41:31 $
+ *           $Revision: 1.1 $
  */
 
-/**
- * \file
- *         A very simple Contiki application showing how Contiki programs look
- * \author
- *         Adam Dunkels <adam@sics.se>
- */
+#ifndef TEMPERATURE_SENSOR_H_
+#define TEMPERATURE_SENSOR_H_
 
-#include "contiki.h"
-#include "dev/leds.h"
-#include <stdio.h> /* For printf() */
-/*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Test process");
-AUTOSTART_PROCESSES(&hello_world_process);
-/*---------------------------------------------------------------------------*/
+#include "lib/sensors.h"
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
-    printf("message sent\n");
-}*/
+extern const struct sensors_sensor temperature_sensor;
 
-PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
+#define TEMPERATURE_SENSOR "Temperature"
 
-    //leds_init();
-    //leds_off(LEDS_ALL);
-
-
-    //static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
-
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
-    start_new_comm_stack(0,0,0);
-
-    for(;;) {
-        PROCESS_WAIT_EVENT();
-
-    printf("Hi\n");
-    //leds_toggle(LEDS_ALL);
-    //if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-    //}
-    //etimer_reset(&timer);
-
-    }
-
-
-
-    PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
+#endif /* TEMPERATURE_SENSOR_H_ */

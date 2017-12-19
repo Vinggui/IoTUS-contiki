@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2005, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,55 +32,29 @@
 
 /**
  * \file
- *         A very simple Contiki application showing how Contiki programs look
+ *         A brief description of what this file is.
  * \author
  *         Adam Dunkels <adam@sics.se>
  */
 
-#include "contiki.h"
 #include "dev/leds.h"
-#include <stdio.h> /* For printf() */
+static unsigned char leds;
 /*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Test process");
-AUTOSTART_PROCESSES(&hello_world_process);
+void
+leds_arch_init(void)
+{
+  leds = 0;
+}
 /*---------------------------------------------------------------------------*/
-
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
-    printf("message sent\n");
-}*/
-
-PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
-
-    //leds_init();
-    //leds_off(LEDS_ALL);
-
-
-    //static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
-
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
-    start_new_comm_stack(0,0,0);
-
-    for(;;) {
-        PROCESS_WAIT_EVENT();
-
-    printf("Hi\n");
-    //leds_toggle(LEDS_ALL);
-    //if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-    //}
-    //etimer_reset(&timer);
-
-    }
-
-
-
-    PROCESS_END();
+unsigned char
+leds_arch_get(void)
+{
+  return leds;
+}
+/*---------------------------------------------------------------------------*/
+void
+leds_arch_set(unsigned char l)
+{
+  leds = l;
 }
 /*---------------------------------------------------------------------------*/

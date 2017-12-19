@@ -22,9 +22,9 @@
 #ifndef IOTUS_ARCH_IOTUS_CORE_H_
 #define IOTUS_ARCH_IOTUS_CORE_H_
 
-enum iotus_transport_protocols IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS;
-enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS;
-enum iotus_data_link_protocols IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS;
+typedef enum iotus_transport_protocols IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS iotus_transport_protocols;
+typedef enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS iotus_routing_protocols;
+typedef enum iotus_data_link_protocols IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS iotus_data_link_protocols;
 
 struct iotus_transport_protocol_struct {
   void (* start)(void);
@@ -55,6 +55,6 @@ struct iotus_service_module_struct {
 //************************************************************************
 
 //Functions that must be available
-void start_new_comm_stack (void);
+void start_new_comm_stack (iotus_transport_protocols transport, iotus_routing_protocols routing, iotus_data_link_protocols data_link);
 
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */
