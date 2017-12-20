@@ -31,6 +31,9 @@ packet_create_msg_piece(uint8_t headerSize, uint16_t payloadSize,
 void
 packet_delete_msg_piece(void *msgPiece);
 
+
+extern struct iotus_service_module_struct packet_service_module;
+
 #endif /* IOTUS_ARCH_SERVICES_PACKET_SIMPLE_PACKET_H_ */
 
 

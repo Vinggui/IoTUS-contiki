@@ -183,6 +183,8 @@ packet_create_header_piece(uint16_t headerSize, uint8_t isSingleBit,
 static void
 start(void)
 {
+  printf("Starting packet service\n");
+  
   // Initiate the lists of module
   LIST(packetMsgList);
   list_init(packetMsgList);

@@ -39,12 +39,15 @@ recursirve_add_dependencies = $(if $(1),\
 ifndef IOTUS_CONF_USING_TRANSPORT
   $(error Application makefile must define IOTUS_CONF_USING_TRANSPORT equals to 0 or 1)
 endif
+CFLAGS+= -DIOTUS_CONF_USING_TRANSPORT=$(IOTUS_CONF_USING_TRANSPORT)
 ifndef IOTUS_CONF_USING_ROUTING
   $(error Application makefile must define IOTUS_CONF_USING_ROUTING equals to 0 or 1)
 endif
+CFLAGS+= -DIOTUS_CONF_USING_ROUTING=$(IOTUS_CONF_USING_ROUTING)
 ifndef IOTUS_CONF_USING_DATA_LINK
   $(error Application makefile must define IOTUS_CONF_USING_DATA_LINK equals to 0 or 1)
 endif
+CFLAGS+= -DIOTUS_CONF_USING_DATA_LINK=$(IOTUS_CONF_USING_DATA_LINK)
 
 
 # Verify if user defined a type of compilation mode
@@ -123,16 +126,27 @@ ifdef IOTUS_CONF_COMPILE_MODE
     $(foreach service, $(IOTUS_SERVICES_LIST), \
       $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
       $(eval include $(SERVICES_FOLDER)/$(service)/Makefile.$(service)) \
+      $(if $(IOTUS_SERVICE_NAME),,\
+        $(error IOTUS_SERVICE_NAME for $(service) is not defined!)\
+      ) \
       $(if $(IOTUS_MODULE_MAIN_HEADER_FILE),\
         $(eval temp_modules_main_header_list += $(IOTUS_MODULE_MAIN_HEADER_FILE)), \
         $(error IOTUS_MODULE_MAIN_HEADER_FILE for service $(service) is not defined!) \
       ) \
+      $(if $(filter $(IOTUS_SERVICE_NAME),$(IOTUS_SERVICE_STRUCT_LIST)),\
+        $(error Service name $(IOTUS_SERVICE_NAME) is not unique!)\
+      ) \
       $(eval service_counter = $(shell expr $(service_counter) + 1 )) \
+      $(eval IOTUS_SERVICE_MODULES_LIST = $(IOTUS_SERVICE_MODULES_LIST) $(IOTUS_SERVICE_NAME)_service_module) \
     )
 
     # Determine the size of the buffer that each buffer will have to hold for every service
     IOTUS_DEPENDENCIES_BUFFER_SIZE = $(shell expr \( 7 + $(service_counter) \) / 8)
     CFLAGS += -DIOTUS_DEPENDENCIES_BUFFER_SIZE=$(IOTUS_DEPENDENCIES_BUFFER_SIZE)
+    CFLAGS += -DIOTUS_TOTAL_SERVICES_USED=$(service_counter)
+
+		IOTUS_SERVICE_MODULES_LIST_WCOMMA = \{$(subst $(space),$(comma),$(addprefix \&,$(IOTUS_SERVICE_MODULES_LIST)))\}
+    CFLAGS += -DIOTUS_SERVICE_MODULES_LIST=$(IOTUS_SERVICE_MODULES_LIST_WCOMMA)
 
     #######################################################################################
     # Add every protocol`s makefiles and set their own define of service that will be used

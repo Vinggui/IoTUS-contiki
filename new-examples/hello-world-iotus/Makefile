@@ -1,6 +1,6 @@
 CONTIKI_PROJECT = hello-world-iotus
 
-# For the use of the new archtecture, this declaration is necessary 
+# For the use of the new archtecture, this declaration is necessary
 CONTIKI_COMM_NEW_STACK = IoTUS
 
 # These 3 declarations are mandatory to explicity define IoTUS
