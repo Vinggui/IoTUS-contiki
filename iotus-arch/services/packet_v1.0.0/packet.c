@@ -184,7 +184,7 @@ void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
-    printf("\tService Packet\n");
+    PRINTF("\tService Packet\n");
     // Initiate the lists of module
     LIST(packetMsgList);
     list_init(packetMsgList);

@@ -88,9 +88,9 @@ send_signal_to_services(iotus_service_signal signal, void *data)
     #ifdef IOTUS_COMPILE_MODE_DYNAMIC
     int     x = i/8; //This should walk to the right
     uint8_t y = i%8;
-    //printf("Step 1 buffer=%x ind=%i, x=%i pos=%x\n",iotus_services_installed[x],i,x,(1<<(7-y)));
+    //PRINTF("Step 1 buffer=%x ind=%i, x=%i pos=%x\n",iotus_services_installed[x],i,x,(1<<(7-y)));
     if(iotus_services_installed[x] & (1<<(7-y))) {
-      //printf("step 2\n");
+      //PRINTF("step 2\n");
       iotus_core_signal_process_list[i](signal, data);
     }
     #else
@@ -112,7 +112,7 @@ iotus_core_start_system (
   #endif
   )
 {
-  printf("Starting IoTUS core.\n");
+  PRINTF("Starting IoTUS core.\n");
 
   //Sum up the services to be Used
   int i=0;
@@ -127,28 +127,28 @@ iotus_core_start_system (
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   #if IOTUS_CONF_USING_TRANSPORT == 1
   i=0;
-  //printf("TRANS\n");
+  //PRINTF("TRANS\n");
   for(;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
     iotus_services_installed[i] |= iotus_transport_dependecies_table[transport][i];
-    //printf("TRANS=%x",iotus_transport_dependecies_table[transport][i]);
+    //PRINTF("TRANS=%x",iotus_transport_dependecies_table[transport][i]);
   }
   #endif /*IOTUS_CONF_USING_TRANSPORT == 1*/
 
   #if IOTUS_CONF_USING_ROUTING == 1
   i=0;
-  //printf("Rou\n");
+  //PRINTF("Rou\n");
   for(;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
     iotus_services_installed[i] |= iotus_routing_dependecies_table[routing][i];
-    //printf("v=%x",iotus_routing_dependecies_table[transport][i]);
+    //PRINTF("v=%x",iotus_routing_dependecies_table[transport][i]);
   }
   #endif/*IOTUS_CONF_USING_ROUTING == 1*/
 
   #if IOTUS_CONF_USING_DATA_LINK == 1
   i=0;
-  //printf("DATA\n ");
+  //PRINTF("DATA\n ");
   for(;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
     iotus_services_installed[i] |= iotus_data_link_dependecies_table[data_link][i];
-    //printf("Data=%x",iotus_data_link_dependecies_table[transport][i]);
+    //PRINTF("Data=%x",iotus_data_link_dependecies_table[transport][i]);
   }
   #endif /*IOTUS_CONF_USING_DATA_LINK == 1*/
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
@@ -210,6 +210,9 @@ PROCESS_THREAD(iotus_core_process, ev, data)
     #if IOTUS_CONF_USING_DATA_LINK == 1
     ACTIVE_DATA_LINK_PROTOCOL(run());
     #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
+
+    // Run each services
+    send_signal_to_services(IOTUS_RUN_SERVICE, NULL);
     PROCESS_PAUSE();
   }
   // any process must end with this, even if it is never reached.
