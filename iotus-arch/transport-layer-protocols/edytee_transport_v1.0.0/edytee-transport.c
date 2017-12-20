@@ -13,8 +13,16 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
+ #include <stdio.h>
  #include "iotus-core.h"
  #include "edytee-transport.h"
+
+#define DEBUG 1
+#if DEBUG
+#define PRINTF(...) printf(__VA_ARGS__)
+#else /* DEBUG */
+#define PRINTF(...)
+#endif /* DEBUG */
 
 PROCESS(edytee_transport, "EDyTEE Transport Protocol");
 
@@ -41,12 +49,14 @@ PROCESS_THREAD(edytee_transport, ev, data)
 static void
 start(void)
 {
+  printf("Starting edytee transport\n");
 }
 
 
 static void
 run(void)
 {
+  printf("Running edytee transport\n");
 }
 
 static void

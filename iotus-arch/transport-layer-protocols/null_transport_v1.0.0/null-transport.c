@@ -13,13 +13,22 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
+ #include <stdio.h>
  #include "contiki.h"
  #include "iotus-core.h"
  #include "null-transport.h"
 
+ #define DEBUG 1
+ #if DEBUG
+ #define PRINTF(...) printf(__VA_ARGS__)
+ #else /* DEBUG */
+ #define PRINTF(...)
+ #endif /* DEBUG */
+
 static void
 start(void)
 {
+  printf("Starting null transport\n");
 }
 
 

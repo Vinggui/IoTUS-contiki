@@ -13,7 +13,15 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
+#include <stdio.h>
 #include "contiki.h"
+
+#define DEBUG 1
+#if DEBUG
+#define PRINTF(...) printf(__VA_ARGS__)
+#else /* DEBUG */
+#define PRINTF(...)
+#endif /* DEBUG */
 
 PROCESS(null_MAC_proc, "Null MAC Protocol");
 
@@ -41,6 +49,7 @@ PROCESS_THREAD(null_MAC_proc, ev, data)
 static void
 start(void)
 {
+  printf("Starting null MAC\n");
 }
 
 

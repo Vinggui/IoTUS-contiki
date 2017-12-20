@@ -10,10 +10,10 @@ IOTUS_CONF_USING_DATA_LINK = 1
 
 # User can use dynamic mode by declaring this parameter to "DYNAMIC" or "Static"
 #IOTUS_COMPILE_MODE = STATIC
-# If Static is used, then specific protocols must be selected
+# If Static is used, then specific single protocols per layer must be selected
 #IOTUS_STATIC_TRANSPORT_LAYER = null_v1.0.0
-#IOTUS_STATIC_ROUTING_LAYER = null_v1.0.0
-#IOTUS_STATIC_DATA_LINK_LAYER = null_v1.0.0
+#IOTUS_STATIC_ROUTING_LAYER = edytee_routing_v1.0.0
+#IOTUS_STATIC_DATA_LINK_LAYER = edytee_MAC_v1.0.0
 
 IOTUS_CONF_COMPILE_MODE = DYNAMIC
 # If dynamic mode is selected, then profiles must be selected or explicite protocols

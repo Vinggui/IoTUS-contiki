@@ -137,13 +137,13 @@ ifdef IOTUS_CONF_COMPILE_MODE
         $(error Service name $(IOTUS_SERVICE_NAME) is not unique!)\
       ) \
       $(eval service_counter = $(shell expr $(service_counter) + 1 )) \
-      $(eval IOTUS_SERVICE_MODULES_LIST = $(IOTUS_SERVICE_MODULES_LIST) $(IOTUS_SERVICE_NAME)_service_module) \
+      $(eval IOTUS_SERVICE_MODULES_LIST = $(IOTUS_SERVICE_MODULES_LIST) iotus_signal_handler_$(IOTUS_SERVICE_NAME)) \
     )
 
     # Determine the size of the buffer that each buffer will have to hold for every service
     IOTUS_DEPENDENCIES_BUFFER_SIZE = $(shell expr \( 7 + $(service_counter) \) / 8)
     CFLAGS += -DIOTUS_DEPENDENCIES_BUFFER_SIZE=$(IOTUS_DEPENDENCIES_BUFFER_SIZE)
-    CFLAGS += -DIOTUS_TOTAL_SERVICES_USED=$(service_counter)
+    CFLAGS += -DIOTUS_TOTAL_SERVICES_INSTALLED=$(service_counter)
 
 		IOTUS_SERVICE_MODULES_LIST_WCOMMA = \{$(subst $(space),$(comma),$(addprefix \&,$(IOTUS_SERVICE_MODULES_LIST)))\}
     CFLAGS += -DIOTUS_SERVICE_MODULES_LIST=$(IOTUS_SERVICE_MODULES_LIST_WCOMMA)

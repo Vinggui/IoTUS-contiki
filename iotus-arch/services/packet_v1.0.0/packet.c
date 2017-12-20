@@ -180,33 +180,22 @@ packet_create_header_piece(uint16_t headerSize, uint8_t isSingleBit,
 }
 
 
-static void
-start(void)
+void
+iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
-  printf("Starting packet service\n");
-  
-  // Initiate the lists of module
-  LIST(packetMsgList);
-  list_init(packetMsgList);
-  LIST(packetHeaderList);
-  list_init(packetHeaderList);
+  if(IOTUS_START_SERVICE == signal) {
+    printf("\tService Packet\n");
+    // Initiate the lists of module
+    LIST(packetMsgList);
+    list_init(packetMsgList);
+    LIST(packetHeaderList);
+    list_init(packetHeaderList);
+  } else if (IOTUS_RUN_SERVICE == signal){
+
+  } else if (IOTUS_END_SERVICE == signal){
+
+  }
 }
-
-
-static void
-run(void)
-{
-}
-
-static void
-close(void)
-{}
-
-struct iotus_service_module_struct packet_service_module = {
-  start,
-  run,
-  close
-};
 
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

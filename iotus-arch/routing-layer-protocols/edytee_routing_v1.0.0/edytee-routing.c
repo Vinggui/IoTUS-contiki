@@ -13,8 +13,15 @@
  *  Created on: Nov 18, 2017
  *      Author: vinicius
  */
-
+#include <stdio.h>
 #include "contiki.h"
+
+#define DEBUG 1
+#if DEBUG
+#define PRINTF(...) printf(__VA_ARGS__)
+#else /* DEBUG */
+#define PRINTF(...)
+#endif /* DEBUG */
 
 PROCESS(edytee_routing_process, "EDyTEE Routing Protocol");
 
@@ -42,12 +49,14 @@ PROCESS_THREAD(edytee_routing_process, ev, data)
 static void
 start(void)
 {
+  printf("Starting edytee routing\n");
 }
 
 
 static void
 run(void)
 {
+  printf("Running edytee routing\n");
 }
 
 static void

@@ -65,7 +65,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     addr.u8[0]=2;
     addr.u8[1]=0;
 */
-    start_new_comm_stack(0,0,0);
+    iotus_core_start_system(0,0,0);
 
     for(;;) {
         PROCESS_WAIT_EVENT();

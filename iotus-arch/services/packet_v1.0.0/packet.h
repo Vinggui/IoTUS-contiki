@@ -32,7 +32,9 @@ void
 packet_delete_msg_piece(void *msgPiece);
 
 
-extern struct iotus_service_module_struct packet_service_module;
+/* This function provides the core access to basic operations into this service */
+void
+iotus_signal_handler_packet(iotus_service_signal signal, void *data);
 
 #endif /* IOTUS_ARCH_SERVICES_PACKET_SIMPLE_PACKET_H_ */
 
