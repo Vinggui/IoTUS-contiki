@@ -30,42 +30,62 @@
 #endif /* DEBUG */
 
 #if IOTUS_CONF_USING_TRANSPORT == 1
-static const struct iotus_transport_protocol_struct *available_transport_protocols_array[] =
-IOTUS_PROTOCOL_TRANSPORT_LIST;
-static const uint8_t iotus_transport_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
-IOTUS_LAYER_TRANSPORT_SERVICE_ARRAY;
-static struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+    static struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;
+    #define ACTIVE_TRANSPORT_PROTOCOL(func) active_transport_protocol->func
+    static const struct iotus_transport_protocol_struct *available_transport_protocols_array[] =
+    IOTUS_PROTOCOL_TRANSPORT_LIST;
+    static const uint8_t iotus_transport_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
+    IOTUS_LAYER_TRANSPORT_SERVICE_ARRAY;
+  #else
+    #define ACTIVE_TRANSPORT_PROTOCOL(func) IOTUS_STATIC_PROTOCOL_TRANSPORT.func
+  #endif
 #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
 
 #if IOTUS_CONF_USING_ROUTING == 1
-static const struct iotus_routing_protocol_struct *available_routing_protocols_array[] =
-IOTUS_PROTOCOL_ROUTING_LIST;
-static const uint8_t iotus_routing_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
-IOTUS_LAYER_ROUTING_SERVICE_ARRAY;
-static struct iotus_routing_protocol_struct const *active_routing_protocol = NULL;
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+    static struct iotus_routing_protocol_struct const *active_routing_protocol = NULL;
+    #define ACTIVE_ROUTING_PROTOCOL(func) active_routing_protocol->func
+    static const struct iotus_routing_protocol_struct *available_routing_protocols_array[] =
+    IOTUS_PROTOCOL_ROUTING_LIST;
+    static const uint8_t iotus_routing_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
+    IOTUS_LAYER_ROUTING_SERVICE_ARRAY;
+  #else
+    #define ACTIVE_ROUTING_PROTOCOL(func) IOTUS_STATIC_PROTOCOL_ROUTING.func
+  #endif
 #endif/*IOTUS_CONF_USING_ROUTING == 1*/
 
 #if IOTUS_CONF_USING_DATA_LINK == 1
-static const struct iotus_data_link_protocol_struct *available_data_link_protocols_array[] =
-IOTUS_PROTOCOL_DATA_LINK_LIST;
-static const uint8_t iotus_data_link_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
-IOTUS_LAYER_DATA_LINK_SERVICE_ARRAY;
-static struct iotus_data_link_protocol_struct const *active_data_link_protocol = NULL;
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+    static struct iotus_data_link_protocol_struct const *active_data_link_protocol = NULL;
+    #define ACTIVE_DATA_LINK_PROTOCOL(func) active_data_link_protocol->func
+    static const struct iotus_data_link_protocol_struct *available_data_link_protocols_array[] =
+    IOTUS_PROTOCOL_DATA_LINK_LIST;
+    static const uint8_t iotus_data_link_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
+    IOTUS_LAYER_DATA_LINK_SERVICE_ARRAY;
+  #else
+    #define ACTIVE_DATA_LINK_PROTOCOL(func) IOTUS_STATIC_PROTOCOL_DATA_LINK.func
+  #endif
 #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
 
 /* Define the list of functions that are available by the services */
 typedef void (*iotus_core_signal_process_function) (iotus_service_signal, void*);
 static const iotus_core_signal_process_function iotus_core_signal_process_list[IOTUS_TOTAL_SERVICES_INSTALLED] =
 IOTUS_SERVICE_MODULES_LIST;
+
+
+#ifdef IOTUS_COMPILE_MODE_DYNAMIC
 static uint8_t iotus_services_installed[IOTUS_DEPENDENCIES_BUFFER_SIZE]={0};
+#endif
 
 PROCESS(iotus_core_process, "Core IoTUS Process");
 
 static void
-send_signal_active_services(iotus_service_signal signal, void *data)
+send_signal_to_services(iotus_service_signal signal, void *data)
 {
   int i=0;
   for(;i<IOTUS_TOTAL_SERVICES_INSTALLED;i++) {
+    #ifdef IOTUS_COMPILE_MODE_DYNAMIC
     int     x = i/8; //This should walk to the right
     uint8_t y = i%8;
     //printf("Step 1 buffer=%x ind=%i, x=%i pos=%x\n",iotus_services_installed[x],i,x,(1<<(7-y)));
@@ -73,24 +93,38 @@ send_signal_active_services(iotus_service_signal signal, void *data)
       //printf("step 2\n");
       iotus_core_signal_process_list[i](signal, data);
     }
+    #else
+    //In static mode, all services are used
+    iotus_core_signal_process_list[i](signal, data);
+    #endif
   }
 }
 
 
 void
 iotus_core_start_system (
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   iotus_transport_protocols transport,
   iotus_routing_protocols routing,
-  iotus_data_link_protocols data_link)
+  iotus_data_link_protocols data_link
+  #else
+  void
+  #endif
+  )
 {
   printf("Starting IoTUS core.\n");
 
   //Sum up the services to be Used
   int i=0;
+
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   for(;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
     iotus_services_installed[i]=0;
   }
+  #endif
 
+
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   #if IOTUS_CONF_USING_TRANSPORT == 1
   i=0;
   //printf("TRANS\n");
@@ -117,22 +151,32 @@ iotus_core_start_system (
     //printf("Data=%x",iotus_data_link_dependecies_table[transport][i]);
   }
   #endif /*IOTUS_CONF_USING_DATA_LINK == 1*/
+  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
 
   // Call the start of each service
-  send_signal_active_services(IOTUS_START_SERVICE, NULL);
+  send_signal_to_services(IOTUS_START_SERVICE, NULL);
 
   //Call the start of each protocols
   #if IOTUS_CONF_USING_TRANSPORT == 1
-  active_transport_protocol = available_transport_protocols_array[transport];
-  active_transport_protocol->start();
+
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+  ACTIVE_TRANSPORT_PROTOCOL = available_transport_protocols_array[transport];
+  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
+  ACTIVE_TRANSPORT_PROTOCOL(start());
   #endif
+
   #if IOTUS_CONF_USING_ROUTING == 1
-  active_routing_protocol = available_routing_protocols_array[routing];
-  active_routing_protocol->start();
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+  ACTIVE_ROUTING_PROTOCOL = available_routing_protocols_array[routing];
+  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
+  ACTIVE_ROUTING_PROTOCOL(start());
   #endif
+
   #if IOTUS_CONF_USING_DATA_LINK == 1
-  active_data_link_protocol = available_data_link_protocols_array[data_link];
-  active_data_link_protocol->start();
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+  ACTIVE_DATA_LINK_PROTOCOL = available_data_link_protocols_array[data_link];
+  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
+  ACTIVE_DATA_LINK_PROTOCOL(start());
   #endif
 
   process_start(&iotus_core_process, NULL);
@@ -159,13 +203,13 @@ PROCESS_THREAD(iotus_core_process, ev, data)
   for(;;) {
     //Time to run protocols
     #if IOTUS_CONF_USING_TRANSPORT == 1
-    active_transport_protocol->run();
+    ACTIVE_TRANSPORT_PROTOCOL(run());
     #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
     #if IOTUS_CONF_USING_ROUTING == 1
-    active_routing_protocol->run();
+    ACTIVE_ROUTING_PROTOCOL(run());
     #endif/*IOTUS_CONF_USING_ROUTING == 1*/
     #if IOTUS_CONF_USING_DATA_LINK == 1
-    active_data_link_protocol->run();
+    ACTIVE_DATA_LINK_PROTOCOL(run());
     #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
     PROCESS_PAUSE();
   }

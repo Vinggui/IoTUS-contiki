@@ -49,14 +49,13 @@ PROCESS_THREAD(edytee_routing_process, ev, data)
 static void
 start(void)
 {
-  printf("Starting edytee routing\n");
+  printf("\tEdytee routing\n");
 }
 
 
 static void
 run(void)
 {
-  printf("Running edytee routing\n");
 }
 
 static void

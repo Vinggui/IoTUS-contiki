@@ -22,9 +22,11 @@
 #ifndef IOTUS_ARCH_IOTUS_CORE_H_
 #define IOTUS_ARCH_IOTUS_CORE_H_
 
+#ifdef IOTUS_COMPILE_MODE_DYNAMIC
 typedef enum iotus_transport_protocols IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS iotus_transport_protocols;
 typedef enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS iotus_routing_protocols;
 typedef enum iotus_data_link_protocols IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS iotus_data_link_protocols;
+#endif /* #ifdef IOTUS_COMPILE_MODE_DYNAMIC */
 
 typedef enum iotus_service_signals {IOTUS_START_SERVICE, IOTUS_RUN_SERVICE, IOTUS_END_SERVICE} iotus_service_signal;
 
@@ -49,10 +51,21 @@ struct iotus_data_link_protocol_struct {
 //************************************************************************
 //                  Prototypes
 //************************************************************************
+/* Call this macro instead of the function iotus_core_start_system itself*/
+#ifdef IOTUS_COMPILE_MODE_DYNAMIC
+#define IOTUS_CORE_START(transport, routing, data_link) iotus_core_start_system(transport, routing, data_link)
+#else
+#define IOTUS_CORE_START(transport, routing, data_link) iotus_core_start_system()
+#endif
 //Functions that must be available
 void
 iotus_core_start_system (
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   iotus_transport_protocols transport,
   iotus_routing_protocols routing,
-  iotus_data_link_protocols data_link);
+  iotus_data_link_protocols data_link
+  #else
+  void
+  #endif
+);
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */

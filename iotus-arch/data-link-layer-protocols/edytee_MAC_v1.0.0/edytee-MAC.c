@@ -49,14 +49,13 @@ PROCESS_THREAD(edytee_MAC_proc, ev, data)
 static void
 start(void)
 {
-  printf("Starting edytee MAC\n");
+  printf("\tEdytee MAC\n");
 }
 
 
 static void
 run(void)
 {
-  printf("Running edytee MAC\n");
 }
 
 static void
