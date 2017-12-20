@@ -158,23 +158,22 @@ iotus_core_start_system (
 
   //Call the start of each protocols
   #if IOTUS_CONF_USING_TRANSPORT == 1
-
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  ACTIVE_TRANSPORT_PROTOCOL = available_transport_protocols_array[transport];
+  active_transport_protocol = available_transport_protocols_array[transport];
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
   ACTIVE_TRANSPORT_PROTOCOL(start());
   #endif
 
   #if IOTUS_CONF_USING_ROUTING == 1
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  ACTIVE_ROUTING_PROTOCOL = available_routing_protocols_array[routing];
+  active_routing_protocol = available_routing_protocols_array[routing];
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
   ACTIVE_ROUTING_PROTOCOL(start());
   #endif
 
   #if IOTUS_CONF_USING_DATA_LINK == 1
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  ACTIVE_DATA_LINK_PROTOCOL = available_data_link_protocols_array[data_link];
+  active_data_link_protocol = available_data_link_protocols_array[data_link];
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
   ACTIVE_DATA_LINK_PROTOCOL(start());
   #endif
