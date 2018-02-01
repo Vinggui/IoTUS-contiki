@@ -215,7 +215,7 @@ main(int argc, char **argv)
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
 #ifdef CONTIKI_COMM_NEW_STACK
-  start_new_comm_stack();
+  //start_new_comm_stack();
 #else /*CONTIKI_COMM_NEW_STACK*/
   //This bracket preserves the old contiki architecture
   NETSTACK_RDC.init();

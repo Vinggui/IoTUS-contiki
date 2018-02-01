@@ -137,3 +137,7 @@ LOG_OPENOCD
 
 # atom files
 *.atom-build.yml
+
+# Sublime files
+*.sublime-project
+*.sublime-workspace

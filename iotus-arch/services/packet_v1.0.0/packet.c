@@ -20,6 +20,7 @@
 #include "iotus-core.h"
 #include "list.h"
 #include "platform-conf.h"
+#include "local-packet-def.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -46,6 +47,11 @@ struct header_piece {
   COMMON_STRUCT_PIECES(struct header_piece);
   uint8_t type;
 };
+
+/* Buffer to indicate which parameters are expected to be default in the header.
+ * This variable is set by each protocol when starting
+ */
+static uint8_t default_packet_header = 0;
 
 /* This function is created separeted so that this module
  * memory allocation can be easily changed.
@@ -140,18 +146,21 @@ packet_delete_piece(void *piecePointer) {
 
 void*
 packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
-    uint8_t allowFragmentation, uint8_t requestedBasicServices, uint16_t timeout, const uint8_t* payload,
+    uint8_t allowFragmentation, uint8_t priority, uint8_t requestedBasicServices,
+    uint16_t timeout, const uint8_t* payload,
     const uint8_t *destination, void *callbackFunction)
 {
   void* newMsg = malloc_piece(payloadSize, sizeof(struct msg_piece));
   set_piece_data(newMsg, payload);
 
-  uint8_t params;
+  uint8_t params = 0;
   /* Encode parameters */
   if(allowAggregation)
-    params  = 0b10000000;
+    params  = PACKET_PARAMETERS_ALLOW_AGGREGATION;
   if(allowFragmentation)
-    params |= 0b01000000;
+    params |= PACKET_PARAMETERS_ALLOW_FRAGMENTATION;
+
+  params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
 
   set_piece_parameters(newMsg, params);
   set_msg_piece_timeout(newMsg, timeout);
@@ -179,7 +188,19 @@ packet_create_header_piece(uint16_t headerSize, uint8_t isSingleBit,
   return newHeader;
 }
 
+/*
+ * Sets the default headers that will be present in every default packet,
+ * it does not mean that it will have only this header.
+ */
+void
+packet_set_default_header (uint8_t services)
+{
 
+}
+
+/*
+ * Default function required from IoTUS, to initialize, run and finish this service
+ */
 void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
@@ -190,6 +211,9 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
     list_init(packetMsgList);
     LIST(packetHeaderList);
     list_init(packetHeaderList);
+
+    //Reset the default packet buffer
+    default_packet_header = 0;
   } else if (IOTUS_RUN_SERVICE == signal){
 
   } else if (IOTUS_END_SERVICE == signal){
