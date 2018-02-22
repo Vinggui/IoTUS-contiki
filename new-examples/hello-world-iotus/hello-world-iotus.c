@@ -65,17 +65,17 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     addr.u8[0]=2;
     addr.u8[1]=0;
 */
-    IOTUS_CORE_START(0,0,0);
+    IOTUS_CORE_START(0,contikiMAC,0);
 
     for(;;) {
         PROCESS_WAIT_EVENT();
 
-    printf("Hi\n");
-    //leds_toggle(LEDS_ALL);
-    //if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-    //}
-    //etimer_reset(&timer);
+        printf("Hi22\n");
+        //leds_toggle(LEDS_ALL);
+        //if(linkaddr_node_addr.u8[0] == 1) {
+            //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
+        //}
+        //etimer_reset(&timer);
 
     }
 

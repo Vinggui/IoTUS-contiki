@@ -19,6 +19,7 @@
 #include <string.h>
 #include "iotus-core.h"
 #include "list.h"
+#include "packet.h"
 #include "platform-conf.h"
 #include "local-packet-def.h"
 
@@ -37,10 +38,12 @@
 
 struct msg_piece {
   COMMON_STRUCT_PIECES(struct msg_piece);
-  void *callbackHandler;
-  uint16_t timeout;
-  uint8_t priority;
-  uint8_t destination[IOTUS_RADIO_FULL_ADDRESS];
+  void *callbackHandler; //Used locally only
+  uint16_t timeout; //Used locally only, differently when sending/receiving
+  uint8_t priority; //Used locally only
+  uint8_t *defaultInitialHeader; //Will be used to build the final packet, processed by the core
+  uint8_t *defaultFinalHeader; //Will be used to build the final packet, processed by the core
+  struct header_piece *piecesList;
 };
 
 struct header_piece {
@@ -48,11 +51,18 @@ struct header_piece {
   uint8_t type;
 };
 
-/* Buffer to indicate which parameters are expected to be default in the header.
+/* Buffer to indicate which functionalities are execute by each layer.
  * This variable is set by each protocol when starting
  */
-static uint8_t default_packet_header = 0;
+#define DEFAULT_FUNCTIONALITIES_SIZE  (IOTUS_FINAL_NUMBER_DEFAULT_HEADER_CHORE*2/8 +1)
+static uint8_t default_layers_chores_header[DEFAULT_FUNCTIONALITIES_SIZE] = {0};
 
+
+// Initiate the lists of module
+LIST(gPacketMsgList);
+LIST(gPacketHeaderList);
+
+/***********************************************************************/
 /* This function is created separeted so that this module
  * memory allocation can be easily changed.
  * Also, the header_piece has the common initial as the msg, so
@@ -100,58 +110,68 @@ set_msg_piece_timeout(void *piece, uint16_t timeout)
   /* Encode the parameters */
   pieceStruct->timeout = timeout;
 }
-
+/*
 static void
-set_msg_piece_destination(void *piecePointer, const uint8_t *dest)
+set_msg_piece_nextDestination(void *piecePointer, const uint8_t *dest)
 {
   struct msg_piece* piece = (struct msg_piece*)piecePointer;
   uint8_t i=0;
   for(;i<IOTUS_RADIO_FULL_ADDRESS;i++) {
-    piece->destination[i] = dest[i];
+   
+    piece->nextDestination[i] = dest[i];
   }
-}
+}*/
 
 static void
 set_msg_piece_callback_function(void *piecePointer, void *function)
 {
-  struct msg_piece* piece = (struct msg_piece*)piecePointer;
+  struct msg_piece *piece = (struct msg_piece *)piecePointer;
   piece->callbackHandler = function;
 }
 
 static void
 set_header_piece_type(void *piecePointer, uint8_t type)
 {
-  struct header_piece* piece = (struct header_piece*)piecePointer;
+  struct header_piece *piece = (struct header_piece *)piecePointer;
   piece->type = type;
 }
 
-static void
+static uint8_t
 set_piece_data(void *piecePointer, const uint8_t *data)
 {
-  struct header_piece* piece = (struct header_piece*)piecePointer;
+  struct header_piece *piece = (struct header_piece *)piecePointer;
+  if(piece == NULL) {
+    return 0;
+  }
   uint8_t i=0;
   for(;i<piece->dataSize;i++) {
     piece->data[i] = data[i];
   }
+  return 1;
 }
 
 void
 packet_delete_piece(void *piecePointer) {
-  struct header_piece *piece = (struct header_piece*)piecePointer;
+  struct header_piece *piece = (struct header_piece *)piecePointer;
   if(piece->dataSize > 0) {
     free(piece->data);
   }
   free(piecePointer);
 }
 
-void*
+struct msg_piece *
 packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
-    uint8_t allowFragmentation, uint8_t priority, uint8_t requestedBasicServices,
+    uint8_t allowFragmentation, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
-    const uint8_t *destination, void *callbackFunction)
-{
-  void* newMsg = malloc_piece(payloadSize, sizeof(struct msg_piece));
-  set_piece_data(newMsg, payload);
+    const uint8_t *finalDestination, void *callbackFunction){
+
+  void *newMsg = malloc_piece(payloadSize, sizeof(struct msg_piece));
+  
+  if(!set_piece_data(newMsg, payload)) {
+    //Alloc failed, cancel operation
+    packet_delete_piece(newMsg);
+    return NULL;
+  }
 
   uint8_t params = 0;
   /* Encode parameters */
@@ -159,43 +179,115 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
     params  = PACKET_PARAMETERS_ALLOW_AGGREGATION;
   if(allowFragmentation)
     params |= PACKET_PARAMETERS_ALLOW_FRAGMENTATION;
-
   params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
+
+
 
   set_piece_parameters(newMsg, params);
   set_msg_piece_timeout(newMsg, timeout);
-  set_msg_piece_destination(newMsg, destination);
   set_msg_piece_callback_function(newMsg, callbackFunction);
+
+  //Link the message into the list
+  list_push(gPacketMsgList, newMsg);
+
   return newMsg;
 }
 
-void*
-packet_create_header_piece(uint16_t headerSize, uint8_t isSingleBit,
-    uint8_t msg_piece_to_attach, const uint8_t* header,
-    uint8_t type)
+/*
+ * Function to create header pieces to be attached
+ * @Params headerSize Size of the header in bytes
+ * @Params headerData The information to be attached
+ * @Params isBroadcastable Indicate if this packet will be able lto be broadcast
+ * @Result Pointer to the struct with the final packet to be transmited (read by framer layer).
+ */
+struct header_piece *
+packet_create_header_piece(uint16_t headerSize, const uint8_t* headerData,
+    uint8_t type, const uint8_t *nextDestination)
 {
-  void* newHeader = malloc_piece(headerSize, sizeof(struct header_piece));
-  if(headerSize)
-    set_piece_data(newHeader, header);
+  void *newHeader = malloc_piece(headerSize, sizeof(struct header_piece));
+  if(headerSize) {
+    if(!set_piece_data(newHeader, headerData)) {
+      //Alloc failed, cancel operation
+      packet_delete_piece(newHeader);
+      return NULL;
+    }
+  }
 
   uint8_t params;
   /* Encode parameters */
-  if(isSingleBit)
-    params  = 0b10000000;
 
-  set_piece_parameters(newHeader, params);
-  set_header_piece_type(newHeader, type);
+  //set_piece_parameters(newHeader, params);
+  //set_header_piece_type(newHeader, type);
   return newHeader;
 }
 
 /*
- * Sets the default headers that will be present in every default packet,
- * it does not mean that it will have only this header.
+ * Sets the default chore that will be present in every default packet.
  */
 void
-packet_set_default_header (uint8_t services)
+packet_subscribe_default_header_chore(iotus_packets_priority priority,
+  iotus_default_header_chores func)
 {
+  uint8_t posByte = func/4;
+  uint8_t posBit = (func%4)*2;
+  uint8_t chore = default_layers_chores_header[posByte] & (11<<posBit);
+  if(chore > 0) {
+    //There is some layer responsible for this chore...
+    if(chore <= (priority<<posBit)) {
+      //This request has lower priority (higher value)
+      return;
+    }
+    default_layers_chores_header[posByte] &= ~(11<<posBit);
+  }
+  //This request has higher priority (lower value)
+  //substitute this chore to this request
+  default_layers_chores_header[posByte] |= (priority<<posBit);
+}
 
+/*
+ * Verifies if default chore header is assigned to some layer.
+ * @Return 1 for true, 0 for false.
+ */
+uint8_t
+packet_verify_default_header_chore(iotus_packets_priority priority,
+  iotus_default_header_chores func)
+{
+  uint8_t posByte = func/4;
+  uint8_t posBit = (func%4)*2;
+  uint8_t chore = default_layers_chores_header[posByte] & (11<<posBit);
+  if(chore == (priority<<posBit)) {
+    return 1;
+  }
+  return 0;
+}
+
+
+
+/*
+ * Function to assemble packets on demand
+ * @Params mainPiece Pointer to the main packet supposed to be sent
+ * @Params MaxPktFrag How many pieces can this packet be fragmented and sent
+ * @Params isBroadcastable Indicate if this packet will be able to be broadcast
+ * @Result Pointer to the struct with the final packet to be transmitted (read by framer layer).
+ */
+void *
+iotus_packet_assemble(void *mainPiece, uint8_t maxPacketFragmentation, uint8_t isBroadcastable)
+{
+  return NULL;
+}
+
+
+/*
+ * Function to insert some header piece to be piggybacked into another message
+ * @Params mainPiece Pointer to the main packet supposed to be sent
+ * @Params MaxPktFrag How many pieces can this packet be fragmented and sent
+ * @Params isBroadcastable Indicate if this packet will be able to be broadcast
+ * @Result Pointer to the struct with the final packet to be transmitted (read by framer layer).
+ */
+int
+iotus_packet_set_msg_info(struct header_piece *info_header, struct msg_piece *msg)
+{
+  return NULL;
 }
 
 /*
@@ -206,14 +298,16 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
     PRINTF("\tService Packet\n");
+
     // Initiate the lists of module
-    LIST(packetMsgList);
-    list_init(packetMsgList);
-    LIST(packetHeaderList);
-    list_init(packetHeaderList);
+    list_init(gPacketMsgList);
+    list_init(gPacketHeaderList);
 
     //Reset the default packet buffer
-    default_packet_header = 0;
+    int i = 0;
+    for(;i<DEFAULT_FUNCTIONALITIES_SIZE; i++) {
+      default_layers_chores_header[i] = 0;
+    }
   } else if (IOTUS_RUN_SERVICE == signal){
 
   } else if (IOTUS_END_SERVICE == signal){

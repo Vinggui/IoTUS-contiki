@@ -29,6 +29,7 @@
 #define PRINTF(...)
 #endif /* DEBUG */
 
+
 #if IOTUS_CONF_USING_TRANSPORT == 1
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
     static struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;

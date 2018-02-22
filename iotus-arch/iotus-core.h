@@ -43,6 +43,10 @@
 
 typedef enum iotus_service_signals {IOTUS_START_SERVICE, IOTUS_RUN_SERVICE, IOTUS_END_SERVICE} iotus_service_signal;
 
+
+#define TRUE            1
+#define FALSE           0
+
 struct iotus_transport_protocol_struct {
   void (* start)(void);
   void (* run)(void);

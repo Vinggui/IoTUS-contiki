@@ -27,10 +27,10 @@
 #define PRINTF(...)
 #endif /* DEBUG */
 
-PROCESS(edytee_MAC_proc, "EDyTEE MAC Protocol");
+PROCESS(contikiMAC_proc, "ContikiMAC Protocol");
 
 /* Implementation of the IoTus core process */
-PROCESS_THREAD(edytee_MAC_proc, ev, data)
+PROCESS_THREAD(contikiMAC_proc, ev, data)
 {
   /* variables are declared static to ensure their values are kept
    * between kernel calls.
@@ -55,7 +55,11 @@ PROCESS_THREAD(edytee_MAC_proc, ev, data)
       IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
       PRINTF("Deu - BC\n");
 
-      //packet_create_msg_piece();
+      packet_create_msg_piece(6, TRUE,
+        FALSE, IOTUS_PRIORITY_DATA_LINK, 5000, "Teste",
+        "01", NULL);
+
+
     }
 
 
@@ -69,8 +73,8 @@ PROCESS_THREAD(edytee_MAC_proc, ev, data)
 static void
 start(void)
 {
-  printf("\tEdytee MAC\n");
-  process_start(&edytee_MAC_proc, NULL);
+  printf("\tContikiMAC\n");
+  process_start(&contikiMAC_proc, NULL);
 
   packet_subscribe_default_header_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
 }
@@ -85,7 +89,7 @@ static void
 close(void)
 {}
 
-const struct iotus_data_link_protocol_struct edytee_MAC_protocol = {
+const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   start,
   run,
   close
