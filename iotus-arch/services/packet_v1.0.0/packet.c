@@ -41,9 +41,13 @@ struct msg_piece {
   void *callbackHandler; //Used locally only
   uint16_t timeout; //Used locally only, differently when sending/receiving
   uint8_t priority; //Used locally only
-  uint8_t *defaultInitialHeader; //Will be used to build the final packet, processed by the core
-  uint8_t *defaultFinalHeader; //Will be used to build the final packet, processed by the core
-  struct header_piece *piecesList;
+  uint16_t totalPacketSize;//Will be used to build the final packet, processed by the core
+  uint16_t initialBitHeaderSize;
+  uint8_t *initialBitHeader; //Will be used to build the final packet, processed by the core
+  uint16_t finalBytesHeaderSize;
+  uint8_t *finalBytesHeader; //Will be used to build the final packet, processed by the core
+  LIST_STRUCT(infoPieces);
+  //struct header_piece *piecesList;
 };
 
 struct header_piece {
@@ -159,7 +163,8 @@ packet_delete_piece(void *piecePointer) {
   free(piecePointer);
 }
 
-struct msg_piece *
+/************************************************************************/
+void *
 packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
     uint8_t allowFragmentation, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
@@ -173,6 +178,10 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
     return NULL;
   }
 
+  LIST_STRUCT_INIT((struct msg_piece *)newMsg, infoPieces);
+  ((struct msg_piece *)newMsg)->initialBitHeaderSize = 0;
+  ((struct msg_piece *)newMsg)->finalBytesHeaderSize = 0;
+
   uint8_t params = 0;
   /* Encode parameters */
   if(allowAggregation)
@@ -181,7 +190,9 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
     params |= PACKET_PARAMETERS_ALLOW_FRAGMENTATION;
   params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
 
-
+  ((struct msg_piece *)newMsg)->initialBitHeader = NULL;
+  ((struct msg_piece *)newMsg)->finalBytesHeader = NULL;
+  ((struct msg_piece *)newMsg)->totalPacketSize = payloadSize;
 
   set_piece_parameters(newMsg, params);
   set_msg_piece_timeout(newMsg, timeout);
@@ -200,7 +211,7 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
  * @Params isBroadcastable Indicate if this packet will be able lto be broadcast
  * @Result Pointer to the struct with the final packet to be transmited (read by framer layer).
  */
-struct header_piece *
+void *
 packet_create_header_piece(uint16_t headerSize, const uint8_t* headerData,
     uint8_t type, const uint8_t *nextDestination)
 {
@@ -287,7 +298,100 @@ iotus_packet_assemble(void *mainPiece, uint8_t maxPacketFragmentation, uint8_t i
 int
 iotus_packet_set_msg_info(struct header_piece *info_header, struct msg_piece *msg)
 {
-  return NULL;
+  return 0;
+}
+
+/*
+ * Function to push bits into the header
+ * @Params bitSequenceSize The amount of bit that will be push into.
+ * @Params bitSeq An array of bytes containing the bits
+ * @Params msg_piece Msg to apply this push
+ * @Result Packet final size
+ */
+uint16_t
+iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
+  void *msg_piece) {
+  int i;
+  uint8_t newSizeInBYTES = 0;
+  uint16_t oldSizeInBYTES = ((((struct msg_piece *)msg_piece)->initialBitHeaderSize)+7)/8;//round up
+  //Verify if the msg piece already has something
+  if(NULL == ((struct msg_piece *)msg_piece)->initialBitHeader) {
+    ((struct msg_piece *)msg_piece)->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
+
+    if(((struct msg_piece *)msg_piece)->initialBitHeader == NULL) {
+      /* Failed to alloc memory */
+      PRINTF("Failed to allocate memory for initialBitHeader.");
+      return 0;
+    }
+  } else {
+    //Verify if a new byte is required
+    uint16_t freeSpaceInBITS = (oldSizeInBYTES*8)-(((struct msg_piece *)msg_piece)->initialBitHeaderSize);
+    if(freeSpaceInBITS < bitSequenceSize) {
+      //Reallocate new buffer for this system
+      newSizeInBYTES = (bitSequenceSize - freeSpaceInBITS + 7)/8;//round up
+
+      uint8_t *newBuff = (uint8_t *)malloc(newSizeInBYTES + oldSizeInBYTES);
+
+      if(newBuff == NULL) {
+        /* Failed to alloc memory */
+        PRINTF("Failed to allocate memory to expand initialBitHeader.");
+        return 0;
+      }
+
+      //transfer the old buffer to the new one, backwards!
+      for(i=(newSizeInBYTES + oldSizeInBYTES - 1); i >= oldSizeInBYTES; i--) {
+        newBuff[i] = (((struct msg_piece *)msg_piece)->initialBitHeader)[i-newSizeInBYTES];
+      }
+
+      //Delete the old buffer
+      free((void *)(((struct msg_piece *)msg_piece)->initialBitHeader));
+      ((struct msg_piece *)msg_piece)->initialBitHeader = newBuff;
+    }
+  }
+
+  //Insert the new bits information
+  uint16_t byteToPush = (newSizeInBYTES + oldSizeInBYTES) - ((((struct msg_piece *)msg_piece)->initialBitHeaderSize)/8);
+  uint8_t bitToPush = ((((struct msg_piece *)msg_piece)->initialBitHeaderSize)%8);
+  uint16_t byteToRead = 1 + (bitSequenceSize/8);
+  for(i=0; i < bitSequenceSize; i++) {
+    //Verify and change the byte to be push into...
+    if(bitToPush > 8) {
+      bitToPush = 0;
+      byteToPush--;
+    }
+    //Read the bits from the source
+    uint8_t bitShifted = (1<<(i%8));
+    if((i%8) == 0) {
+      byteToRead--;
+    }
+    uint8_t bitRead = (bitSeq[byteToRead] & bitShifted);
+    if(bitRead == 0) {
+      (((struct msg_piece *)msg_piece)->initialBitHeader)[byteToPush] &= ~(1<<bitToPush);
+    } else {
+      (((struct msg_piece *)msg_piece)->initialBitHeader)[byteToPush] |= (1<<bitToPush);
+    }
+  }
+
+  ((struct msg_piece *)msg_piece)->initialBitHeaderSize += bitSequenceSize;
+  ((struct msg_piece *)msg_piece)->totalPacketSize += newSizeInBYTES;
+
+  return ((struct msg_piece *)msg_piece)->totalPacketSize;
+}
+
+
+/*
+ * Function to append full bytes headers into the tail (inversed)
+ * @Params bytesSize The amount of bytes that will be appended.
+ * @Params byteSeq An array of bytes in its normal sequence
+ * @Params msg_piece Msg to apply this append
+ * @Result Packet final size
+ */
+uint16_t
+iotus_packet_append_byte_header(uint8_t bitSequenceSize, const uint8_t *msg,
+  void *msg_piece) {
+  //Verify if the msg piece already has something
+
+  return 0;
 }
 
 /*

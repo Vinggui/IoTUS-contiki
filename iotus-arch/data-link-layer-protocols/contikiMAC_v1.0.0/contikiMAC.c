@@ -55,11 +55,16 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
       PRINTF("Deu - BC\n");
 
-      packet_create_msg_piece(6, TRUE,
-        FALSE, IOTUS_PRIORITY_DATA_LINK, 5000, "Teste",
-        "01", NULL);
+      void *packet = packet_create_msg_piece(6, TRUE,
+        FALSE, IOTUS_PRIORITY_DATA_LINK, 5000, (const uint8_t *)"Teste",
+        (const uint8_t *)"01", NULL);
 
+      uint8_t testeHeader[1] = {0b00000111};
+      uint16_t teste = iotus_packet_push_bit_header(3, testeHeader, packet);
 
+      if(teste > 0) {
+        PRINTF("Gen is super linda!!!");
+      }
     }
 
 

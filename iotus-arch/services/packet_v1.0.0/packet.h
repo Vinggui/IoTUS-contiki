@@ -46,7 +46,7 @@ typedef enum IOTUS_DEFAULT_HEADER_CHORES {
 /*
  * Functions of this module
  */
-struct msg_piece *
+void *
 packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
     uint8_t allowFragmentation, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
@@ -62,6 +62,10 @@ packet_subscribe_default_header_chore(iotus_packets_priority priority,
 uint8_t
 packet_verify_default_header_chore(iotus_packets_priority priority,
   iotus_default_header_chores func);
+
+uint16_t
+iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
+  void *msg_piece);
 
 
 /* This function provides the core access to basic operations into this service */
