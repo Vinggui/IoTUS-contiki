@@ -309,14 +309,17 @@ iotus_packet_set_msg_info(struct header_piece *info_header, struct msg_piece *ms
  * @Result Packet final size
  */
 uint16_t
-iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
+iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   void *msg_piece) {
-  int i;
-  uint8_t newSizeInBYTES = 0;
+
+  uint16_t i;
+  uint16_t newSizeInBYTES = 0;
   uint16_t oldSizeInBYTES = ((((struct msg_piece *)msg_piece)->initialBitHeaderSize)+7)/8;//round up
+  
   //Verify if the msg piece already has something
   if(NULL == ((struct msg_piece *)msg_piece)->initialBitHeader) {
     ((struct msg_piece *)msg_piece)->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
+    newSizeInBYTES = (bitSequenceSize+7)/8;
 
     if(((struct msg_piece *)msg_piece)->initialBitHeader == NULL) {
       /* Failed to alloc memory */
@@ -364,6 +367,7 @@ iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
     if((i%8) == 0) {
       byteToRead--;
     }
+
     uint8_t bitRead = (bitSeq[byteToRead] & bitShifted);
     if(bitRead == 0) {
       (((struct msg_piece *)msg_piece)->initialBitHeader)[byteToPush] &= ~(1<<bitToPush);
@@ -371,8 +375,7 @@ iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
       (((struct msg_piece *)msg_piece)->initialBitHeader)[byteToPush] |= (1<<bitToPush);
     }
   }
-
-  ((struct msg_piece *)msg_piece)->initialBitHeaderSize += bitSequenceSize;
+  ((struct msg_piece *)msg_piece)->initialBitHeaderSize += bitSequenceSize;//counted in bits
   ((struct msg_piece *)msg_piece)->totalPacketSize += newSizeInBYTES;
 
   return ((struct msg_piece *)msg_piece)->totalPacketSize;
@@ -387,11 +390,93 @@ iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
  * @Result Packet final size
  */
 uint16_t
-iotus_packet_append_byte_header(uint8_t bitSequenceSize, const uint8_t *msg,
+iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   void *msg_piece) {
-  //Verify if the msg piece already has something
+  int i;//Verify if the msg piece already has something
+  uint16_t totalFinalSize = 0;
+  if(NULL == ((struct msg_piece *)msg_piece)->finalBytesHeader) {
+    ((struct msg_piece *)msg_piece)->finalBytesHeader = (uint8_t *)malloc(byteSequenceSize);
 
+    if(((struct msg_piece *)msg_piece)->finalBytesHeader == NULL) {
+      /* Failed to alloc memory */
+      PRINTF("Failed to allocate memory for finalBytesHeader.");
+      return 0;
+    }
+    totalFinalSize = byteSequenceSize;
+  } else {
+    //Reallocate new buffer for this system
+    totalFinalSize = byteSequenceSize + ((struct msg_piece *)msg_piece)->finalBytesHeaderSize;//round up
+
+    uint8_t *newBuff = (uint8_t *)malloc(totalFinalSize);
+
+    if(newBuff == NULL) {
+      /* Failed to alloc memory */
+      PRINTF("Failed to allocate memory to expand finalBytesHeader.");
+      return 0;
+    }
+
+    //transfer the old buffer to the new one! (left to the right)
+    for(i=0; i < (((struct msg_piece *)msg_piece)->finalBytesHeaderSize); i++) {
+      newBuff[i] = (((struct msg_piece *)msg_piece)->finalBytesHeader)[i];
+    }
+
+    //Delete the old buffer
+    free((void *)(((struct msg_piece *)msg_piece)->finalBytesHeader));
+    ((struct msg_piece *)msg_piece)->finalBytesHeader = newBuff;
+  }
+
+  //update size
+  ((struct msg_piece *)msg_piece)->finalBytesHeaderSize = totalFinalSize;
+  
+  //Insert the new bytes, backwards...
+  for(i=0; i < byteSequenceSize; i++) {
+    (((struct msg_piece *)msg_piece)->finalBytesHeader)[totalFinalSize - i - 1] = ((uint8_t *)headerToAppend)[i];
+  }
+
+  ((struct msg_piece *)msg_piece)->totalPacketSize += byteSequenceSize;
+
+  return ((struct msg_piece *)msg_piece)->totalPacketSize;
+}
+
+
+/*
+ * Function to append piggyback informations into the tail of the msg (inversed)
+ * @Params bytesSize The amount of bytes that will be appended.
+ * @Params byteSeq An array of bytes in its normal sequence
+ * @Params msg_piece Msg to apply this append
+ * @Result Packet final size
+ */
+uint16_t
+iotus_packet_apply_piggyback(void *msg_piece) {
   return 0;
+}
+
+/*
+ * Function to read any byte of a message, given its position
+ * @Params bytePos The position of the byte
+ * @Params msg_piece Packet to be read.
+ * @Result Byte read.
+ */
+uint8_t
+iotus_packet_read_byte(uint16_t bytePos, void *msg_piece) {
+  if((((struct msg_piece *)msg_piece)->totalPacketSize) <= bytePos) {
+    return 0;
+  }
+  //paddingRemover starts with the size of the initial Bit header size in Bytes...
+  uint16_t paddingRemover = ((((struct msg_piece *)msg_piece)->initialBitHeaderSize +7)/8);
+  if (bytePos < paddingRemover) {
+    //This byte is one of the bit headers
+    return (((struct msg_piece *)msg_piece)->initialBitHeader)[
+                          bytePos
+                          ];
+  }
+  if(bytePos < (paddingRemover + ((struct msg_piece *)msg_piece)->dataSize)) {
+    //BytePos is located into payload (data) section
+    return (((struct msg_piece *)msg_piece)->data)[bytePos - paddingRemover];
+  }
+
+  paddingRemover += ((struct msg_piece *)msg_piece)->dataSize;
+  return (((struct msg_piece *)msg_piece)->finalBytesHeader)[bytePos - paddingRemover];
 }
 
 /*

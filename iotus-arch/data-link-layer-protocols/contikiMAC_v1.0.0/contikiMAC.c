@@ -63,13 +63,26 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       uint16_t teste = iotus_packet_push_bit_header(3, testeHeader, packet);
 
       if(teste > 0) {
-        PRINTF("Gen is super linda!!!");
+        PRINTF("Bits pushed ok! new size %u\n",teste);
       }
+
+      uint8_t testeHeaderFullBytes[3] = {0xbe, 0xef, 0xFF};
+      teste = iotus_packet_append_byte_header(3, testeHeaderFullBytes, packet);
+
+      if(teste > 0) {
+        PRINTF("Bytes appended ok! new size %u\n",teste);
+      }
+
+      //testing reading
+      teste = iotus_packet_read_byte(7, packet);
+      PRINTF("Packet byte 7 is: %02x",teste);
     }
 
 
     etimer_reset(&timer);
   }
+
+
 
   PROCESS_END();
 }

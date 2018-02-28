@@ -64,8 +64,15 @@ packet_verify_default_header_chore(iotus_packets_priority priority,
   iotus_default_header_chores func);
 
 uint16_t
-iotus_packet_push_bit_header(uint8_t bitSequenceSize, const uint8_t *bitSeq,
+iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   void *msg_piece);
+
+uint16_t
+iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
+  void *msg_piece);
+
+uint8_t
+iotus_packet_read_byte(uint16_t bytePos, void *msg_piece);
 
 
 /* This function provides the core access to basic operations into this service */
