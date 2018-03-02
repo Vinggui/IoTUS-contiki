@@ -40,6 +40,7 @@
 #define PLATFORM_CONF_H_
 
 #define IOTUS_RADIO_FULL_ADDRESS 2
+#define IOTUS_RADIO_MAX_PACKET_SIZE             127
 
 
 #ifndef uint8_t

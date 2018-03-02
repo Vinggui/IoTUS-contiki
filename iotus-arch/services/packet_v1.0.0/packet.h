@@ -43,6 +43,16 @@ typedef enum IOTUS_DEFAULT_HEADER_CHORES {
   IOTUS_FINAL_NUMBER_DEFAULT_HEADER_CHORE
 } iotus_default_header_chores;
 
+//The field infoPiece can have more valuer then these, but these are the standard
+enum IOTUS_MSG_PIECE_INFO_TYPE {
+  IOTUS_MSG_PIECE_INFO_TYPE_INITIAL_SOURCE_ADDRESS = 0,
+  IOTUS_MSG_PIECE_INFO_TYPE_PREV_SOURCE_ADDRESS,
+  IOTUS_MSG_PIECE_INFO_TYPE_FINAL_DEST_ADDRESS,
+  IOTUS_MSG_PIECE_INFO_TYPE_NEXT_DEST_ADDRESS,
+  IOTUS_MSG_PIECE_INFO_TYPE_SEQUENCE_NUMBER,
+};
+
+
 /*
  * Functions of this module
  */
@@ -54,6 +64,9 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
 
 void
 packet_delete_msg_piece(void *msgPiece);
+
+uint16_t
+iotus_packet_packet_size(void *msg_piece);
 
 void
 packet_subscribe_default_header_chore(iotus_packets_priority priority,
@@ -70,6 +83,10 @@ iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 uint16_t
 iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   void *msg_piece);
+
+
+uint16_t
+iotus_packet_apply_piggyback(void *msg_piece);
 
 uint8_t
 iotus_packet_read_byte(uint16_t bytePos, void *msg_piece);

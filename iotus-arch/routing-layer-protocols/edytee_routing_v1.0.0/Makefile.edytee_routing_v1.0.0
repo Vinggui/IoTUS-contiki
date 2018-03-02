@@ -1,8 +1,5 @@
 # $Id: Makefile.null-v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
 
-
-MODULES += iotus-arch/routing-layer-protocols/edytee_routing_v1.0.0
-
 CONTIKI_TARGET_SOURCEFILES += edytee-routing.c
 
 IOTUS_SERVICE_FILES=

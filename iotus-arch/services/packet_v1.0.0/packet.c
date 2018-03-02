@@ -17,11 +17,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "global_parameters.h"
 #include "iotus-core.h"
+#include "local-packet-def.h"
 #include "list.h"
 #include "packet.h"
 #include "platform-conf.h"
-#include "local-packet-def.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -33,25 +34,24 @@
 #define COMMON_STRUCT_PIECES(structName) \
   structName *next;\
   uint8_t params;\
+  uint16_t timeout;\
+  uint8_t priority;\
+  void *callbackHandler;\
   uint16_t dataSize;\
   uint8_t *data
 
 struct msg_piece {
   COMMON_STRUCT_PIECES(struct msg_piece);
-  void *callbackHandler; //Used locally only
-  uint16_t timeout; //Used locally only, differently when sending/receiving
-  uint8_t priority; //Used locally only
   uint16_t totalPacketSize;//Will be used to build the final packet, processed by the core
   uint16_t initialBitHeaderSize;
   uint8_t *initialBitHeader; //Will be used to build the final packet, processed by the core
   uint16_t finalBytesHeaderSize;
   uint8_t *finalBytesHeader; //Will be used to build the final packet, processed by the core
   LIST_STRUCT(infoPieces);
-  //struct header_piece *piecesList;
 };
 
-struct header_piece {
-  COMMON_STRUCT_PIECES(struct header_piece);
+struct piggyback_piece {
+  COMMON_STRUCT_PIECES(struct piggyback_piece);
   uint8_t type;
 };
 
@@ -69,7 +69,7 @@ LIST(gPacketHeaderList);
 /***********************************************************************/
 /* This function is created separeted so that this module
  * memory allocation can be easily changed.
- * Also, the header_piece has the common initial as the msg, so
+ * Also, the piggyback_piece has the common initial as the msg, so
  * just use as the cast type to set common fields.
  */
 static void*
@@ -82,7 +82,7 @@ malloc_piece(uint16_t dataSize, uint16_t pieceSize) {
     return NULL;
   }
 
-  struct header_piece *newPiece = (struct header_piece *)newPiecePointer;
+  struct piggyback_piece *newPiece = (struct piggyback_piece *)newPiecePointer;
 
   newPiece->dataSize = dataSize;
   if(dataSize > 0) {
@@ -98,22 +98,6 @@ malloc_piece(uint16_t dataSize, uint16_t pieceSize) {
   return newPiecePointer;
 }
 
-/* In case memory allocation needs to be changed, this function
- * centralizes every operation to set a specific field */
-static void
-set_piece_parameters(void *piece, uint8_t params)
-{
-  struct header_piece* pieceStruct = (struct header_piece*)piece;
-  pieceStruct->params = params;
-}
-
-static void
-set_msg_piece_timeout(void *piece, uint16_t timeout)
-{
-  struct msg_piece* pieceStruct = (struct msg_piece*)piece;
-  /* Encode the parameters */
-  pieceStruct->timeout = timeout;
-}
 /*
 static void
 set_msg_piece_nextDestination(void *piecePointer, const uint8_t *dest)
@@ -126,24 +110,10 @@ set_msg_piece_nextDestination(void *piecePointer, const uint8_t *dest)
   }
 }*/
 
-static void
-set_msg_piece_callback_function(void *piecePointer, void *function)
-{
-  struct msg_piece *piece = (struct msg_piece *)piecePointer;
-  piece->callbackHandler = function;
-}
-
-static void
-set_header_piece_type(void *piecePointer, uint8_t type)
-{
-  struct header_piece *piece = (struct header_piece *)piecePointer;
-  piece->type = type;
-}
-
 static uint8_t
 set_piece_data(void *piecePointer, const uint8_t *data)
 {
-  struct header_piece *piece = (struct header_piece *)piecePointer;
+  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
   if(piece == NULL) {
     return 0;
   }
@@ -155,8 +125,17 @@ set_piece_data(void *piecePointer, const uint8_t *data)
 }
 
 void
-packet_delete_piece(void *piecePointer) {
-  struct header_piece *piece = (struct header_piece *)piecePointer;
+packet_delete_piggyback_piece(void *piecePointer) {
+  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
+  if(piece->dataSize > 0) {
+    free(piece->data);
+  }
+  free(piecePointer);
+}
+
+void
+packet_delete_msg_piece(void *piecePointer) {
+  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
   if(piece->dataSize > 0) {
     free(piece->data);
   }
@@ -174,7 +153,7 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
   
   if(!set_piece_data(newMsg, payload)) {
     //Alloc failed, cancel operation
-    packet_delete_piece(newMsg);
+    packet_delete_msg_piece(newMsg);
     return NULL;
   }
 
@@ -194,9 +173,9 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
   ((struct msg_piece *)newMsg)->finalBytesHeader = NULL;
   ((struct msg_piece *)newMsg)->totalPacketSize = payloadSize;
 
-  set_piece_parameters(newMsg, params);
-  set_msg_piece_timeout(newMsg, timeout);
-  set_msg_piece_callback_function(newMsg, callbackFunction);
+  ((struct msg_piece *)newMsg)->params = params;
+  ((struct msg_piece *)newMsg)->timeout = timeout;
+  ((struct msg_piece *)newMsg)->callbackHandler = callbackFunction;
 
   //Link the message into the list
   list_push(gPacketMsgList, newMsg);
@@ -212,14 +191,14 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
  * @Result Pointer to the struct with the final packet to be transmited (read by framer layer).
  */
 void *
-packet_create_header_piece(uint16_t headerSize, const uint8_t* headerData,
+packet_create_piggyback_piece(uint16_t headerSize, const uint8_t* headerData,
     uint8_t type, const uint8_t *nextDestination)
 {
-  void *newHeader = malloc_piece(headerSize, sizeof(struct header_piece));
+  void *newHeader = malloc_piece(headerSize, sizeof(struct piggyback_piece));
   if(headerSize) {
     if(!set_piece_data(newHeader, headerData)) {
       //Alloc failed, cancel operation
-      packet_delete_piece(newHeader);
+      packet_delete_piggyback_piece(newHeader);
       return NULL;
     }
   }
@@ -228,9 +207,25 @@ packet_create_header_piece(uint16_t headerSize, const uint8_t* headerData,
   /* Encode parameters */
 
   //set_piece_parameters(newHeader, params);
-  //set_header_piece_type(newHeader, type);
+  //set_piggyback_piece_type(newHeader, type);
+
+  //Link the header into the list
+  list_push(gPacketHeaderList, newHeader);
   return newHeader;
 }
+
+/*
+ * Function to get the total size of a packet
+ * @Params msg_piece Packet to be read.
+ * @Result Total size.
+ */
+uint16_t
+iotus_packet_packet_size(void *msg_piece) {
+  return (((struct msg_piece *)msg_piece)->initialBitHeaderSize +7)/8 +
+         (((struct msg_piece *)msg_piece)->finalBytesHeaderSize) +
+         (((struct msg_piece *)msg_piece)->dataSize);
+}
+
 
 /*
  * Sets the default chore that will be present in every default packet.
@@ -272,34 +267,6 @@ packet_verify_default_header_chore(iotus_packets_priority priority,
   return 0;
 }
 
-
-
-/*
- * Function to assemble packets on demand
- * @Params mainPiece Pointer to the main packet supposed to be sent
- * @Params MaxPktFrag How many pieces can this packet be fragmented and sent
- * @Params isBroadcastable Indicate if this packet will be able to be broadcast
- * @Result Pointer to the struct with the final packet to be transmitted (read by framer layer).
- */
-void *
-iotus_packet_assemble(void *mainPiece, uint8_t maxPacketFragmentation, uint8_t isBroadcastable)
-{
-  return NULL;
-}
-
-
-/*
- * Function to insert some header piece to be piggybacked into another message
- * @Params mainPiece Pointer to the main packet supposed to be sent
- * @Params MaxPktFrag How many pieces can this packet be fragmented and sent
- * @Params isBroadcastable Indicate if this packet will be able to be broadcast
- * @Result Pointer to the struct with the final packet to be transmitted (read by framer layer).
- */
-int
-iotus_packet_set_msg_info(struct header_piece *info_header, struct msg_piece *msg)
-{
-  return 0;
-}
 
 /*
  * Function to push bits into the header
@@ -376,9 +343,8 @@ iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
     }
   }
   ((struct msg_piece *)msg_piece)->initialBitHeaderSize += bitSequenceSize;//counted in bits
-  ((struct msg_piece *)msg_piece)->totalPacketSize += newSizeInBYTES;
 
-  return ((struct msg_piece *)msg_piece)->totalPacketSize;
+  return iotus_packet_packet_size(msg_piece);
 }
 
 
@@ -405,7 +371,7 @@ iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *header
     totalFinalSize = byteSequenceSize;
   } else {
     //Reallocate new buffer for this system
-    totalFinalSize = byteSequenceSize + ((struct msg_piece *)msg_piece)->finalBytesHeaderSize;//round up
+    totalFinalSize = byteSequenceSize + ((struct msg_piece *)msg_piece)->finalBytesHeaderSize;
 
     uint8_t *newBuff = (uint8_t *)malloc(totalFinalSize);
 
@@ -433,9 +399,7 @@ iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *header
     (((struct msg_piece *)msg_piece)->finalBytesHeader)[totalFinalSize - i - 1] = ((uint8_t *)headerToAppend)[i];
   }
 
-  ((struct msg_piece *)msg_piece)->totalPacketSize += byteSequenceSize;
-
-  return ((struct msg_piece *)msg_piece)->totalPacketSize;
+  return iotus_packet_packet_size(msg_piece);
 }
 
 
@@ -448,7 +412,45 @@ iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *header
  */
 uint16_t
 iotus_packet_apply_piggyback(void *msg_piece) {
-  return 0;
+  if(!(((struct msg_piece *)msg_piece)->params & PACKET_PARAMETERS_ALLOW_PIGGYBACK)) {
+    //No piggyback allowed for this packet
+    return 0;
+  }
+  //Look for header pieces that match this packet conditions
+  struct piggyback_piece *h;
+  struct piggyback_piece *nextH;
+  uint16_t packetOldSize = iotus_packet_packet_size(msg_piece);
+  
+
+  h = list_head(gPacketHeaderList);
+  while(h != NULL) {
+    nextH = list_item_next(h);
+    //if(COMPARE DESTINATION ADDRESS)
+    if(!(((struct msg_piece *)msg_piece)->params & PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
+      /*
+        We will only get in here if this packet do NOT accept fragmentation. 
+        Because this list is already ordered into latency sequence,
+        no need to sort or anything
+      */
+      if((iotus_radio_max_message - packetOldSize) >= h->dataSize) {
+        //This will fit...
+        uint16_t newSize = iotus_packet_append_byte_header(h->dataSize, h->data, msg_piece);
+        if(newSize != packetOldSize) {
+          //Operation success
+          list_remove(gPacketHeaderList, h);
+          //TODO CALL the CB function of the header
+          packet_delete_piggyback_piece(h);
+        }
+      }
+    } else {
+    //TODO This packet allows fragmentation...
+      PRINTF("Packet piggyback with fragmentation not done... TODO");
+    }
+
+    h = nextH;
+  }
+
+  return iotus_packet_packet_size(msg_piece);
 }
 
 /*
@@ -459,7 +461,7 @@ iotus_packet_apply_piggyback(void *msg_piece) {
  */
 uint8_t
 iotus_packet_read_byte(uint16_t bytePos, void *msg_piece) {
-  if((((struct msg_piece *)msg_piece)->totalPacketSize) <= bytePos) {
+  if(iotus_packet_packet_size(msg_piece) <= bytePos) {
     return 0;
   }
   //paddingRemover starts with the size of the initial Bit header size in Bytes...

@@ -1,12 +1,24 @@
 # Makefile for the new architeture developed into contiki
 # This makefile is called by the makefile of the mote platform
 
-IOTUS_FOLDER = $(CONTIKI)/iotus-arch
-TRANSPORT_FOLDER = $(IOTUS_FOLDER)/transport-layer-protocols
-ROUTING_FOLDER = $(IOTUS_FOLDER)/routing-layer-protocols
-DATA_LINK_FOLDER = $(IOTUS_FOLDER)/data-link-layer-protocols
-SERVICES_FOLDER = $(IOTUS_FOLDER)/services
+IOTUS_FOLDER_MAIN       = iotus-arch
+IOTUS_FOLDER_SERVICE    = services
+IOTUS_FOLDER_TRANSPORT  = transport-layer-protocols
+IOTUS_FOLDER_ROUTING    = routing-layer-protocols
+IOTUS_FOLDER_DATA_LINK  = data-link-layer-protocols
 IOTUS_DYNAMIC_HEADER_FILE = dyn-iotus-include-list.h
+
+
+IOTUS_FOLDER = $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
+SERVICES_FOLDER = $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
+TRANSPORT_FOLDER = $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
+ROUTING_FOLDER = $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
+DATA_LINK_FOLDER = $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
+
+RELATIVE_FOLDER_SERVICES = $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SERVICE)
+RELATIVE_FOLDER_TRANSPORT = $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_TRANSPORT)
+RELATIVE_FOLDER_ROUTING = $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_ROUTING)
+RELATIVE_FOLDER_DATA_LINK = $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DATA_LINK)
 
 comma=,
 empty=
@@ -138,6 +150,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
     $(foreach service, $(IOTUS_SERVICES_LIST), \
       $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
       $(eval include $(SERVICES_FOLDER)/$(service)/Makefile.$(service)) \
+      $(eval MODULES += $(RELATIVE_FOLDER_SERVICES)/$(service)) \
       $(if $(IOTUS_SERVICE_NAME),,\
         $(error IOTUS_SERVICE_NAME for $(service) is not defined!)\
       ) \
@@ -167,6 +180,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
         $(eval IOTUS_PROTOCOL_NAME = ) \
         $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
         $(eval include $($(1)_FOLDER)/$(protocol)/Makefile.$(protocol)) \
+        $(eval MODULES += $(RELATIVE_FOLDER_$(1))/$(protocol)) \
         $(if $(IOTUS_PROTOCOL_NAME),,\
           $(error IOTUS_PROTOCOL_NAME for $(protocol) is not defined!)\
         ) \
@@ -315,6 +329,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
       $(foreach service, $(IOTUS_SERVICES_LIST), \
         $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
         $(eval include $(SERVICES_FOLDER)/$(service)/Makefile.$(service)) \
+        $(eval MODULES += $(RELATIVE_FOLDER_SERVICES)/$(service)) \
         $(if $(IOTUS_SERVICE_NAME),,\
           $(error IOTUS_SERVICE_NAME for $(service) is not defined!)\
         ) \
@@ -342,6 +357,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
           $(eval IOTUS_PROTOCOL_NAME = ) \
           $(eval IOTUS_MODULE_MAIN_HEADER_FILE = ) \
           $(eval include $($(1)_FOLDER)/$(protocol)/Makefile.$(protocol)) \
+          $(eval MODULES += $(RELATIVE_FOLDER_$(1))/$(protocol)) \
           $(if $(IOTUS_PROTOCOL_NAME),,\
             $(error IOTUS_PROTOCOL_NAME for $(protocol) is not defined!)\
           ) \

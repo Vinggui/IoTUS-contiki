@@ -75,7 +75,11 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 
       //testing reading
       teste = iotus_packet_read_byte(7, packet);
-      PRINTF("Packet byte 7 is: %02x",teste);
+      PRINTF("Packet byte 7 is: %02x\n",teste);
+
+      //testing piggyback
+      teste = iotus_packet_apply_piggyback(packet);
+      PRINTF("Packet after piggyback: %u\n",teste);
     }
 
 
