@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "packet.h"
+#include "piggyback.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -47,38 +48,36 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
   for(;;) {
     PROCESS_WAIT_EVENT();
 
-    if(packet_verify_default_header_chore(
-      IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM)) {
+    if(IOTUS_PRIORITY_DATA_LINK == packet_get_assigned_chore(IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM)) {
       PRINTF("Deu - CS\n");
     }
-    if(packet_verify_default_header_chore(
-      IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
+    if(IOTUS_PRIORITY_DATA_LINK == packet_get_assigned_chore(IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
       PRINTF("Deu - BC\n");
 
-      void *packet = packet_create_msg_piece(6, TRUE,
+      void *packet = packet_create_msg(6, TRUE,
         FALSE, IOTUS_PRIORITY_DATA_LINK, 5000, (const uint8_t *)"Teste",
         (const uint8_t *)"01", NULL);
 
       uint8_t testeHeader[1] = {0b00000111};
-      uint16_t teste = iotus_packet_push_bit_header(3, testeHeader, packet);
+      uint16_t teste = packet_push_bit_header(3, testeHeader, packet);
 
       if(teste > 0) {
         PRINTF("Bits pushed ok! new size %u\n",teste);
       }
 
       uint8_t testeHeaderFullBytes[3] = {0xbe, 0xef, 0xFF};
-      teste = iotus_packet_append_byte_header(3, testeHeaderFullBytes, packet);
+      teste = packet_append_byte_header(3, testeHeaderFullBytes, packet);
 
       if(teste > 0) {
         PRINTF("Bytes appended ok! new size %u\n",teste);
       }
 
       //testing reading
-      teste = iotus_packet_read_byte(7, packet);
+      teste = packet_read_byte(7, packet);
       PRINTF("Packet byte 7 is: %02x\n",teste);
 
       //testing piggyback
-      teste = iotus_packet_apply_piggyback(packet);
+      teste = piggyback_apply(packet);
       PRINTF("Packet after piggyback: %u\n",teste);
     }
 
@@ -98,7 +97,7 @@ start(void)
   printf("\tContikiMAC\n");
   process_start(&contikiMAC_proc, NULL);
 
-  packet_subscribe_default_header_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
+  packet_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
 }
 
 

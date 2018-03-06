@@ -1,6 +1,9 @@
 # $Id: Makefile.null-v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
 
-IOTUS_SERVICE_FILES=
-
-IOTUS_MODULE_MAIN_HEADER_FILE = edytee-MAC.h
 IOTUS_PROTOCOL_NAME = edytee_MAC
+
+# Files to be compiled for this module
+CONTIKI_TARGET_SOURCEFILES += $(IOTUS_PROTOCOL_NAME).c
+
+# Headers that should be seen by other services, protocols and iotus core
+IOTUS_MODULE_MAIN_HEADER_FILE = $(IOTUS_PROTOCOL_NAME).h

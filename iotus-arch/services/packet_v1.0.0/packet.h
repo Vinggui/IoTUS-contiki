@@ -56,40 +56,38 @@ enum IOTUS_MSG_PIECE_INFO_TYPE {
 /*
  * Functions of this module
  */
+uint8_t
+packet_verify_parameter(void *msg_piece, uint8_t param);
+
 void *
-packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
+packet_create_msg(uint16_t payloadSize, uint8_t allowAggregation,
     uint8_t allowFragmentation, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
     const uint8_t *finalDestination, void *callbackFunction);
 
 void
-packet_delete_msg_piece(void *msgPiece);
+packet_delete_msg(void *msgPiece);
 
 uint16_t
-iotus_packet_packet_size(void *msg_piece);
+packet_get_size(void *msg_piece);
 
 void
-packet_subscribe_default_header_chore(iotus_packets_priority priority,
+packet_subscribe_for_chore(iotus_packets_priority priority,
   iotus_default_header_chores func);
 
 uint8_t
-packet_verify_default_header_chore(iotus_packets_priority priority,
-  iotus_default_header_chores func);
+packet_get_assigned_chore(iotus_default_header_chores func);
 
 uint16_t
-iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
+packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   void *msg_piece);
 
 uint16_t
-iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
+packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   void *msg_piece);
-
-
-uint16_t
-iotus_packet_apply_piggyback(void *msg_piece);
 
 uint8_t
-iotus_packet_read_byte(uint16_t bytePos, void *msg_piece);
+packet_read_byte(uint16_t bytePos, void *msg_piece);
 
 
 /* This function provides the core access to basic operations into this service */

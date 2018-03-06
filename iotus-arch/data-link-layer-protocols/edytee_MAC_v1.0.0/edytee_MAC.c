@@ -47,16 +47,7 @@ PROCESS_THREAD(edytee_MAC_proc, ev, data)
   for(;;) {
     PROCESS_WAIT_EVENT();
 
-    if(packet_verify_default_header_chore(
-      IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM)) {
-      PRINTF("Deu - CS\n");
-    }
-    if(packet_verify_default_header_chore(
-      IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
-      PRINTF("Deu - BC\n");
-
-      //packet_create_msg_piece();
-    }
+    PRINTF("Running EDyTEE MAC");
 
 
     etimer_reset(&timer);
@@ -71,8 +62,6 @@ start(void)
 {
   printf("\tEdytee MAC\n");
   process_start(&edytee_MAC_proc, NULL);
-
-  packet_subscribe_default_header_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
 }
 
 

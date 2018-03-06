@@ -19,9 +19,10 @@
 #include <string.h>
 #include "global_parameters.h"
 #include "iotus-core.h"
-#include "local-packet-def.h"
+#include "packet-defs.h"
 #include "list.h"
 #include "packet.h"
+#include "pieces.h"
 #include "platform-conf.h"
 
 #define DEBUG 1
@@ -30,15 +31,6 @@
 #else /* DEBUG */
 #define PRINTF(...)
 #endif /* DEBUG */
-
-#define COMMON_STRUCT_PIECES(structName) \
-  structName *next;\
-  uint8_t params;\
-  uint16_t timeout;\
-  uint8_t priority;\
-  void *callbackHandler;\
-  uint16_t dataSize;\
-  uint8_t *data
 
 struct msg_piece {
   COMMON_STRUCT_PIECES(struct msg_piece);
@@ -50,11 +42,6 @@ struct msg_piece {
   LIST_STRUCT(infoPieces);
 };
 
-struct piggyback_piece {
-  COMMON_STRUCT_PIECES(struct piggyback_piece);
-  uint8_t type;
-};
-
 /* Buffer to indicate which functionalities are execute by each layer.
  * This variable is set by each protocol when starting
  */
@@ -64,96 +51,48 @@ static uint8_t default_layers_chores_header[DEFAULT_FUNCTIONALITIES_SIZE] = {0};
 
 // Initiate the lists of module
 LIST(gPacketMsgList);
-LIST(gPacketHeaderList);
 
 /***********************************************************************/
-/* This function is created separeted so that this module
- * memory allocation can be easily changed.
- * Also, the piggyback_piece has the common initial as the msg, so
- * just use as the cast type to set common fields.
- */
-static void*
-malloc_piece(uint16_t dataSize, uint16_t pieceSize) {
-  void *newPiecePointer = malloc(pieceSize);
-
-  if(newPiecePointer == NULL) {
-    /* Failed to alloc memory */
-    PRINTF("Failed to allocate memory for piece.");
-    return NULL;
+void
+packet_delete_msg(void *piecePointer) {
+  struct msg_piece *piece = (struct msg_piece *)piecePointer;
+  if(piece->dataSize > 0) {
+    free(piece->data);
   }
-
-  struct piggyback_piece *newPiece = (struct piggyback_piece *)newPiecePointer;
-
-  newPiece->dataSize = dataSize;
-  if(dataSize > 0) {
-    uint8_t *dataPointer = (uint8_t *)malloc(dataSize);
-    if(dataPointer == NULL) {
-      /* Failed to alloc memory */
-      PRINTF("Failed to allocate memory for new msg payload.");
-      free(newPiecePointer);
-      return NULL;
-    }
-    newPiece->data = dataPointer;
-  }
-  return newPiecePointer;
+  free(piecePointer);
 }
+
 
 /*
-static void
-set_msg_piece_nextDestination(void *piecePointer, const uint8_t *dest)
-{
-  struct msg_piece* piece = (struct msg_piece*)piecePointer;
-  uint8_t i=0;
-  for(;i<IOTUS_RADIO_FULL_ADDRESS;i++) {
-   
-    piece->nextDestination[i] = dest[i];
-  }
-}*/
-
-static uint8_t
-set_piece_data(void *piecePointer, const uint8_t *data)
-{
-  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
-  if(piece == NULL) {
+ * Function to allow other services to verify the status of a parameter into a msg
+ * @Params msg_piece Packet to be read.
+ * @Params param Parameter to be verified
+ * @Result Boolean.
+ */
+uint8_t
+packet_verify_parameter(void *msg_piece, uint8_t param) {
+  if(NULL == msg_piece) {
+    PRINTF("PACKET: Null pointer to verify parameter");
     return 0;
   }
-  uint8_t i=0;
-  for(;i<piece->dataSize;i++) {
-    piece->data[i] = data[i];
-  }
-  return 1;
-}
 
-void
-packet_delete_piggyback_piece(void *piecePointer) {
-  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
-  if(piece->dataSize > 0) {
-    free(piece->data);
-  }
-  free(piecePointer);
-}
-
-void
-packet_delete_msg_piece(void *piecePointer) {
-  struct piggyback_piece *piece = (struct piggyback_piece *)piecePointer;
-  if(piece->dataSize > 0) {
-    free(piece->data);
-  }
-  free(piecePointer);
+  if( ((struct msg_piece *)msg_piece)->params & param)
+    return TRUE;
+  return FALSE;
 }
 
 /************************************************************************/
 void *
-packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
+packet_create_msg(uint16_t payloadSize, uint8_t allowAggregation,
     uint8_t allowFragmentation, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
     const uint8_t *finalDestination, void *callbackFunction){
 
-  void *newMsg = malloc_piece(payloadSize, sizeof(struct msg_piece));
+  void *newMsg = pieces_malloc(payloadSize, sizeof(struct msg_piece));
   
-  if(!set_piece_data(newMsg, payload)) {
+  if(!pieces_set_data(newMsg, payload)) {
     //Alloc failed, cancel operation
-    packet_delete_msg_piece(newMsg);
+    packet_delete_msg(newMsg);
     return NULL;
   }
 
@@ -184,43 +123,12 @@ packet_create_msg_piece(uint16_t payloadSize, uint8_t allowAggregation,
 }
 
 /*
- * Function to create header pieces to be attached
- * @Params headerSize Size of the header in bytes
- * @Params headerData The information to be attached
- * @Params isBroadcastable Indicate if this packet will be able lto be broadcast
- * @Result Pointer to the struct with the final packet to be transmited (read by framer layer).
- */
-void *
-packet_create_piggyback_piece(uint16_t headerSize, const uint8_t* headerData,
-    uint8_t type, const uint8_t *nextDestination)
-{
-  void *newHeader = malloc_piece(headerSize, sizeof(struct piggyback_piece));
-  if(headerSize) {
-    if(!set_piece_data(newHeader, headerData)) {
-      //Alloc failed, cancel operation
-      packet_delete_piggyback_piece(newHeader);
-      return NULL;
-    }
-  }
-
-  uint8_t params;
-  /* Encode parameters */
-
-  //set_piece_parameters(newHeader, params);
-  //set_piggyback_piece_type(newHeader, type);
-
-  //Link the header into the list
-  list_push(gPacketHeaderList, newHeader);
-  return newHeader;
-}
-
-/*
  * Function to get the total size of a packet
  * @Params msg_piece Packet to be read.
  * @Result Total size.
  */
 uint16_t
-iotus_packet_packet_size(void *msg_piece) {
+packet_get_size(void *msg_piece) {
   return (((struct msg_piece *)msg_piece)->initialBitHeaderSize +7)/8 +
          (((struct msg_piece *)msg_piece)->finalBytesHeaderSize) +
          (((struct msg_piece *)msg_piece)->dataSize);
@@ -231,7 +139,7 @@ iotus_packet_packet_size(void *msg_piece) {
  * Sets the default chore that will be present in every default packet.
  */
 void
-packet_subscribe_default_header_chore(iotus_packets_priority priority,
+packet_subscribe_for_chore(iotus_packets_priority priority,
   iotus_default_header_chores func)
 {
   uint8_t posByte = func/4;
@@ -255,16 +163,12 @@ packet_subscribe_default_header_chore(iotus_packets_priority priority,
  * @Return 1 for true, 0 for false.
  */
 uint8_t
-packet_verify_default_header_chore(iotus_packets_priority priority,
-  iotus_default_header_chores func)
+packet_get_assigned_chore(iotus_default_header_chores func)
 {
   uint8_t posByte = func/4;
   uint8_t posBit = (func%4)*2;
   uint8_t chore = default_layers_chores_header[posByte] & (11<<posBit);
-  if(chore == (priority<<posBit)) {
-    return 1;
-  }
-  return 0;
+  return chore;
 }
 
 
@@ -276,7 +180,7 @@ packet_verify_default_header_chore(iotus_packets_priority priority,
  * @Result Packet final size
  */
 uint16_t
-iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
+packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   void *msg_piece) {
 
   uint16_t i;
@@ -344,7 +248,7 @@ iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   }
   ((struct msg_piece *)msg_piece)->initialBitHeaderSize += bitSequenceSize;//counted in bits
 
-  return iotus_packet_packet_size(msg_piece);
+  return packet_get_size(msg_piece);
 }
 
 
@@ -356,7 +260,7 @@ iotus_packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
  * @Result Packet final size
  */
 uint16_t
-iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
+packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   void *msg_piece) {
   int i;//Verify if the msg piece already has something
   uint16_t totalFinalSize = 0;
@@ -399,58 +303,7 @@ iotus_packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *header
     (((struct msg_piece *)msg_piece)->finalBytesHeader)[totalFinalSize - i - 1] = ((uint8_t *)headerToAppend)[i];
   }
 
-  return iotus_packet_packet_size(msg_piece);
-}
-
-
-/*
- * Function to append piggyback informations into the tail of the msg (inversed)
- * @Params bytesSize The amount of bytes that will be appended.
- * @Params byteSeq An array of bytes in its normal sequence
- * @Params msg_piece Msg to apply this append
- * @Result Packet final size
- */
-uint16_t
-iotus_packet_apply_piggyback(void *msg_piece) {
-  if(!(((struct msg_piece *)msg_piece)->params & PACKET_PARAMETERS_ALLOW_PIGGYBACK)) {
-    //No piggyback allowed for this packet
-    return 0;
-  }
-  //Look for header pieces that match this packet conditions
-  struct piggyback_piece *h;
-  struct piggyback_piece *nextH;
-  uint16_t packetOldSize = iotus_packet_packet_size(msg_piece);
-  
-
-  h = list_head(gPacketHeaderList);
-  while(h != NULL) {
-    nextH = list_item_next(h);
-    //if(COMPARE DESTINATION ADDRESS)
-    if(!(((struct msg_piece *)msg_piece)->params & PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
-      /*
-        We will only get in here if this packet do NOT accept fragmentation. 
-        Because this list is already ordered into latency sequence,
-        no need to sort or anything
-      */
-      if((iotus_radio_max_message - packetOldSize) >= h->dataSize) {
-        //This will fit...
-        uint16_t newSize = iotus_packet_append_byte_header(h->dataSize, h->data, msg_piece);
-        if(newSize != packetOldSize) {
-          //Operation success
-          list_remove(gPacketHeaderList, h);
-          //TODO CALL the CB function of the header
-          packet_delete_piggyback_piece(h);
-        }
-      }
-    } else {
-    //TODO This packet allows fragmentation...
-      PRINTF("Packet piggyback with fragmentation not done... TODO");
-    }
-
-    h = nextH;
-  }
-
-  return iotus_packet_packet_size(msg_piece);
+  return packet_get_size(msg_piece);
 }
 
 /*
@@ -460,8 +313,8 @@ iotus_packet_apply_piggyback(void *msg_piece) {
  * @Result Byte read.
  */
 uint8_t
-iotus_packet_read_byte(uint16_t bytePos, void *msg_piece) {
-  if(iotus_packet_packet_size(msg_piece) <= bytePos) {
+packet_read_byte(uint16_t bytePos, void *msg_piece) {
+  if(packet_get_size(msg_piece) <= bytePos) {
     return 0;
   }
   //paddingRemover starts with the size of the initial Bit header size in Bytes...
@@ -492,7 +345,6 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 
     // Initiate the lists of module
     list_init(gPacketMsgList);
-    list_init(gPacketHeaderList);
 
     //Reset the default packet buffer
     int i = 0;

@@ -8,7 +8,7 @@
  */
 
 /*
- * global_parameters.c
+ * piggyback.c
  *
  *  Created on: Feb 27, 2018
  *      Author: vinicius
@@ -17,8 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "iotus-core.h"
-#include "global_parameters.h"
+#include "piggyback.h"
 #include "platform-conf.h"
+#include "global_parameters.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -36,6 +37,7 @@ packet_prioritization iotus_packet_prioritization;
                               Radio Parameters
 ***********************************************************************/
 uint16_t iotus_radio_max_message = IOTUS_RADIO_MAX_PACKET_SIZE;
+uint8_t iotus_radio_address_size = IOTUS_RADIO_FULL_ADDRESS;
 
 
 
@@ -48,7 +50,7 @@ uint16_t iotus_radio_max_message = IOTUS_RADIO_MAX_PACKET_SIZE;
  * Default function required from IoTUS, to initialize, run and finish this service
  */
 void
-iotus_signal_handler_global_parameters(iotus_service_signal signal, void *data)
+iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
 {
   /*
   if(IOTUS_START_SERVICE == signal) {

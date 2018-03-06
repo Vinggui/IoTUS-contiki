@@ -1,6 +1,6 @@
-# $Id: Makefile.null-v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
+# $Id: Makefile.piggyback-v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
 
-IOTUS_SERVICE_NAME = null
+IOTUS_SERVICE_NAME = piggyback
 
 # Files to be compiled for this module
 CONTIKI_TARGET_SOURCEFILES += $(IOTUS_SERVICE_NAME).c

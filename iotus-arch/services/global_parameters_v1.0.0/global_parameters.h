@@ -26,6 +26,7 @@ typedef enum {
 
 extern packet_prioritization iotus_packet_prioritization;
 extern uint16_t iotus_radio_max_message;
+extern uint8_t iotus_radio_address_size;
 
 
 void
