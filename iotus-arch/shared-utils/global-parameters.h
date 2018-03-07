@@ -28,10 +28,6 @@ extern packet_prioritization iotus_packet_prioritization;
 extern uint16_t iotus_radio_max_message;
 extern uint8_t iotus_radio_address_size;
 
-
-void
-iotus_signal_handler_global_parameters(iotus_service_signal signal, void *data);
-
 #endif /* IOTUS_ARCH_SERVICES_GLOBAL_PARAMETERS_GLOBAL_PARAMETERS_H_ */
 
 /* The following stuff ends the \defgroup block at the beginning of

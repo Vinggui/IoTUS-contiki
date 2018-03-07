@@ -59,9 +59,11 @@ enum IOTUS_MSG_PIECE_INFO_TYPE {
 uint8_t
 packet_verify_parameter(void *msg_piece, uint8_t param);
 
+void
+packet_set_parameter(void *msg_piece, uint8_t param);
+
 void *
-packet_create_msg(uint16_t payloadSize, uint8_t allowAggregation,
-    uint8_t allowFragmentation, iotus_packets_priority priority,
+packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
     const uint8_t *finalDestination, void *callbackFunction);
 

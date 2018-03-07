@@ -1,7 +1,3 @@
-
-
-
-
 /**
  * \defgroup decription...
  *
@@ -19,6 +15,7 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "packet.h"
+#include "packet-defs.h"
 #include "piggyback.h"
 
 #define DEBUG 1
@@ -54,8 +51,8 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
     if(IOTUS_PRIORITY_DATA_LINK == packet_get_assigned_chore(IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
       PRINTF("Deu - BC\n");
 
-      void *packet = packet_create_msg(6, TRUE,
-        FALSE, IOTUS_PRIORITY_DATA_LINK, 5000, (const uint8_t *)"Teste",
+      void *packet = packet_create_msg(6, IOTUS_PRIORITY_DATA_LINK, 5000,
+        (const uint8_t *)"Teste",
         (const uint8_t *)"01", NULL);
 
       uint8_t testeHeader[1] = {0b00000111};
@@ -77,6 +74,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       PRINTF("Packet byte 7 is: %02x\n",teste);
 
       //testing piggyback
+      packet_set_parameter(packet, PACKET_PARAMETERS_ALLOW_PIGGYBACK);
       teste = piggyback_apply(packet);
       PRINTF("Packet after piggyback: %u\n",teste);
     }

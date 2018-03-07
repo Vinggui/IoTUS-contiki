@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "global_parameters.h"
+#include "global-parameters.h"
 #include "iotus-core.h"
 #include "nodes.h"
 #include "platform-conf.h"
@@ -31,7 +31,8 @@
 struct nodes {
   struct nodes *next;
   uint8_t *address;
-  uint16_t timestamp;//Supposed to be the last time heard
+  unsigned long timeout_seconds;
+  clock_time_t timestamp;//Supposed to be the last time heard
   LIST_STRUCT(additionalInfo);
 };
 
@@ -58,15 +59,13 @@ iotus_nodes_get_node_by_address(uint8_t addressSize, uint8_t *address) {
 
 static void *
 create_node(void) {
-  void *newChunk = malloc(sizeof(struct nodes));
+  struct nodes *newChunk = (struct nodes *)malloc(sizeof(struct nodes));
 
   if(newChunk == NULL) {
     /* Failed to alloc memory */
     PRINTF("Failed to allocate memory for node.");
     return NULL;
   }
-
-  struct nodes *newNode = (struct nodes *)newChunk;
 
   uint8_t *addressPointer = (uint8_t *)malloc(iotus_radio_address_size);
   if(addressPointer == NULL) {

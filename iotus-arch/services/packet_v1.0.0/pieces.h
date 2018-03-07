@@ -17,13 +17,15 @@
 #define IOTUS_ARCH_SERVICES_PACKET_PIECES_H_  
 
 #include "platform-conf.h"
+#include "clock.h"
 
 
 
 #define COMMON_STRUCT_PIECES(structName) \
   structName *next;\
   uint8_t params;\
-  uint16_t timeout;\
+  unsigned long timeout_seconds;\
+  clock_time_t timeout;\
   uint8_t priority;\
   void *callbackHandler;\
   uint16_t dataSize;\

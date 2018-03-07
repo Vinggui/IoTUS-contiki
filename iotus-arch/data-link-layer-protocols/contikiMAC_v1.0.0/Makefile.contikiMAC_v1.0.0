@@ -2,8 +2,6 @@
 
 IOTUS_PROTOCOL_NAME = contikiMAC
 
-# Files to be compiled for this module
-CONTIKI_TARGET_SOURCEFILES += $(IOTUS_PROTOCOL_NAME).c
-
-# Headers that should be seen by other services, protocols and iotus core
-IOTUS_MODULE_MAIN_HEADER_FILE = $(IOTUS_PROTOCOL_NAME).h
+# If more folders need to be compiled, just add them to the following line, like
+# THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/<NEW FOLDER 1> $(THIS_MODULE_FOLDER)/<NEW FOLDER 2>
+THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/teste

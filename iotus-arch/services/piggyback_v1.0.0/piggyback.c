@@ -8,7 +8,7 @@
  */
 
 /*
- * global_parameters.c
+ * piggyback.c
  *
  *  Created on: Feb 27, 2018
  *      Author: vinicius
@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include "list.h"
 #include "iotus-core.h"
-#include "global_parameters.h"
+#include "global-parameters.h"
 #include "packet.h"
 #include "pieces.h"
 #include "platform-conf.h"
@@ -93,6 +93,7 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
 uint16_t
 piggyback_apply(void *msg_piece) {
   if(!packet_verify_parameter(msg_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK)) {
+    PRINTF("Packet doens't allow piggyback.\n");
     //No piggyback allowed for this packet
     return 0;
   }
@@ -137,7 +138,7 @@ piggyback_apply(void *msg_piece) {
  * Default function required from IoTUS, to initialize, run and finish this service
  */
 void
-iotus_signal_handler_global_parameters(iotus_service_signal signal, void *data)
+iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
     PRINTF("\tService Piggyback\n");

@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "global_parameters.h"
+#include "global-parameters.h"
 #include "iotus-core.h"
 #include "packet-defs.h"
 #include "list.h"
@@ -81,10 +81,27 @@ packet_verify_parameter(void *msg_piece, uint8_t param) {
   return FALSE;
 }
 
+
+/*
+ * Function to allow other services to set a parameter into a msg
+ * @Params msg_piece Packet to be set.
+ * @Params param Parameter to be written
+ * @Result Boolean.
+ */
+void
+packet_set_parameter(void *msg_piece, uint8_t param) {
+  if(NULL == msg_piece) {
+    PRINTF("PACKET: Null pointer to set parameter");
+    return;
+  }
+
+  /* Encode parameters */
+  ((struct msg_piece *)msg_piece)->params |= param;
+}
+
 /************************************************************************/
 void *
-packet_create_msg(uint16_t payloadSize, uint8_t allowAggregation,
-    uint8_t allowFragmentation, iotus_packets_priority priority,
+packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
     const uint8_t *finalDestination, void *callbackFunction){
 
@@ -100,19 +117,11 @@ packet_create_msg(uint16_t payloadSize, uint8_t allowAggregation,
   ((struct msg_piece *)newMsg)->initialBitHeaderSize = 0;
   ((struct msg_piece *)newMsg)->finalBytesHeaderSize = 0;
 
-  uint8_t params = 0;
-  /* Encode parameters */
-  if(allowAggregation)
-    params  = PACKET_PARAMETERS_ALLOW_AGGREGATION;
-  if(allowFragmentation)
-    params |= PACKET_PARAMETERS_ALLOW_FRAGMENTATION;
-  params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
-
   ((struct msg_piece *)newMsg)->initialBitHeader = NULL;
   ((struct msg_piece *)newMsg)->finalBytesHeader = NULL;
   ((struct msg_piece *)newMsg)->totalPacketSize = payloadSize;
 
-  ((struct msg_piece *)newMsg)->params = params;
+  ((struct msg_piece *)newMsg)->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
   ((struct msg_piece *)newMsg)->timeout = timeout;
   ((struct msg_piece *)newMsg)->callbackHandler = callbackFunction;
 
