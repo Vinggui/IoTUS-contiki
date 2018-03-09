@@ -17,6 +17,7 @@
 #include "packet.h"
 #include "packet-defs.h"
 #include "piggyback.h"
+#include "timestamp.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -24,6 +25,8 @@
 #else /* DEBUG */
 #define PRINTF(...)
 #endif /* DEBUG */
+
+timestamp firstTimer;
 
 PROCESS(contikiMAC_proc, "ContikiMAC Protocol");
 
@@ -37,7 +40,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 
   /* Any process must start with this. */
   PROCESS_BEGIN();
-  etimer_set(&timer, CLOCK_SECOND*2);
+  etimer_set(&timer, CLOCK_SECOND/3);
 
   /* Initiate the lists of module */
 
@@ -77,6 +80,11 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       packet_set_parameter(packet, PACKET_PARAMETERS_ALLOW_PIGGYBACK);
       teste = piggyback_apply(packet);
       PRINTF("Packet after piggyback: %u\n",teste);
+
+
+      //Testing timestamp
+      unsigned long elapsed = timestamp_elapsed(&firstTimer);
+      PRINTF("Elapsed time is: %lu\n",elapsed);
     }
 
 
@@ -96,6 +104,7 @@ start(void)
   process_start(&contikiMAC_proc, NULL);
 
   packet_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
+  timestamp_mark(&firstTimer);
 }
 
 

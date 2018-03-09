@@ -13,15 +13,11 @@
  *      Author: vinicius
  */
 
-#ifndef IOTUS_ARCH_SERVICES_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
-#define IOTUS_ARCH_SERVICES_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
-
-#include "iotus-core.h"
-#include "platform-conf.h"
+#ifndef IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
+#define IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
 
 
-
-#endif /* IOTUS_ARCH_SERVICES_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_ */
+#endif /* IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_ */
 
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

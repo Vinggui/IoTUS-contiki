@@ -18,6 +18,7 @@
 
 #include "iotus-core.h"
 #include "platform-conf.h"
+#include "timestamp.h"
 
 
 void

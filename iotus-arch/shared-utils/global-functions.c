@@ -1,4 +1,3 @@
-
 /**
  * \defgroup decription...
  *
@@ -18,7 +17,6 @@
 #include <stdlib.h>
 #include "iotus-core.h"
 #include "platform-conf.h"
-#include "global-functions.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -36,3 +34,9 @@
 
 
 /***********************************************************************/
+
+
+/* The following stuff ends the \defgroup block at the beginning of
+   the file: */
+
+/** @} */

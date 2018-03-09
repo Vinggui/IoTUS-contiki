@@ -43,3 +43,9 @@ uint8_t iotus_radio_address_size = IOTUS_RADIO_FULL_ADDRESS;
 
 
 /***********************************************************************/
+
+
+/* The following stuff ends the \defgroup block at the beginning of
+   the file: */
+
+/** @} */

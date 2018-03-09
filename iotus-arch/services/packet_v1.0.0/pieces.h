@@ -18,14 +18,14 @@
 
 #include "platform-conf.h"
 #include "clock.h"
+#include "timestamp.h"
 
 
 
 #define COMMON_STRUCT_PIECES(structName) \
   structName *next;\
+  timestamp timeout; \
   uint8_t params;\
-  unsigned long timeout_seconds;\
-  clock_time_t timeout;\
   uint8_t priority;\
   void *callbackHandler;\
   uint16_t dataSize;\

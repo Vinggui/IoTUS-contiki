@@ -31,8 +31,7 @@
 struct nodes {
   struct nodes *next;
   uint8_t *address;
-  unsigned long timeout_seconds;
-  clock_time_t timestamp;//Supposed to be the last time heard
+  timestamp timestamp;//Supposed to be the last time heard
   LIST_STRUCT(additionalInfo);
 };
 
@@ -112,7 +111,7 @@ iotus_nodes_update_by_address(uint8_t *address, uint16_t timestamp)
  * Default function required from IoTUS, to initialize, run and finish this service
  */
 void
-iotus_signal_handler_global_parameters(iotus_service_signal signal, void *data)
+iotus_signal_handler_nodes(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
     PRINTF("\tService Packet\n");

@@ -64,10 +64,10 @@ packet_delete_msg(void *piecePointer) {
 
 
 /*
- * Function to allow other services to verify the status of a parameter into a msg
- * @Params msg_piece Packet to be read.
- * @Params param Parameter to be verified
- * @Result Boolean.
+ * \brief Function to allow other services to verify the status of a parameter into a msg
+ * \param msg_piece Packet to be read.
+ * \param param Parameter to be verified
+ * \return Boolean.
  */
 uint8_t
 packet_verify_parameter(void *msg_piece, uint8_t param) {
@@ -83,10 +83,10 @@ packet_verify_parameter(void *msg_piece, uint8_t param) {
 
 
 /*
- * Function to allow other services to set a parameter into a msg
- * @Params msg_piece Packet to be set.
- * @Params param Parameter to be written
- * @Result Boolean.
+ * \brief Function to allow other services to set a parameter into a msg
+ * \param msg_piece Packet to be set.
+ * \param param Parameter to be written
+ * \return Boolean.
  */
 void
 packet_set_parameter(void *msg_piece, uint8_t param) {
@@ -122,7 +122,7 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
   ((struct msg_piece *)newMsg)->totalPacketSize = payloadSize;
 
   ((struct msg_piece *)newMsg)->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
-  ((struct msg_piece *)newMsg)->timeout = timeout;
+  //((struct msg_piece *)newMsg)->timeout = timeout;
   ((struct msg_piece *)newMsg)->callbackHandler = callbackFunction;
 
   //Link the message into the list
@@ -132,9 +132,9 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
 }
 
 /*
- * Function to get the total size of a packet
- * @Params msg_piece Packet to be read.
- * @Result Total size.
+ * \brief Function to get the total size of a packet
+ * \param msg_piece Packet to be read.
+ * \return Total size.
  */
 uint16_t
 packet_get_size(void *msg_piece) {
@@ -182,11 +182,11 @@ packet_get_assigned_chore(iotus_default_header_chores func)
 
 
 /*
- * Function to push bits into the header
- * @Params bitSequenceSize The amount of bit that will be push into.
- * @Params bitSeq An array of bytes containing the bits
- * @Params msg_piece Msg to apply this push
- * @Result Packet final size
+ * \brief Function to push bits into the header
+ * \param bitSequenceSize The amount of bit that will be push into.
+ * \param bitSeq An array of bytes containing the bits
+ * \param msg_piece Msg to apply this push
+ * \return Packet final size
  */
 uint16_t
 packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
@@ -262,11 +262,11 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 
 
 /*
- * Function to append full bytes headers into the tail (inversed)
- * @Params bytesSize The amount of bytes that will be appended.
- * @Params byteSeq An array of bytes in its normal sequence
- * @Params msg_piece Msg to apply this append
- * @Result Packet final size
+ * \brief Function to append full bytes headers into the tail (inversed)
+ * \param bytesSize The amount of bytes that will be appended.
+ * \param byteSeq An array of bytes in its normal sequence
+ * \param msg_piece Msg to apply this append
+ * \return Packet final size
  */
 uint16_t
 packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
@@ -316,10 +316,10 @@ packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 }
 
 /*
- * Function to read any byte of a message, given its position
- * @Params bytePos The position of the byte
- * @Params msg_piece Packet to be read.
- * @Result Byte read.
+ * \brief  Function to read any byte of a message, given its position
+ * \param bytePos The position of the byte
+ * \param msg_piece Packet to be read.
+ * \return Byte read.
  */
 uint8_t
 packet_read_byte(uint16_t bytePos, void *msg_piece) {
@@ -344,7 +344,7 @@ packet_read_byte(uint16_t bytePos, void *msg_piece) {
 }
 
 /*
- * Default function required from IoTUS, to initialize, run and finish this service
+ * \brief Default function required from IoTUS, to initialize, run and finish this service
  */
 void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data)
