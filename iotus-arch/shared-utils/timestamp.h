@@ -16,24 +16,32 @@
 #ifndef IOTUS_ARCH_SHARED_UTILS_TIMESTAMP_H_
 #define IOTUS_ARCH_SHARED_UTILS_TIMESTAMP_H_
 
+#include "clock.h"
+
+
 typedef struct timestamp {
   unsigned long seconds;
   clock_time_t fineTime;
-} timestamp;
+} timestamp_t;
 
 #define TIMESTAMP_GRANULARITY       1000 //Milliseconds
 
 void
-timestamp_mark(timestamp *time);
+timestamp_mark(timestamp_t *time, int32_t delta);
 
 uint8_t
-timestamp_greater_then(timestamp *time_1,timestamp *time_2);
+timestamp_greater_then(timestamp_t *time_1,timestamp_t *time_2);
 
 unsigned long
-timestamp_diference(timestamp *time_1, timestamp *time_2);
+timestamp_diference(timestamp_t *time_1, timestamp_t *time_2);
 
-unsigned long
-timestamp_elapsed(timestamp *time);
+uint32_t
+timestamp_elapsed(timestamp_t *time);
+
+
+uint32_t
+timestamp_remainder(timestamp_t *time);
+
 
 #endif /* IOTUS_ARCH_SHARED_UTILS_TIMESTAMP_H_ */
 

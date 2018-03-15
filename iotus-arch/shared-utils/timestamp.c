@@ -31,15 +31,22 @@
 /*---------------------------------------------------------------------*/
 /*
  * \brief Get the elapsed time between the provided values and now.
- * \param time    The pointer of the timestamp to be set.
+ * \param time          The pointer of the timestamp to be set.
+ * \param delta         Add or subtract time (in ms) to the actual momment.
  */
 void
-timestamp_mark(timestamp *time)
+timestamp_mark(timestamp_t *time, int32_t delta)//(thanks Lucas for this name)
 {
   time->fineTime = (clock_time() % CLOCK_CONF_SECOND);
   time->seconds = clock_seconds();
+  if(delta != 0) {
+    time->fineTime += (delta % TIMESTAMP_GRANULARITY)*CLOCK_CONF_SECOND;
+    time->seconds += delta / TIMESTAMP_GRANULARITY;
+  }
 }
-/*---------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------
+-*/
 
 /*
  * \brief Gets which timestamp is bigger then the other.
@@ -50,7 +57,7 @@ timestamp_mark(timestamp *time)
  * \retval 2           Inputs 1 < 2.
  */
 uint8_t
-timestamp_greater_then(timestamp *time_1,timestamp *time_2)
+timestamp_greater_then(timestamp_t *time_1, timestamp_t *time_2)
 {
   if(time_1->seconds == time_2->seconds) {
     if(time_1->fineTime == time_2->fineTime) {
@@ -74,10 +81,11 @@ timestamp_greater_then(timestamp *time_1,timestamp *time_2)
  * \brief Get the time difference between the provided values 1 and 2.
  * \param time_1    The pointer of the timestamp 1 to be calculated.
  * \param time_2    The pointer of the timestamp 2 to be calculated.
- * \return             The elasped time in milliseconds between time 1 and 2 (input has to be 1>2).
+ * \return          The elasped time in milliseconds between time 1 and 2
+                    (input 1 has to be greater than 2, return 0 otherwise).
  */
 unsigned long
-timestamp_diference(timestamp *time_1, timestamp *time_2)
+timestamp_diference(timestamp_t *time_1, timestamp_t *time_2)
 {
   /* We have to consider every kind of clock implementation.
    * It means that clock_time() can return epoch values or easily wraped 2 bytes counter
@@ -93,15 +101,6 @@ timestamp_diference(timestamp *time_1, timestamp *time_2)
     } else {
       difference -= ((time_2->fineTime - time_1->fineTime)*TIMESTAMP_GRANULARITY)/CLOCK_CONF_SECOND;
     }
-  } else if(greaterValue == 2) {
-    difference = time_2->seconds - time_1->seconds;
-    difference *= TIMESTAMP_GRANULARITY;
-    
-    if(time_2->fineTime > time_1->fineTime) {
-      difference += ((time_2->fineTime - time_1->fineTime)*TIMESTAMP_GRANULARITY)/CLOCK_CONF_SECOND;
-    } else {
-      difference -= ((time_1->fineTime - time_2->fineTime)*TIMESTAMP_GRANULARITY)/CLOCK_CONF_SECOND;
-    }
   }
   return difference;
 }
@@ -112,12 +111,26 @@ timestamp_diference(timestamp *time_1, timestamp *time_2)
  * \param seconds    The pointer of the timestamp.
  * \return           The elasped time in milliseconds until now.
  */
-unsigned long
-timestamp_elapsed(timestamp *time)
+uint32_t
+timestamp_elapsed(timestamp_t *time)
 {
-  timestamp now;
-  timestamp_mark(&now);
+  timestamp_t now;
+  timestamp_mark(&now,0);
   return timestamp_diference(&now,time);
+}
+/*---------------------------------------------------------------------*/
+
+/*
+ * \brief Get the elapsed time between the provided values and now.
+ * \param seconds    The pointer of the timestamp.
+ * \return           The elasped time in milliseconds until now.
+ */
+uint32_t
+timestamp_remainder(timestamp_t *time)
+{
+  timestamp_t now;
+  timestamp_mark(&now,0);
+  return timestamp_diference(time,&now);
 }
 /*---------------------------------------------------------------------*/
 

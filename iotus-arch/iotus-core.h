@@ -22,6 +22,8 @@
 #ifndef IOTUS_ARCH_IOTUS_CORE_H_
 #define IOTUS_ARCH_IOTUS_CORE_H_
 
+#include "platform-conf.h"
+
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   //Define the Enumaration types for dynamic mode
   #if IOTUS_CONF_USING_TRANSPORT == 1
@@ -44,6 +46,7 @@
 typedef enum iotus_service_signals {IOTUS_START_SERVICE, IOTUS_RUN_SERVICE, IOTUS_END_SERVICE} iotus_service_signal;
 
 
+typedef uint8_t Boolean;
 #define TRUE            1
 #define FALSE           0
 

@@ -21,15 +21,20 @@
 #include "timestamp.h"
 
 
-void
-piggyback_delete_piece(void *piecePointer);
+typedef struct piggyback_piece {
+  COMMON_STRUCT_PIECES(struct piggyback_piece);
+  uint8_t type;
+} Iotus_piggyback_t;
 
-void *
+void
+piggyback_delete_piece(Iotus_piggyback_t *piece);
+
+Iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
-    uint8_t type, const uint8_t *nextDestination);
+    uint8_t type, Iotus_node *destinationNode, int32_t timeout);
 
 uint16_t
-piggyback_apply(void *msg_piece);
+piggyback_apply(iotus_packet_t *packet_piece);
 
 void
 iotus_signal_handler_piggyback(iotus_service_signal signal, void *data);
