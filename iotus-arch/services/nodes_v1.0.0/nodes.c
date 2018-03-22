@@ -23,12 +23,10 @@
 #include "platform-conf.h"
 #include "timestamp.h"
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
+
+#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define THIS_LOG_FILE_NAME_DESCRITOR "nodes"
+#include "safe-printer.h"
 
 // Initiate the lists of module
 LIST(gNodesList);
@@ -63,8 +61,8 @@ nodes_compare_address(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
  * \retval  NULL           If the address type is not found. 
  */
 uint8_t *
-nodes_get_address(Iotus_node *node, uint8_t addressType) {
-  if(addressType == IOTUS_NODES_ADDR_TYPE_FULL) {
+nodes_get_address(iotus_node_t *node, uint8_t addressType) {
+  if(addressType == IOTUS_NODES_ADD_INFO_TYPE_FULL_ADDR) {
     return node->address;
   } else {
     iotus_additional_info_t *addressInfo = pieces_get_additional_info_by_type(node->additionalInfoList, addressType);
@@ -84,16 +82,16 @@ nodes_get_address(Iotus_node *node, uint8_t addressType) {
  * \param   addressType   The type of address to be returned.
  * \retval  The pointer to the node, if the address is found. Null otherwise.
  */
-Iotus_node *
+iotus_node_t *
 nodes_get_node_by_address(uint8_t addressType, uint8_t *address) {
   if(NULL == address) {
     return NULL;
   }
 
   //Verify if this node already exists
-  struct nodes *node;
+  iotus_node_t *node;
   for(node = list_head(gNodesList); node != NULL; node = list_item_next(node)) {
-    if(addressType == IOTUS_NODES_ADDR_TYPE_FULL) {
+    if(addressType == IOTUS_NODES_ADD_INFO_TYPE_FULL_ADDR) {
       if(TRUE == nodes_compare_address(node->address, address, iotus_radio_address_size)) {
         //Node found
         break;
@@ -109,27 +107,27 @@ nodes_get_node_by_address(uint8_t addressType, uint8_t *address) {
       }
     }
   }
-  return NULL;
+  return node;
 }
 
 /*---------------------------------------------------------------------*/
 /**
  * \return
  */
-static Iotus_node *
+static iotus_node_t *
 create_node(void) {
   struct nodes *newChunk = (struct nodes *)malloc(sizeof(struct nodes));
 
   if(newChunk == NULL) {
     /* Failed to alloc memory */
-    PRINTF("Failed to allocate memory for node.");
+    SAFE_PRINT("Allocate memory.");
     return NULL;
   }
 
   uint8_t *addressPointer = (uint8_t *)malloc(iotus_radio_address_size);
   if(addressPointer == NULL) {
     /* Failed to alloc memory */
-    PRINTF("Failed to allocate memory for new node address.");
+    SAFE_PRINT("Allocate memory");
     free(newChunk);
     return NULL;
   }
@@ -144,11 +142,11 @@ create_node(void) {
  * \brief Get the elapsed time between the provided values and now.
  * \param time    The pointer of the timestamp to be set.
  */
-Iotus_node *
+iotus_node_t *
 nodes_update_by_address(uint8_t *address, uint8_t addressType)
 {
   //Verify if this node already exists
-  Iotus_node *h = nodes_update_by_address(address, addressType);
+  iotus_node_t *h = nodes_update_by_address(address, addressType);
   if(NULL == h) {
     //node was not found
     h = create_node();
@@ -173,7 +171,7 @@ nodes_update_by_address(uint8_t *address, uint8_t addressType)
 void iotus_signal_handler_nodes(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
-    PRINTF("\tService Packet\n");
+    SAFE_PRINT("\tService Packet\n");
 
     // Initiate the lists of module
     list_init(gNodesList);

@@ -7,7 +7,7 @@
  */
 
 /*
- * packet.h
+ * pieces.h
  *
  *  Created on: Nov 15, 2017
  *      Author: vinicius
@@ -29,7 +29,7 @@
   uint8_t params;\
   uint8_t priority;\
   void *callbackHandler;\
-  Iotus_node *finalDestinationNode;\
+  iotus_node_t *finalDestinationNode;\
   uint16_t dataSize;\
   uint8_t *data
 

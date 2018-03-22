@@ -87,7 +87,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 
 
       //Testing timestamp
-      uint64_t elapsed = timestamp_elapsed(&firstTimer);
+      unsigned long elapsed = timestamp_elapsed(&firstTimer);
       PRINTF("Elapsed time is: %lu\n",elapsed);
 
 

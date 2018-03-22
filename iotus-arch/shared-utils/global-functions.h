@@ -16,6 +16,7 @@
 #ifndef IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
 #define IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
 
+#define member_size(type, member) sizeof(((type *)0)->member)
 
 #endif /* IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_ */
 

@@ -18,6 +18,7 @@
 
 #include "iotus-core.h"
 #include "platform-conf.h"
+#include "timestamp.h"
 
 typedef enum {
   IOTUS_PACKET_PRIORITIZE_ENERGY_EFFICIENCY = 0,
@@ -27,6 +28,7 @@ typedef enum {
 extern packet_prioritization iotus_packet_prioritization;
 extern uint16_t iotus_radio_max_message;
 extern uint8_t iotus_radio_address_size;
+extern timestamp_t iotus_time_zero;
 
 #endif /* IOTUS_ARCH_SERVICES_GLOBAL_PARAMETERS_GLOBAL_PARAMETERS_H_ */
 

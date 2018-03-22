@@ -35,11 +35,11 @@ timestamp_greater_then(timestamp_t *time_1,timestamp_t *time_2);
 unsigned long
 timestamp_diference(timestamp_t *time_1, timestamp_t *time_2);
 
-uint32_t
+unsigned long
 timestamp_elapsed(timestamp_t *time);
 
 
-uint32_t
+unsigned long
 timestamp_remainder(timestamp_t *time);
 
 

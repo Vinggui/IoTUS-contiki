@@ -111,7 +111,7 @@ timestamp_diference(timestamp_t *time_1, timestamp_t *time_2)
  * \param seconds    The pointer of the timestamp.
  * \return           The elasped time in milliseconds until now.
  */
-uint32_t
+unsigned long
 timestamp_elapsed(timestamp_t *time)
 {
   timestamp_t now;
@@ -123,9 +123,9 @@ timestamp_elapsed(timestamp_t *time)
 /*
  * \brief Get the elapsed time between the provided values and now.
  * \param seconds    The pointer of the timestamp.
- * \return           The elasped time in milliseconds until now.
+ * \return           The elasped time in milliseconds for this next time.
  */
-uint32_t
+unsigned long
 timestamp_remainder(timestamp_t *time)
 {
   timestamp_t now;

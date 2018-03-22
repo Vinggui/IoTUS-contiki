@@ -35,7 +35,7 @@ typedef enum IOTUS_PACKET_PRIORITY {IOTUS_PRIORITY_NONE = 0, IOTUS_PRIORITY_DATA
 
 typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
-  Iotus_node *nextDestinationNode;\
+  iotus_node_t *nextDestinationNode;\
   uint16_t totalPacketSize;//Will be used to build the final packet, processed by the core
   uint16_t initialBitHeaderSize;
   uint8_t *initialBitHeader; //Will be used to build the final packet, processed by the core
@@ -43,6 +43,31 @@ typedef struct packet_piece {
   uint8_t *finalBytesHeader; //Will be used to build the final packet, processed by the core
   LIST_STRUCT(infoPieces);
 } iotus_packet_t;
+
+
+/*
+ * The address type is defined as a single byte (0 to 255 values).
+ * Hence, types 0 to N are the given default pre-defined addresses types for this
+ * architecture.
+ * 
+ * After N, values are divided between ranges that are assigned to each layer of protocol,
+ * in case they need to use some specific address not already expected by this architecture.
+*/
+enum packet_infoPieces_types {
+  IOTUS_PACKET_INFO_TYPE_UNDEFINED = 0,
+
+
+  IOTUS_PACKET_INFO_TYPE___N
+};
+
+/* Application layer has twice the range, so that it can include sub-layers of protocols */
+#define IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER     ((256-IOTUS_PACKET_INFO_TYPE___N)/5)
+#define IOTUS_PACKET_INFO_DATA_LINK_ADDR_TYPE_BEGIN     (IOTUS_PACKET_INFO_TYPE___N)
+#define IOTUS_PACKET_INFO_ROUTING_ADDR_TYPE_BEGIN       (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_DATA_LINK_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_INFO_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_ROUTING_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_INFO_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_TRANSPORT_ADDR_TYPE_BEGIN)
+
+
 
 /*
  * Functions of this module
@@ -53,13 +78,13 @@ packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param);
 void
 packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param);
 
-Iotus_node *
+iotus_node_t *
 packet_get_final_destination(iotus_packet_t *packet_piece);
 
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
-    Iotus_node *finalDestination, void *callbackFunction);
+    iotus_node_t *finalDestination, void *callbackFunction);
 
 void
 packet_delete_msg(iotus_packet_t *msgPiece);

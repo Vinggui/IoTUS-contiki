@@ -28,12 +28,9 @@
 #include "platform-conf.h"
 #include "nodes.h"
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
+#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define THIS_LOG_FILE_NAME_DESCRITOR "packet"
+#include "safe-printer.h"
 
 /* Buffer to indicate which functionalities are execute by each layer.
  * This variable is set by each protocol when starting
@@ -62,12 +59,7 @@ packet_delete_msg(iotus_packet_t *piece) {
 
 /*---------------------------------------------------------------------*/
 /*
- * 
- * \param 
- * \return Packet final size
- */
-/*
- * \brief Function to allow other services to verify the status of a parameter into a msg
+ * \brief verify if a certain parameter is defined
  * \param packet_piece Packet to be read.
  * \param param Parameter to be verified
  * \return Boolean.
@@ -75,7 +67,7 @@ packet_delete_msg(iotus_packet_t *piece) {
 uint8_t
 packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param) {
   if(NULL == packet_piece) {
-    PRINTF("PACKET: Null pointer to verify parameter");
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
     return 0;
   }
 
@@ -87,12 +79,7 @@ packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param) {
 
 /*---------------------------------------------------------------------*/
 /*
- * 
- * \param 
- * \return Packet final size
- */
-/*
- * \brief Function to allow other services to set a parameter into a msg
+ * \brief Allow other services to set a parameter into a msg
  * \param packet_piece Packet to be set.
  * \param param Parameter to be written
  * \return Boolean.
@@ -100,7 +87,7 @@ packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param) {
 void
 packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param) {
   if(NULL == packet_piece) {
-    PRINTF("PACKET: Null pointer to set parameter");
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
     return;
   }
 
@@ -114,15 +101,31 @@ packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param) {
  * \param packet_piece       The pointer to the packet to be searched.
  * \return                The pointer to the node of the final destination.
  */
-Iotus_node *
+iotus_node_t *
 packet_get_final_destination(iotus_packet_t *packet_piece)
 {
   if(NULL == packet_piece) {
-    PRINTF("PACKET: Null pointer to set parameter");
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
     return NULL;
   }
-  PRINTF("GOT HERE");
   return packet_piece->finalDestinationNode;
+}
+
+
+/*---------------------------------------------------------------------*/
+/*
+ * Return the pointer to the node of next destination
+ * \param packet_piece       The pointer to the packet to be searched.
+ * \return                The pointer to the node of the final destination.
+ */
+iotus_node_t *
+packet_get_next_destination(iotus_packet_t *packet_piece)
+{
+  if(NULL == packet_piece) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return NULL;
+  }
+  return packet_piece->nextDestinationNode;
 }
 
 /*---------------------------------------------------------------------*/
@@ -134,7 +137,7 @@ packet_get_final_destination(iotus_packet_t *packet_piece)
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
-    Iotus_node *finalDestination, void *callbackFunction){
+    iotus_node_t *finalDestination, void *callbackFunction){
 
   iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(payloadSize, sizeof(iotus_packet_t));
   
@@ -262,7 +265,7 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 
     if(packet_piece->initialBitHeader == NULL) {
       /* Failed to alloc memory */
-      PRINTF("Failed to allocate memory for initialBitHeader.");
+      SAFE_PRINTF_LOG_ERROR("allocate memory");
       return 0;
     }
   } else {
@@ -276,7 +279,7 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 
       if(newBuff == NULL) {
         /* Failed to alloc memory */
-        PRINTF("Failed to allocate memory to expand initialBitHeader.");
+        SAFE_PRINTF_LOG_ERROR("allocate memory.");
         return 0;
       }
 
@@ -343,7 +346,7 @@ packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 
     if(packet_piece->finalBytesHeader == NULL) {
       /* Failed to alloc memory */
-      PRINTF("Failed to allocate memory for finalBytesHeader.");
+      SAFE_PRINTF_LOG_ERROR("allocate memory");
       return 0;
     }
     totalFinalSize = byteSequenceSize;
@@ -355,7 +358,7 @@ packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 
     if(newBuff == NULL) {
       /* Failed to alloc memory */
-      PRINTF("Failed to allocate memory to expand finalBytesHeader.");
+      SAFE_PRINTF_LOG_ERROR("allocate memory");
       return 0;
     }
 
@@ -427,7 +430,7 @@ void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
-    PRINTF("\tService Packet\n");
+    SAFE_PRINT("\tService Packet\n");
 
     // Initiate the lists of module
     list_init(gPacketMsgList);

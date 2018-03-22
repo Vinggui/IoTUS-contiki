@@ -39,8 +39,9 @@
 #ifndef PLATFORM_CONF_H_
 #define PLATFORM_CONF_H_
 
+
 #define IOTUS_RADIO_FULL_ADDRESS                2
-#define IOTUS_RADIO_MAX_PACKET_SIZE             CC2420_MAX_PACKET_LEN
+#define IOTUS_RADIO_MAX_PACKET_SIZE             127//CC2420_MAX_PACKET_LEN)
 
 /*
  * Definitions below are dictated by the hardware and not really

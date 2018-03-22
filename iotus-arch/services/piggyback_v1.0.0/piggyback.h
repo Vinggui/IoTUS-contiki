@@ -23,15 +23,20 @@
 
 typedef struct piggyback_piece {
   COMMON_STRUCT_PIECES(struct piggyback_piece);
-  uint8_t type;
-} Iotus_piggyback_t;
+  uint8_t extendedSize;
+} iotus_piggyback_t;
+
+#define IOTUS_PIGGYBACK_LAYER                                 0b00000011
+#define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00000100
+#define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00001000
+#define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b11110000
 
 void
-piggyback_delete_piece(Iotus_piggyback_t *piece);
+piggyback_delete_piece(iotus_piggyback_t *piece);
 
-Iotus_piggyback_t *
+iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
-    uint8_t type, Iotus_node *destinationNode, int32_t timeout);
+    uint8_t targetLayer, iotus_node_t *destinationNode, int32_t timeout);
 
 uint16_t
 piggyback_apply(iotus_packet_t *packet_piece);
