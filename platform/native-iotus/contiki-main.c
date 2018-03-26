@@ -63,6 +63,11 @@
 #include "dev/pir-sensor.h"
 #include "dev/vib-sensor.h"
 
+
+#if IOTUS_USING_MALLOC == 0
+#include "lib/mmem.h"
+#endif
+
 #ifdef SELECT_CONF_MAX
 #define SELECT_MAX SELECT_CONF_MAX
 #else
@@ -161,6 +166,11 @@ main(int argc, char **argv)
   process_start(&etimer_process, NULL);
   ctimer_init();
   rtimer_init();
+
+#if IOTUS_USING_MALLOC == 0
+  mmem_init();
+#endif
+
 
 #if WITH_GUI
   process_start(&ctk_process, NULL);

@@ -260,7 +260,13 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   
   //Verify if the msg piece already has something
   if(NULL == packet_piece->initialBitHeader) {
+
+    #if IOTUS_USING_MALLOC == 0
     packet_piece->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
+    #else
+    packet_piece->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
+    #endif
+    
     newSizeInBYTES = (bitSequenceSize+7)/8;
 
     if(packet_piece->initialBitHeader == NULL) {
@@ -428,7 +434,13 @@ void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
-    SAFE_PRINT("\tService Packet\n");
+
+    #if IOTUS_USING_MALLOC == 0
+    SAFE_PRINT("\tService Packet:MMEM\n");
+    #else
+    SAFE_PRINT("\tService Packet:Malloc\n");
+    #endif
+    
 
     // Initiate the lists of module
     list_init(gPacketMsgList);

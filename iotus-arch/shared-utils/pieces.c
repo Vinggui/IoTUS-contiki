@@ -83,7 +83,7 @@ pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t 
   #else
   uint8_t *dataPointer = malloc(dataSize);
   if(dataPointer == NULL) {
-    SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+    SAFE_PRINTF_LOG_ERROR("Alloc malloc");
     free(newPiece);
     return NULL;
   }
@@ -250,7 +250,7 @@ pieces_set_additional_info(list_t list, uint8_t type, uint8_t *data, uint16_t da
     #else
     uint8_t *dataPointer = (uint8_t *)malloc(dataSize);
     if(dataPointer == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+      SAFE_PRINTF_LOG_ERROR("Alloc malloc");
       free(addInfo);
       return FALSE;
     }
