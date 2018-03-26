@@ -54,6 +54,7 @@ memb_init(struct memb *m)
   memset(m->count, 0, m->num);
   memset(m->mem, 0, m->size * m->num);
 }
+
 /*---------------------------------------------------------------------------*/
 void *
 memb_alloc(struct memb *m)

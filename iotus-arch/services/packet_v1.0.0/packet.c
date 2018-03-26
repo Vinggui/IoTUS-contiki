@@ -20,6 +20,7 @@
 #include "global-parameters.h"
 #include "iotus-core.h"
 #include "packet-defs.h"
+#include "lib/memb.h"
 #include "list.h"
 #include "packet.h"
 #include "packet-default-additional-info.h"
@@ -27,6 +28,7 @@
 #include "pieces.h"
 #include "platform-conf.h"
 #include "nodes.h"
+
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
@@ -40,6 +42,7 @@ static uint8_t default_layers_chores_header[DEFAULT_FUNCTIONALITIES_SIZE] = {0};
 
 
 // Initiate the lists of module
+MEMB(iotus_packet_struct_mem, iotus_packet_t, IOTUS_PACKET_LIST_SIZE);
 LIST(gPacketMsgList);
 
 /*---------------------------------------------------------------------*/
@@ -48,12 +51,11 @@ LIST(gPacketMsgList);
  * \param 
  * \return Packet final size
  */
-void
-packet_delete_msg(iotus_packet_t *piece) {
-  if(piece->dataSize > 0) {
-    free(piece->data);
-  }
-  free(piece);
+Boolean
+packet_destroy(iotus_packet_t *piece) {
+  list_remove(gPacketMsgList, piece);
+
+  return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
 
 
@@ -137,24 +139,22 @@ packet_get_next_destination(iotus_packet_t *packet_piece)
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
-    iotus_node_t *finalDestination, void *callbackFunction){
+    iotus_node_t *finalDestination, void *callbackFunction)
+{
 
-  iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(payloadSize, sizeof(iotus_packet_t));
-  
-  if(!pieces_set_data(newMsg, payload)) {
-    //Alloc failed, cancel operation
-    packet_delete_msg(newMsg);
+  iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(&iotus_packet_struct_mem, sizeof(iotus_packet_t), payload, payloadSize);
+  if(NULL == newMsg) {
+    SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
   }
 
-  LIST_STRUCT_INIT(newMsg, infoPieces);
+  LIST_STRUCT_INIT(newMsg, additionalInfoList);
   (newMsg)->initialBitHeaderSize = 0;
   (newMsg)->finalBytesHeaderSize = 0;
 
   newMsg->initialBitHeader = NULL;
   newMsg->finalBytesHeader = NULL;
   newMsg->nextDestinationNode = NULL;
-  newMsg->totalPacketSize = payloadSize;
 
   newMsg->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
   //((struct packet_piece *)newMsg)->timeout = timeout;
@@ -184,7 +184,7 @@ uint16_t
 packet_get_size(iotus_packet_t *packet_piece) {
   return (packet_piece->initialBitHeaderSize +7)/8 +
          (packet_piece->finalBytesHeaderSize) +
-         (packet_piece->dataSize);
+         (packet_piece->data.size);
 }
 
 
@@ -400,21 +400,19 @@ packet_read_byte(uint16_t bytePos, iotus_packet_t *packet_piece) {
   if(packet_get_size(packet_piece) <= bytePos) {
     return 0;
   }
-  //paddingRemover starts with the size of the initial Bit header size in Bytes...
-  uint16_t paddingRemover = ((packet_piece->initialBitHeaderSize +7)/8);
-  if (bytePos < paddingRemover) {
+  //firstBitHarderSize starts with the size of the initial Bit header size in Bytes...
+  uint16_t firstBitHarderSize = ((packet_piece->initialBitHeaderSize +7)/8);
+  if (bytePos < firstBitHarderSize) {
     //This byte is one of the bit headers
-    return (packet_piece->initialBitHeader)[
-                          bytePos
-                          ];
+    return (packet_piece->initialBitHeader)[bytePos];
   }
-  if(bytePos < (paddingRemover + packet_piece->dataSize)) {
+  if(bytePos < (firstBitHarderSize + packet_piece->data.size)) {
     //BytePos is located into payload (data) section
-    return (packet_piece->data)[bytePos - paddingRemover];
+    return pieces_get_data_pointer(packet_piece)[bytePos - firstBitHarderSize];
   }
 
-  paddingRemover += packet_piece->dataSize;
-  return (packet_piece->finalBytesHeader)[bytePos - paddingRemover];
+  firstBitHarderSize += packet_piece->data.size;
+  return (packet_piece->finalBytesHeader)[bytePos - firstBitHarderSize];
 }
 
 /*---------------------------------------------------------------------*/

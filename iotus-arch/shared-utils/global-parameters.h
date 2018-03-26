@@ -20,14 +20,50 @@
 #include "platform-conf.h"
 #include "timestamp.h"
 
+
+////////////////////////////////////////////////////
+//           System general parameters            //
+////////////////////////////////////////////////////
+
 typedef enum {
   IOTUS_PACKET_PRIORITIZE_ENERGY_EFFICIENCY = 0,
   IOTUS_PACKET_PRIORITIZE_LOW_LATENCY
 } packet_prioritization;
 
-extern packet_prioritization iotus_packet_prioritization;
-extern uint16_t iotus_radio_max_message;
+
+////////////////////////////////////////////
+//             Radio parameters           //
+////////////////////////////////////////////
+
+/* This parameter should be written only by the radio layer */
+typedef struct iotus_radio_events {
+  uint8_t collisions;
+  uint8_t transmitTime;
+} iotus_parameters_radio_events_t;
+
+/* Most of these parameter should be set by data link layer */
+typedef struct iotus_radio_parameters {
+  uint8_t channel;
+  uint8_t txPower;
+  uint8_t listenTime;
+  uint8_t maxReTxTimes; 
+} iotus_parameters_radio_setup;
+
 extern uint8_t iotus_radio_address_size;
+extern uint16_t iotus_radio_max_message;
+
+
+/////////////////////////////////////////////////////
+//               QoS parameters                    //
+/////////////////////////////////////////////////////
+
+extern packet_prioritization iotus_packet_prioritization;
+
+
+///////////////////////////////////////////////
+//           Time parameters                 //
+///////////////////////////////////////////////
+
 extern timestamp_t iotus_time_zero;
 
 #endif /* IOTUS_ARCH_SERVICES_GLOBAL_PARAMETERS_GLOBAL_PARAMETERS_H_ */

@@ -3,9 +3,9 @@
 
 IOTUS_FOLDER_MAIN         = iotus-arch
 IOTUS_FOLDER_SERVICE      = services
-IOTUS_FOLDER_TRANSPORT    = transport-layer-protocols
-IOTUS_FOLDER_ROUTING      = routing-layer-protocols
-IOTUS_FOLDER_DATA_LINK    = data-link-layer-protocols
+IOTUS_FOLDER_TRANSPORT    = layer-transport-protocols
+IOTUS_FOLDER_ROUTING      = layer-routing-protocols
+IOTUS_FOLDER_DATA_LINK    = layer-data-link-protocols
 IOTUS_FOLDER_SHARED_UTILS = shared-utils
 IOTUS_DYNAMIC_HEADER_FILE = dyn-iotus-include-list.h
 

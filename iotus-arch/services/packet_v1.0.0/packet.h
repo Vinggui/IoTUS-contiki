@@ -26,22 +26,27 @@
   #error Please define IOTUS_RADIO_FULL_ADDRESS into platform-conf.h
 #endif
 
-/*
- * Defines of this module
- */
-typedef enum IOTUS_PACKET_PRIORITY {IOTUS_PRIORITY_NONE = 0, IOTUS_PRIORITY_DATA_LINK,
+
+#ifndef IOTUS_PACKET_LIST_SIZE
+  #error IOTUS_PACKET_LIST_SIZE not defined! Define it into your platform-conf.h
+#endif
+
+///////////////////////////////////////////////////////
+//             Defines of this module                //
+///////////////////////////////////////////////////////
+/* This PRIORITY can have only 4 value, since it uses only 2 bits in the system. */
+typedef enum IOTUS_PACKET_PRIORITY {IOTUS_PRIORITY_RADIO = 0, IOTUS_PRIORITY_DATA_LINK,
     IOTUS_PRIORITY_ROUTING, IOTUS_PRIORITY_TRANSPORT} iotus_packets_priority;
 
 
 typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
-  iotus_node_t *nextDestinationNode;\
-  uint16_t totalPacketSize;//Will be used to build the final packet, processed by the core
+  iotus_node_t *nextDestinationNode;
   uint16_t initialBitHeaderSize;
   uint8_t *initialBitHeader; //Will be used to build the final packet, processed by the core
   uint16_t finalBytesHeaderSize;
   uint8_t *finalBytesHeader; //Will be used to build the final packet, processed by the core
-  LIST_STRUCT(infoPieces);
+  LIST_STRUCT(additionalInfoList);
 } iotus_packet_t;
 
 
@@ -53,19 +58,19 @@ typedef struct packet_piece {
  * After N, values are divided between ranges that are assigned to each layer of protocol,
  * in case they need to use some specific address not already expected by this architecture.
 */
-enum packet_infoPieces_types {
-  IOTUS_PACKET_INFO_TYPE_UNDEFINED = 0,
+enum packet_types {
+  IOTUS_PACKET_TYPE_UNDEFINED = 0,
 
-
-  IOTUS_PACKET_INFO_TYPE___N
+  IOTUS_PACKET_TYPE___N
 };
 
 /* Application layer has twice the range, so that it can include sub-layers of protocols */
-#define IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER     ((256-IOTUS_PACKET_INFO_TYPE___N)/5)
-#define IOTUS_PACKET_INFO_DATA_LINK_ADDR_TYPE_BEGIN     (IOTUS_PACKET_INFO_TYPE___N)
-#define IOTUS_PACKET_INFO_ROUTING_ADDR_TYPE_BEGIN       (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_DATA_LINK_ADDR_TYPE_BEGIN)
-#define IOTUS_PACKET_INFO_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_ROUTING_ADDR_TYPE_BEGIN)
-#define IOTUS_PACKET_INFO_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_INFO_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_INFO_TRANSPORT_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_TYPE_RANGE_PER_LAYER               ((256-IOTUS_PACKET_TYPE___N)/6)
+#define IOTUS_PACKET_TYPE_SECURITY_ADDR_TYPE_BEGIN      (IOTUS_PACKET_TYPE___N)
+#define IOTUS_PACKET_TYPE_DATA_LINK_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_SECURITY_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN       (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_DATA_LINK_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN)
+#define IOTUS_PACKET_TYPE_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN)
 
 
 
@@ -86,15 +91,14 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,
     iotus_node_t *finalDestination, void *callbackFunction);
 
-void
-packet_delete_msg(iotus_packet_t *msgPiece);
+Boolean
+packet_destroy(iotus_packet_t *msgPiece);
 
 uint16_t
 packet_get_size(iotus_packet_t *packet_piece);
 
 void
-packet_subscribe_for_chore(iotus_packets_priority priority,
-  iotus_default_header_chores func);
+packet_subscribe_for_chore(iotus_packets_priority priority, iotus_default_header_chores func);
 
 uint8_t
 packet_get_layer_assigned_for(iotus_default_header_chores func);

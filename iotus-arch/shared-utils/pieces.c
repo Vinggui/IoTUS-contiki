@@ -1,6 +1,6 @@
 
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -18,94 +18,84 @@
 #include <stdlib.h>
 #include <string.h>
 #include "clock.h"
+#include "lib/memb.h"
+#include "lib/mmem.h"
 #include "list.h"
 #include "pieces.h"
 #include "platform-conf.h"
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
 
+#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define THIS_LOG_FILE_NAME_DESCRITOR "pieces"
+#include "safe-printer.h"
+
+#if IOTUS_USING_MALLOC == 0
+MEMB(iotus_additional_info_handlers_mem, iotus_additional_info_t, IOTUS_ADDITIONAL_HANDLERS_SIZE);
+#endif
 
 /*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return Packet final size
+/**
+ * \brief   Return the pointer to the data part of this piece
+ * \param   piecePointer  The pointer to the piece
  */
-/* This function is created separated so that this module
- * memory allocation can be easily changed.
- * Also, the generic_piece has the common initial as the msg, so
- * just use as the cast type to set common fields.
+extern inline uint8_t *
+pieces_get_data_pointer(void *piecePointer)
+{
+  return (uint8_t *)((iotus_additional_info_t *)piecePointer)->data.ptr;
+}
+
+/*---------------------------------------------------------------------*/
+/* \brief     This function is created separated so that this module
+ *            memory allocation can be easily changed.
+ *            Also, the generic_piece has the common initial as the msg, so
+ *            just use as the cast type to set common fields.
+ * 
+ * @param m         When using mmem, the buffer to request allocation.
+ * @param allocSize When using malloc, the size to be allocated.
+ * @param data      The data field to be used.
+ * @param dataSize  The size of this data field.
+ * \return          The pointer to this piece.
  */
 iotus_generic_piece_t *
-pieces_malloc(uint16_t dataSize, uint16_t pieceSize) {
-  iotus_generic_piece_t *newPiece = (iotus_generic_piece_t *)malloc(pieceSize);
+pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t dataSize) {
+  #if IOTUS_USING_MALLOC == 0
+  iotus_generic_piece_t *newPiece = (iotus_generic_piece_t *)memb_alloc(m);
+  allocSize = allocSize;
+  #else
+  m=m;
+  iotus_generic_piece_t *newPiece = (iotus_generic_piece_t *)malloc(allocSize);
+  #endif
 
   if(newPiece == NULL) {
     /* Failed to alloc memory */
-    PRINTF("Failed to allocate memory for piece.");
+    SAFE_PRINTF_LOG_ERROR("Allocate memory");
     return NULL;
   }
 
-  newPiece->dataSize = dataSize;
-  if(dataSize > 0) {
-    uint8_t *dataPointer = (uint8_t *)malloc(dataSize);
-    if(dataPointer == NULL) {
-      /* Failed to alloc memory */
-      PRINTF("Failed to allocate memory for new msg payload.");
-      free(newPiece);
-      return NULL;
-    }
-    newPiece->data = dataPointer;
+
+  #if IOTUS_USING_MALLOC == 0
+  if(mmem_alloc(&(newPiece->data), dataSize) == 0) {
+    SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+    memb_free(m, newPiece);
+    return NULL;
   }
+  memcpy(newPiece->data.ptr, data, dataSize);
+  #else
+  uint8_t *dataPointer = malloc(dataSize);
+  if(dataPointer == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+    free(newPiece);
+    return NULL;
+  }
+  memcpy(dataPointer, data, dataSize);
+  newPiece->data.ptr = dataPointer;
+  #endif
 
   newPiece->params = 0;
   newPiece->priority = 0;
   newPiece->callbackHandler = NULL;
   newPiece->finalDestinationNode = NULL;
   return newPiece;
-}
-
-/*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return Packet final size
- */
-/*
-static void
-set_msg_piece_nextDestination(void *piecePointer, const uint8_t *dest)
-{
-  struct msg_piece* piece = (struct msg_piece*)piecePointer;
-  uint8_t i=0;
-  for(;i<IOTUS_RADIO_FULL_ADDRESS;i++) {
-   
-    piece->nextDestination[i] = dest[i];
-  }
-}*/
-
-/*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return True if operation succeeded to copy, False otherwise.
- */
-Boolean
-pieces_set_data(void *piecePointer, const uint8_t *data)
-{
-  iotus_generic_piece_t *piece = (iotus_generic_piece_t *)piecePointer;
-  if(piece == NULL) {
-    return FALSE;
-  }
-  uint8_t i=0;
-  for(;i<piece->dataSize;i++) {
-    piece->data[i] = data[i];
-  }
-  return TRUE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -117,11 +107,12 @@ pieces_set_data(void *piecePointer, const uint8_t *data)
  * \retval  NULL           If the type was not found. 
  */
 iotus_additional_info_t *
-pieces_get_additional_info_by_type(list_t list, uint8_t type)
+pieces_get_additional_info(list_t list, uint8_t type)
 {
   if(NULL == list) {
     return NULL;
   }
+
   iotus_additional_info_t *addInfo;
   for(addInfo=list_head(list); addInfo != NULL; addInfo=list_item_next(addInfo)) {
     if(type == addInfo->type) {
@@ -129,6 +120,152 @@ pieces_get_additional_info_by_type(list_t list, uint8_t type)
     }
   }
   return NULL;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief     Destroy the piece itself.
+ * \param m   The pointer to the memb.
+ * \param h   The pointer to this piece.
+ * \return    True for confirmed operation.
+ */
+Boolean
+pieces_destroy(struct memb *m, void *h)
+{
+  if(h == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Pointer null");
+    return FALSE;
+  }
+
+  iotus_generic_piece_t *piece = (iotus_generic_piece_t *)h;
+  
+
+  #if IOTUS_USING_MALLOC == 0
+  mmem_free(&(piece->data));
+  memb_free(m,h);
+  #else
+  m=m;
+  free(piece->data.ptr);
+  free(h);
+  #endif
+  
+  return TRUE;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief     Destroy the list of additional information that a piece may contain.
+ * \param h   The pointer to this list.
+ */
+void
+pieces_destroy_additional_info(list_t list, iotus_additional_info_t *item)
+{
+  if(list==NULL || item==NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info Destroy");
+    return;
+  }
+  list_remove(list,item);
+  if(item->isCopied == TRUE) {
+    #if IOTUS_USING_MALLOC == 0
+    mmem_free(&(item->data));
+    #else
+    free(item->data.ptr);
+    #endif
+    
+  }
+
+  #if IOTUS_USING_MALLOC == 0
+  memb_free(&iotus_additional_info_handlers_mem, item);
+  #else
+  free(item);
+  #endif
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief     Destroy the list of additional information that a piece may contain.
+ * \param h   The pointer to this list.
+ */
+void
+pieces_clean_additional_info_list(list_t list)
+{
+  iotus_additional_info_t *h;
+  while(NULL != (h =list_pop(list))) {
+    pieces_destroy_additional_info(list,h);
+  }
+}
+
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief                Allocate, set/copy and link the additional information required.
+ *                       Hence, the information has to be given by its pointer and size only.
+ * \param list           The linst where this info will be linked.
+ * \param data           The value to be set/copied.
+ * \param dataSize       The size of this value
+ * \param copyIntoBuffer If the value needs to be copied of not.
+ * \return               The pointer to this additional information.
+ */
+iotus_additional_info_t *
+pieces_set_additional_info(list_t list, uint8_t type, uint8_t *data, uint16_t dataSize, Boolean copyIntoBuffer)
+{
+  if(NULL == list) {
+    return NULL;
+  }
+
+
+  //Verify if this list already has this info...
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(list,type);
+  if(NULL != addInfo) {
+    //Destroy it first
+    pieces_destroy_additional_info(list, addInfo);
+  } 
+
+  //recreate it...
+  #if IOTUS_USING_MALLOC == 0
+  addInfo = memb_alloc(&iotus_additional_info_handlers_mem);
+  if(NULL == addInfo) {
+    SAFE_PRINTF_LOG_ERROR("Alloc fail");
+    return NULL;
+  }
+  #else
+  addInfo = malloc(sizeof(iotus_additional_info_t));
+  if(NULL == addInfo) {
+    SAFE_PRINTF_LOG_ERROR("Alloc fail");
+    return NULL;
+  }
+  #endif
+  
+
+  if(TRUE == copyIntoBuffer) {
+    addInfo->isCopied = TRUE;
+
+    #if IOTUS_USING_MALLOC == 0
+    if(mmem_alloc(&(addInfo->data), dataSize) == 0) {
+      SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+      memb_free(&iotus_additional_info_handlers_mem, addInfo);
+      return FALSE;
+    }
+    memcpy(MMEM_PTR(&(addInfo->data)), data, dataSize);
+    #else
+    uint8_t *dataPointer = (uint8_t *)malloc(dataSize);
+    if(dataPointer == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+      free(addInfo);
+      return FALSE;
+    }
+    memcpy(dataPointer, data, dataSize);
+    addInfo->data.ptr = (void *)dataPointer;
+    #endif
+  } else {
+    addInfo->isCopied = FALSE;
+    addInfo->data.size = dataSize;
+    addInfo->data.ptr = (void *)data;
+  }
+
+  addInfo->type = type;
+  list_push(list, addInfo);
+  return addInfo;
 }
 
 /*---------------------------------------------------------------------*/

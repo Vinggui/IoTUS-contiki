@@ -21,6 +21,11 @@
 #include "timestamp.h"
 
 
+#ifndef IOTUS_PIGGYBACK_LIST_SIZE
+  #error IOTUS_PIGGYBACK_LIST_SIZE not defined! Define it into your platform-conf.h
+#endif
+
+
 typedef struct piggyback_piece {
   COMMON_STRUCT_PIECES(struct piggyback_piece);
   uint8_t extendedSize;
@@ -31,8 +36,8 @@ typedef struct piggyback_piece {
 #define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00001000
 #define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b11110000
 
-void
-piggyback_delete_piece(iotus_piggyback_t *piece);
+Boolean
+piggyback_destroy(iotus_piggyback_t *piece);
 
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,

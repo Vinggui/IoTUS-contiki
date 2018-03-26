@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2007, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,55 +32,64 @@
 
 /**
  * \file
- *         A very simple Contiki application showing how Contiki programs look
+ *         CC2420 driver header file
  * \author
  *         Adam Dunkels <adam@sics.se>
+ *         Joakim Eriksson <joakime@sics.se>
+ *         Konrad Krentz <konrad.krentz@gmail.com>
  */
 
+#ifndef CC2420_H_
+#define CC2420_H_
+
 #include "contiki.h"
-#include "dev/leds.h"
-#include <stdio.h> /* For printf() */
-/*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Test process");
-AUTOSTART_PROCESSES(&hello_world_process);
-/*---------------------------------------------------------------------------*/
+#include "dev/spi.h"
+#include "dev/radio.h"
+#include "cc2420_const.h"
+#include "lib/aes-128.h"
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
-    printf("message sent\n");
-}*/
+int cc2420_init(void);
 
-PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
+#define CC2420_MAX_PACKET_LEN      127
 
-    //leds_init();
-    //leds_off(LEDS_ALL);
+int cc2420_set_channel(int channel);
+int cc2420_get_channel(void);
 
+void cc2420_set_pan_addr(unsigned pan,
+                                unsigned addr,
+                                const uint8_t *ieee_addr);
 
-    //static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
+extern signed char cc2420_last_rssi;
+extern uint8_t cc2420_last_correlation;
 
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
-    IOTUS_CORE_START(0,0,contikiMAC);
+int cc2420_rssi(void);
 
-    for(;;) {
-        PROCESS_WAIT_EVENT();
+extern const struct radio_driver cc2420_driver;
 
-        printf("Hi22\n");
-        //leds_toggle(LEDS_ALL);
-        //if(linkaddr_node_addr.u8[0] == 1) {
-            //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-        //}
-        //etimer_reset(&timer);
+/**
+ * \param power Between 1 and 31.
+ */
+void cc2420_set_txpower(uint8_t power);
+int cc2420_get_txpower(void);
+#define CC2420_TXPOWER_MAX  31
+#define CC2420_TXPOWER_MIN   0
 
-    }
+/**
+ * Interrupt function, called from the simple-cc2420-arch driver.
+ *
+ */
+int cc2420_interrupt(void);
 
+/* XXX hack: these will be made as Chameleon packet attributes */
+extern rtimer_clock_t cc2420_time_of_arrival,
+  cc2420_time_of_departure;
+extern int cc2420_authority_level_of_sender;
 
+int cc2420_on(void);
+int cc2420_off(void);
 
-    PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
+void cc2420_set_cca_threshold(int value);
+
+extern const struct aes_128_driver cc2420_aes_128_driver;
+
+#endif /* CC2420_H_ */

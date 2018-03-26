@@ -22,27 +22,22 @@
 #include "timestamp.h"
 
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
 
-/***********************************************************************
-                              QoS parameters
- ***********************************************************************/
+/////////////////////////////////////////////////////
+//               QoS parameters                    //
+/////////////////////////////////////////////////////
 packet_prioritization iotus_packet_prioritization;
 
-/***********************************************************************
-                              Radio Parameters
-***********************************************************************/
+////////////////////////////////////////////
+//             Radio parameters           //
+////////////////////////////////////////////
 uint16_t iotus_radio_max_message = IOTUS_RADIO_MAX_PACKET_SIZE;
 uint8_t iotus_radio_address_size = IOTUS_RADIO_FULL_ADDRESS;
 
-/***********************************************************************
-                              Timing parameters
- ***********************************************************************/
+
+///////////////////////////////////////////////
+//           Time parameters                 //
+///////////////////////////////////////////////
 // The time when the system want to use as reference
 timestamp_t iotus_time_zero;
 

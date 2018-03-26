@@ -51,7 +51,7 @@
 #include "net/packetbuf.h"
 #include "net/rime/rimestats.h"
 #include "net/netstack.h"
-#endif
+#endif /* CONTIKI_COMM_STACK != IoTUS */
 
 #define WITH_SEND_CCA 1
 

@@ -1,6 +1,6 @@
 
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "lib/memb.h"
 #include "list.h"
 #include "iotus-core.h"
 #include "global-functions.h"
@@ -33,6 +34,8 @@
 
 #define PIGGYBACK_MAX_FRAME_SIZE            0x0FFF
 #define PIGGYBACK_SINGLE_HEADER_FRAME       0x000F
+
+MEMB(iotus_piggyback_mem, iotus_piggyback_t, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gPiggybackFramesList);
 
 
@@ -42,12 +45,11 @@ LIST(gPiggybackFramesList);
  * \param 
  * \return Packet final size
  */
-void
-piggyback_delete_piece(iotus_piggyback_t *piece) {
-  if(piece->dataSize > 0) {
-    free(piece->data);
-  }
-  free(piece);
+Boolean
+piggyback_destroy(iotus_piggyback_t *piece) {
+  list_remove(gPiggybackFramesList, piece);
+
+  return pieces_destroy(&iotus_piggyback_mem, piece);
 }
 
 /*---------------------------------------------------------------------*/
@@ -65,17 +67,16 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
     uint8_t targetLayer, iotus_node_t *destinationNode, int32_t timeout)
 {
   if(headerSize > PIGGYBACK_MAX_FRAME_SIZE) {
-    SAFE_PRINTF_LOG_ERROR("Piggy hdr too large\n");
+    SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
     return NULL;
   }
-  iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(headerSize, sizeof(iotus_piggyback_t));
-  if(headerSize) {
-    if(!pieces_set_data(newPiece, headerData)) {
-      //Alloc failed, cancel operation
-      piggyback_delete_piece(newPiece);
-      return NULL;
-    }
+  iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(&iotus_piggyback_mem, sizeof(iotus_piggyback_t), headerData, headerSize);
+  
+  if(NULL == newPiece) {
+    SAFE_PRINTF_LOG_ERROR("Alloc failed.");
+    return NULL;
   }
+  
 
   timestamp_mark(&(newPiece->timeout), timeout);
 
@@ -83,7 +84,7 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
   /* Encode parameters 
    * 0b00000011 - 2 bits indicates to which layer this frame is supposed to be sent
    * 0b00000100 - 1 bit indicate if this frame is to the next node or stick to final destination
-   * 0b00001000 - 1 bit indicate if this frame has a second byte to describe hearder size
+   * 0b00001000 - 1 bit indicate if this frame has a second byte to describe header size
    * 0b11110000 - 4 bits indicate the size of the header (if smaller than 16bytes) or the
    *                most significant byte of the size (if bigger).
    */
@@ -122,14 +123,16 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece, iotus_piggyback_t *pigg
 
     uint16_t packetOldSize = packet_get_size(packet_piece);
     uint16_t piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE)? 1:0;
-    if((iotus_radio_max_message - packetOldSize) >= piggyback_piece->dataSize + member_size(iotus_piggyback_t,params) + piggyback_with_ext_size) {
-      //This will fit...
+    if((iotus_radio_max_message - packetOldSize) >= 
+          piggyback_piece->data.size + member_size(iotus_piggyback_t,params) + piggyback_with_ext_size) {
+      //This piggyback will fit...
+      
       if(stick) {
         SAFE_PRINTF_LOG_INFO("Sticking piggy");
         piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
       }
       
-      packet_append_byte_header(piggyback_piece->dataSize, piggyback_piece->data, packet_piece);
+      packet_append_byte_header(piggyback_piece->data.size, pieces_get_data_pointer(piggyback_piece), packet_piece);
       if(piggyback_with_ext_size) {
         SAFE_PRINTF_LOG_INFO("Extended size");
         packet_append_byte_header(member_size(iotus_piggyback_t,extendedSize), &(piggyback_piece->extendedSize), packet_piece);
@@ -140,7 +143,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece, iotus_piggyback_t *pigg
       SAFE_PRINTF_LOG_INFO("Appended. Deleting");
       list_remove(gPiggybackFramesList, piggyback_piece);
       //TODO CALL the CB function of the header
-      piggyback_delete_piece(piggyback_piece);
+      piggyback_destroy(piggyback_piece);
       return TRUE;
     }
   }
@@ -198,7 +201,7 @@ void
 iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
 {
   if(IOTUS_START_SERVICE == signal) {
-    SAFE_PRINTF_CLEAN("\tService Piggyback");
+    SAFE_PRINT("\tService Piggyback\n");
     list_init(gPiggybackFramesList);
   }
   /* else if (IOTUS_RUN_SERVICE == signal){
