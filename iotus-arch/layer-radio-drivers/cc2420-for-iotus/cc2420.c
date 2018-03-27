@@ -224,14 +224,6 @@ get_value(radio_param_t param, radio_value_t *value)
     /* Return the RSSI value in dBm */
     *value = cc2420_rssi();
     return RADIO_RESULT_OK;
-  case RADIO_PARAM_LAST_RSSI:
-    /* RSSI of the last packet received */
-    *value = cc2420_last_rssi;
-    return RADIO_RESULT_OK;
-  case RADIO_PARAM_LAST_LINK_QUALITY:
-    /* LQI of the last packet received */
-    *value = cc2420_last_correlation;
-    return RADIO_RESULT_OK;
   case RADIO_CONST_CHANNEL_MIN:
     *value = 11;
     return RADIO_RESULT_OK;
@@ -255,16 +247,6 @@ set_value(radio_param_t param, radio_value_t value)
   int i;
 
   switch(param) {
-  case RADIO_PARAM_POWER_MODE:
-    if(value == RADIO_POWER_MODE_ON) {
-      cc2420_on();
-      return RADIO_RESULT_OK;
-    }
-    if(value == RADIO_POWER_MODE_OFF) {
-      cc2420_off();
-      return RADIO_RESULT_OK;
-    }
-    return RADIO_RESULT_INVALID_VALUE;
   case RADIO_PARAM_CHANNEL:
     if(value < 11 || value > 26) {
       return RADIO_RESULT_INVALID_VALUE;
@@ -331,7 +313,9 @@ set_object(radio_param_t param, const void *src, size_t size)
 
 const struct radio_driver cc2420_driver =
   {
-    cc2420_init,
+    NULL,
+    NULL,
+    NULL,
     cc2420_prepare,
     cc2420_transmit,
     cc2420_send,
@@ -608,8 +592,8 @@ set_txpower(uint8_t power)
   setreg(CC2420_TXCTRL, reg);
 }
 /*---------------------------------------------------------------------------*/
-int
-cc2420_init(void)
+static void
+start(void)
 {
   uint16_t reg;
   {

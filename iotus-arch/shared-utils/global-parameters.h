@@ -37,28 +37,12 @@ typedef enum {
 
 /* This parameter should be written only by the radio layer */
 typedef struct iotus_radio_events {
-  uint8_t collisions;
-  uint8_t transmitTime;//in ms
+  uint16_t collisions;
+  uint16_t transmitTime;//in ms
+  int16_t lastRSSI;
+  int16_t lastLinkQuality;
+
 } iotus_parameters_radio_events_t;
-
-/* This parameter should be written only by the radio layer */
-typedef struct iotus_parameters_radio_limits {
-  uint8_t minAddressSize;
-  uint8_t maxAddressSize;
-  Boolean hasAutoAck;
-  Boolean hasCCA;
-  uint8_t numOfChannels;
-} iotus_parameters_radio_limits_t;
-
-/* Most of these parameter should be set by data link layer */
-typedef struct iotus_parameters_radio_setup {
-  uint8_t channel;
-  uint8_t txPower;
-  uint8_t listenTime;
-  uint8_t maxReTxTimes;
-  uint8_t addressSize;
-  uint8_t rxMode;
-} iotus_parameters_radio_setup_t;
 
 extern uint8_t iotus_radio_address_size;
 extern uint16_t iotus_radio_max_message;

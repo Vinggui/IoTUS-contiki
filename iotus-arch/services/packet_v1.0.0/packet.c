@@ -39,6 +39,8 @@
  */
 #define DEFAULT_FUNCTIONALITIES_SIZE  (IOTUS_FINAL_NUMBER_DEFAULT_HEADER_CHORE*2/8 +1)
 static uint8_t default_layers_chores_header[DEFAULT_FUNCTIONALITIES_SIZE] = {0};
+#define DEFAULT_REQUEST_NEEDED_SIZE  (IOTUS_FINAL_NUMBER_DEFAULT_HEADER_CHORE/8 +1)
+static uint8_t default_chores_requested[DEFAULT_REQUEST_NEEDED_SIZE] = {0};
 
 
 // Initiate the lists of module
@@ -185,24 +187,27 @@ packet_get_size(iotus_packet_t *packetPiece) {
 
 
 /*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return Packet final size
+/**
+ * \brief           Sets the default chore that will be present in every default packet.
+ * @param priority  The iotus layer requesting: radio, data link, routing or transport.
+ * @param chore      The chore the request is going to take effect upon.
+ * \return          Status: Success or failure.
  */
-/*
- * Sets the default chore that will be present in every default packet.
- */
-void
+Status
 packet_subscribe_for_chore(iotus_packets_priority priority,
-  iotus_default_header_chores func)
+                           iotus_default_header_chores chore)
 {
-  uint8_t posByte = func/4;
-  uint8_t posBit = (func%4)*2;
-  uint8_t chore = default_layers_chores_header[posByte] & (11<<posBit);
-  if(chore > 0) {
+  uint8_t posByte = chore/4;
+  uint8_t posBit = (chore%4)*2;
+  uint8_t layerPriorityForChore = default_layers_chores_header[posByte] & (11<<posBit);
+
+  uint8_t posByteRequested = chore/8;
+  uint8_t posBitRequested = chore%8;
+  uint8_t choreRequested = default_chores_requested[posByteRequested] & (1<posBitResquest);
+
+  if(choreRequested > 0) {
     //There is some layer responsible for this chore...
-    if(chore <= (priority<<posBit)) {
+    if(layerPriorityForChore <= (priority<<posBit)) {
       //This request has lower priority (higher value)
       return;
     }
@@ -211,25 +216,29 @@ packet_subscribe_for_chore(iotus_packets_priority priority,
   //This request has higher priority (lower value)
   //substitute this chore to this request
   default_layers_chores_header[posByte] |= (priority<<posBit);
+  default_chores_requested[posByteRequested] |= (1<posBitResquest);
 }
 
 /*---------------------------------------------------------------------*/
 /*
  * \brief  Verifies if default chore header is assigned to some layer
- * \param func      
- * \return Packet final size
+ * \param chore       The chore to be verified.
+ * \return            The layer assigned to the chore or -1 if no layer is doing it.
  */
-/*
- * .
- * @Return 1 for true, 0 for false.
- */
-uint8_t
-packet_get_layer_assigned_for(iotus_default_header_chores func)
+int8_t
+packet_get_layer_assigned_for(iotus_default_header_chores chore)
 {
-  uint8_t posByte = func/4;
-  uint8_t posBit = (func%4)*2;
-  uint8_t chore = (default_layers_chores_header[posByte]>>posBit) & 0b00000011;
-  return chore;
+
+  uint8_t posByteRequested = chore/8;
+  uint8_t posBitRequested = chore%8;
+  if(0 == default_chores_requested[posByteRequested] & (1<posBitResquest)) {
+    return -1;
+  }
+
+  uint8_t posByte = chore/4;
+  uint8_t posBit = (chore%4)*2;
+  uint8_t layerForChore = (default_layers_chores_header[posByte]>>posBit) & 0b00000011;
+  return layerForChore;
 }
 
 

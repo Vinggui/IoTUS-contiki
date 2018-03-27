@@ -22,6 +22,7 @@
 #ifndef IOTUS_ARCH_IOTUS_CORE_H_
 #define IOTUS_ARCH_IOTUS_CORE_H_
 
+#include "radio.h"
 #include "platform-conf.h"
 
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
@@ -52,6 +53,10 @@ typedef uint8_t Boolean;
 #define TRUE            1
 #define FALSE           0
 
+typedef uint8_t Status;
+#define SUCCESS         1
+#define FAILURE         0
+
 struct iotus_transport_protocol_struct {
   void (* start)(void);
   void (* run)(void);
@@ -70,11 +75,6 @@ struct iotus_data_link_protocol_struct {
   void (* close)(void);
 };
 
-struct iotus_radio_driver_struct {
-  void (* start)(void);
-  void (* run)(void);
-  void (* close)(void);
-};
 
 //************************************************************************
 //                  Prototypes

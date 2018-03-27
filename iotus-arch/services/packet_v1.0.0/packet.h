@@ -95,10 +95,10 @@ packet_destroy(iotus_packet_t *msgPiece);
 unsigned int
 packet_get_size(iotus_packet_t *packet_piece);
 
-void
+Status
 packet_subscribe_for_chore(iotus_packets_priority priority, iotus_default_header_chores func);
 
-uint8_t
+int8_t
 packet_get_layer_assigned_for(iotus_default_header_chores func);
 
 uint16_t

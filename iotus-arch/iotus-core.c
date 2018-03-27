@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include "contiki.h"
 #include "iotus-core.h"
+#include "radio.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
 */
