@@ -60,7 +60,7 @@ safe_printer_copy_to_bufring(void *output, const char *input, uint8_t size)
 void
 vprintfLogSafe(safe_printer_log_type logType, int (* output)(struct ringbuf *r, uint8_t c), const char *sourceFileName, uint16_t lineNumber, const char *format, va_list variadicArguments)
 {
-  char subbuffer[20];
+  char subbuffer[IOTUS_SUB_BUF_SIZE];
   if(SAFE_PRINT_CLEAN != logType) {
     sprintf(subbuffer,"%lu",timestamp_elapsed(&iotus_time_zero)/100);
     safe_printer_copy_to_bufring(output, subbuffer,strlen(subbuffer));

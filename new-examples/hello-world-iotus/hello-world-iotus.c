@@ -65,7 +65,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     addr.u8[0]=2;
     addr.u8[1]=0;
 */
-    IOTUS_CORE_START(0,0,contikiMAC);
+    IOTUS_CORE_START(0,0,contikiMAC,null_radio);
 
     for(;;) {
         PROCESS_WAIT_EVENT();

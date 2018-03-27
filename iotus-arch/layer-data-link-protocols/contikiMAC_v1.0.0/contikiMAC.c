@@ -20,12 +20,10 @@
 #include "nodes.h"
 #include "timestamp.h"
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
+
+#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
+#include "safe-printer.h"
 
 timestamp_t firstTimer;
 
@@ -50,13 +48,13 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
     PROCESS_WAIT_EVENT();
 
     if(IOTUS_PRIORITY_DATA_LINK == packet_get_layer_assigned_for(IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM)) {
-      PRINTF("Deu - CS\n\n\n");
+      SAFE_PRINTF_CLEAN("Deu - CS\n\n\n");
       piggyback_create_piece(
         8,(const uint8_t *)"merda!!!",0,
         NODES_BROADCAST, 3000);
     }
     if(IOTUS_PRIORITY_DATA_LINK == packet_get_layer_assigned_for(IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
-      PRINTF("Deu - BC\n");
+      SAFE_PRINTF_CLEAN("Deu - BC\n");
 
       iotus_packet_t *packet = packet_create_msg(6, IOTUS_PRIORITY_DATA_LINK, 5000,
         (const uint8_t *)"Teste",
@@ -66,29 +64,29 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       uint16_t teste = packet_push_bit_header(3, testeHeader, packet);
 
       if(teste > 0) {
-        PRINTF("Bits pushed ok! new size %u\n",teste);
+        SAFE_PRINTF_CLEAN("Bits pushed ok! new size %u\n",teste);
       }
 
       uint8_t testeHeaderFullBytes[3] = {0xbe, 0xef, 0xFF};
       teste = packet_append_last_header(3, testeHeaderFullBytes, packet);
 
       if(teste > 0) {
-        PRINTF("Bytes appended ok! new size %u\n",teste);
+        SAFE_PRINTF_CLEAN("Bytes appended ok! new size %u\n",teste);
       }
 
       //testing reading
       teste = packet_read_byte(7, packet);
-      PRINTF("Packet byte 7 is: %02x\n",teste);
+      SAFE_PRINTF_CLEAN("Packet byte 7 is: %02x\n",teste);
 
       //testing piggyback
       packet_set_parameter(packet, PACKET_PARAMETERS_ALLOW_PIGGYBACK);
       teste = piggyback_apply(packet);
-      PRINTF("Packet after piggyback: %u\n",teste);
+      SAFE_PRINTF_CLEAN("Packet after piggyback: %u\n",teste);
 
 
       //Testing timestamp
       unsigned long elapsed = timestamp_elapsed(&firstTimer);
-      PRINTF("Elapsed time is: %lu\n",elapsed);
+      SAFE_PRINTF_CLEAN("Elapsed time is: %lu\n",elapsed);
 
 
     }
@@ -106,7 +104,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 static void
 start(void)
 {
-  printf("\tContikiMAC\n");
+  SAFE_PRINTF_CLEAN("\tContikiMAC\n");
   process_start(&contikiMAC_proc, NULL);
 
   packet_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM);
@@ -122,7 +120,8 @@ run(void)
 
 static void
 close(void)
-{}
+{
+}
 
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   start,

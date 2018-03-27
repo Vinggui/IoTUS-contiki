@@ -1,3 +1,17 @@
+/**
+ * \defgroup decription...
+ *
+ * This...
+ *
+ * @{
+ */
+
+/*
+ * addresses.c
+ *
+ *  Created on: Nov 18, 2017
+ *      Author: vinicius
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "addresses.h"
@@ -26,3 +40,7 @@ addresses_compare(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
   }
   return FALSE;
 }
+/* The following stuff ends the \defgroup block at the beginning of
+   the file: */
+
+/** @} */

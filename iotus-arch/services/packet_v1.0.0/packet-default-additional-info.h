@@ -22,7 +22,7 @@
 enum packet_additionalInfoList_types {
   IOTUS_PACKET_INFO_TYPE_RESERVED = 0,
 
-  IOTUS_PACKET_INFO_TYPE_E2E_ADDRESSES,
+  IOTUS_PACKET_INFO_TYPE_P2P_ADDRESSES,
   IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
   IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
 
@@ -59,7 +59,7 @@ typedef struct packet_tx_additional_info {
 } packet_tx_block_input_t;
 
 /* 
- * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_E2E_ADDRESSES
+ * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_P2P_ADDRESSES
  * Used to inform end to end communications
  */
 typedef struct packet_e2e_nodes_addit_info {

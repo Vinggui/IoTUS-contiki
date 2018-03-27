@@ -1,5 +1,5 @@
 /**
- * \defgroup decription...
+ * \defgroup dedcription...
  *
  * This...
  *
@@ -41,6 +41,8 @@
   #else
     typedef enum iotus_data_link_protocols {IOTUS_NO_DATA_LINK_LAYER} iotus_data_link_protocols;
   #endif
+
+    typedef enum iotus_radio_drivers IOTUS_RADIO_DRIVERS_ENUM_OPTIONS iotus_radio_drivers;
 #endif /* #ifdef IOTUS_COMPILE_MODE_DYNAMIC */
 
 typedef enum iotus_service_signals {IOTUS_START_SERVICE, IOTUS_RUN_SERVICE, IOTUS_END_SERVICE} iotus_service_signal;
@@ -68,14 +70,20 @@ struct iotus_data_link_protocol_struct {
   void (* close)(void);
 };
 
+struct iotus_radio_driver_struct {
+  void (* start)(void);
+  void (* run)(void);
+  void (* close)(void);
+};
+
 //************************************************************************
 //                  Prototypes
 //************************************************************************
 /* Call this macro instead of the function iotus_core_start_system itself*/
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-#define IOTUS_CORE_START(transport, routing, data_link) iotus_core_start_system(transport, routing, data_link)
+#define IOTUS_CORE_START(transport, routing, data_link, radio) iotus_core_start_system(transport, routing, data_link, radio)
 #else
-#define IOTUS_CORE_START(transport, routing, data_link) iotus_core_start_system()
+#define IOTUS_CORE_START(transport, routing, data_link, radio) iotus_core_start_system()
 #endif
 //Functions that must be available
 void
@@ -83,9 +91,14 @@ iotus_core_start_system (
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   iotus_transport_protocols transport,
   iotus_routing_protocols routing,
-  iotus_data_link_protocols data_link
+  iotus_data_link_protocols data_link,
+  iotus_radio_drivers radio_driver
   #else
   void
   #endif
 );
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */
+/* The following stuff ends the \defgroup block at the beginning of
+   the file: */
+
+/** @} */

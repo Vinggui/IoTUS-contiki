@@ -1195,3 +1195,27 @@ set_send_on_cca(uint8_t enable)
   send_on_cca = enable;
 }
 /*---------------------------------------------------------------------------*/
+
+
+static void
+start(void)
+{
+  SAFE_PRINTF_CLEAN("\tCC2440 driver\n");
+}
+
+
+static void
+run(void)
+{
+}
+
+static void
+close(void)
+{
+}
+
+const struct iotus_radio_struct cc2420_radio_driver = {
+  start,
+  run,
+  close
+};

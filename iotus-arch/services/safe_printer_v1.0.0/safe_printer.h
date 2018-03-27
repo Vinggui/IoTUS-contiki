@@ -39,6 +39,7 @@ typedef enum LogType {
 } safe_printer_log_type;
 
 #define IOTUS_SAFE_PRINTER_BUFFER_SIZE  128
+#define IOTUS_SUB_BUF_SIZE              100
 
 int
 safe_printer_immediately_put(struct ringbuf *r, uint8_t c);

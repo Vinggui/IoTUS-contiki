@@ -28,12 +28,15 @@
 /////////////////////////////////////////////////////
 packet_prioritization iotus_packet_prioritization;
 
-////////////////////////////////////////////
-//             Radio parameters           //
-////////////////////////////////////////////
+///////////////////////////////////////////////////////
+//                   Radio related                   //
+///////////////////////////////////////////////////////
 uint16_t iotus_radio_max_message = IOTUS_RADIO_MAX_PACKET_SIZE;
 uint8_t iotus_radio_address_size = IOTUS_RADIO_FULL_ADDRESS;
 
+iotus_parameters_radio_events_t iotus_parameters_radio_events;
+iotus_parameters_radio_limits_t iotus_parameters_radio_limits;
+iotus_parameters_radio_setup_t  iotus_parameters_radio_setup;
 
 ///////////////////////////////////////////////
 //           Time parameters                 //

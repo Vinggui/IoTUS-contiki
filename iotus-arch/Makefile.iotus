@@ -1,25 +1,28 @@
 # Makefile for the new architeture developed into contiki
 # This makefile is called by the makefile of the mote platform
 
-IOTUS_FOLDER_MAIN         = iotus-arch
-IOTUS_FOLDER_SERVICE      = services
-IOTUS_FOLDER_TRANSPORT    = layer-transport-protocols
-IOTUS_FOLDER_ROUTING      = layer-routing-protocols
-IOTUS_FOLDER_DATA_LINK    = layer-data-link-protocols
-IOTUS_FOLDER_SHARED_UTILS = shared-utils
-IOTUS_DYNAMIC_HEADER_FILE = dyn-iotus-include-list.h
+IOTUS_FOLDER_MAIN          = iotus-arch
+IOTUS_FOLDER_SERVICE       = services
+IOTUS_FOLDER_TRANSPORT     = layer-transport-protocols
+IOTUS_FOLDER_ROUTING       = layer-routing-protocols
+IOTUS_FOLDER_DATA_LINK     = layer-data-link-protocols
+IOTUS_FOLDER_RADIO_DRIVERS = layer-radio-drivers
+IOTUS_FOLDER_SHARED_UTILS  = shared-utils
+IOTUS_DYNAMIC_HEADER_FILE  = dyn-iotus-include-list.h
 
-IOTUS_FOLDER := $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
-SERVICES_FOLDER := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
-TRANSPORT_FOLDER := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
-ROUTING_FOLDER := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
-DATA_LINK_FOLDER := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
+IOTUS_FOLDER          := $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
+SERVICES_FOLDER       := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
+TRANSPORT_FOLDER      := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
+ROUTING_FOLDER        := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
+DATA_LINK_FOLDER      := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
+RADIO_DRIVERS_FOLDER  := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_RADIO_DRIVERS)
 
-RELATIVE_FOLDER_SERVICES := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SERVICE)
-RELATIVE_FOLDER_TRANSPORT := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_TRANSPORT)
-RELATIVE_FOLDER_ROUTING := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_ROUTING)
-RELATIVE_FOLDER_DATA_LINK := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DATA_LINK)
-RELATIVE_FOLDER_SHARED_UTILS := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SHARED_UTILS)
+RELATIVE_FOLDER_SERVICES      := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SERVICE)
+RELATIVE_FOLDER_TRANSPORT     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_TRANSPORT)
+RELATIVE_FOLDER_ROUTING       := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_ROUTING)
+RELATIVE_FOLDER_DATA_LINK     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DATA_LINK)
+RELATIVE_FOLDER_RADIO_DRIVERS := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_RADIO_DRIVERS)
+RELATIVE_FOLDER_SHARED_UTILS  := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SHARED_UTILS)
 
 comma:=,
 empty:=
@@ -94,6 +97,11 @@ ifdef IOTUS_CONF_COMPILE_MODE
       endif
     endif
 
+    ifndef IOTUS_CONF_RADIO_DRIVERS_LIST
+      $(error In IoTUS dynamic mode, IOTUS_CONF_RADIO_DRIVERS_LIST must be defined within the platform makefile)
+    endif
+
+
     include $(IOTUS_FOLDER)/iotus-profiles-list
 
     ifdef IOTUS_CONF_DYNAMIC_MODE_PROFILES
@@ -114,6 +122,26 @@ ifdef IOTUS_CONF_COMPILE_MODE
     endif
 
     CFLAGS+= -DIOTUS_COMPILE_MODE_DYNAMIC
+
+
+    ############################################################################
+    # Create the radios list
+    $(foreach radio_driver, $(IOTUS_CONF_RADIO_DRIVERS_LIST), \
+      $(eval IOTUS_RADIO_DRIVER_NAME := ) \
+      $(eval THIS_MODULE_FOLDER := $(RELATIVE_FOLDER_RADIO_DRIVERS)/$(radio_driver)) \
+      $(eval THIS_SUB_MODULES := ) \
+      $(eval include $(RADIO_DRIVERS_FOLDER)/$(radio_driver)/Makefile.$(radio_driver)) \
+      $(eval MODULES += $(THIS_SUB_MODULES) $(THIS_MODULE_FOLDER)) \
+      $(if $(IOTUS_RADIO_DRIVER_NAME),, \
+        $(error IOTUS_RADIO_DRIVER_NAME for $(radio_driver) is not defined!) \
+      ) \
+      $(eval temp_modules_main_header_list += $(IOTUS_RADIO_DRIVER_NAME).h) \
+      $(if $(filter $(IOTUS_RADIO_DRIVER_NAME),$(IOTUS_RADIO_DRIVERS_ENUM_OPTIONS)), \
+        $(error $(1) protocol name $(IOTUS_RADIO_DRIVER_NAME) is not unique!) \
+      ) \
+      $(eval IOTUS_RADIO_DRIVERS_ENUM_OPTIONS += $(IOTUS_RADIO_DRIVER_NAME)) \
+      $(eval IOTUS_RADIO_DRIVERS_LIST += $(IOTUS_RADIO_DRIVER_NAME)_radio_driver) \
+    )
     ############################################################################
     # Add every service and its dependencies to the list of compilation
     add_protocols_dependencies = \
@@ -228,6 +256,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
     $(info Transport protocols used are: $(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))
     $(info Routing protocols used are: $(IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS))
     $(info Data link protocols used are: $(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS))
+    $(info Radio drivers used are: $(IOTUS_RADIO_DRIVERS_ENUM_OPTIONS))
     $(info Services used are: $(IOTUS_SERVICES_LIST))
 
     # Create the dynamic header file that will carry all the protocols and services includes
@@ -246,7 +275,8 @@ ifdef IOTUS_CONF_COMPILE_MODE
     $(file >$(IOTUS_FOLDER)/$(IOTUS_DYNAMIC_HEADER_FILE),$(COMPLETE_PROTOCOL_SERVICE_LIST))
 
     ######################################################################################
-    setup_defines_into_iotus_core = \
+    # Setup the defines into the system, to have enum and the arrays
+    setup_protocol_defines_into_iotus_core = \
       $(eval IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS_WCOMMA := \{$(subst $(space),$(comma),$(IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS))\}) \
       $(eval IOTUS_PROTOCOL_$(1)_LIST_WCOMMA := \{$(subst $(space),$(comma),$(addprefix \&,$(IOTUS_PROTOCOL_$(1)_LIST)))\}) \
       $(eval CFLAGS += -DIOTUS_PROTOCOL_$(1)_ENUM_OPTIONS=$(IOTUS_PROTOCOL_$(1)_ENUM_OPTIONS_WCOMMA)) \
@@ -257,16 +287,27 @@ ifdef IOTUS_CONF_COMPILE_MODE
 
     ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
     # Execute this for Transport
-    $(call setup_defines_into_iotus_core,TRANSPORT)
+    $(call setup_protocol_defines_into_iotus_core,TRANSPORT)
     endif
     ifeq ($(IOTUS_CONF_USING_ROUTING),1)
     # Execute this for Routing
-    $(call setup_defines_into_iotus_core,ROUTING)
+    $(call setup_protocol_defines_into_iotus_core,ROUTING)
     endif
     ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
-    $(call setup_defines_into_iotus_core,DATA_LINK)
+    $(call setup_protocol_defines_into_iotus_core,DATA_LINK)
     endif
+
+    ######################################################################################
+    # Setup the defines for enum and arrays for the radio layer
+    setup_radio_defines_into_iotus_core = \
+      $(eval IOTUS_$(1)_ENUM_OPTIONS_WCOMMA := \{$(subst $(space),$(comma),$(IOTUS_$(1)_ENUM_OPTIONS))\}) \
+      $(eval IOTUS_$(1)_LIST_WCOMMA := \{$(subst $(space),$(comma),$(addprefix \&,$(IOTUS_$(1)_LIST)))\}) \
+      $(eval CFLAGS += -DIOTUS_$(1)_ENUM_OPTIONS=$(IOTUS_$(1)_ENUM_OPTIONS_WCOMMA)) \
+      $(eval CFLAGS += -DIOTUS_$(1)_LIST=$(IOTUS_$(1)_LIST_WCOMMA)) \
+
+
+    $(call setup_radio_defines_into_iotus_core,RADIO_DRIVERS)
   else
   #$%^$%^$^$^$^#$#%@#%$#%@#$%$@%$#^#$^@#$$^%$^@#$#$^$%^%@$#$^%^@$##$#@$%%$^^$EWEWR^^^$#%@$#%^@$%@
   #$%^$%^$^$^$^#$#%@#%$#%@#$%$@%$#^#$^     STATIC    %^%@$#$^%^@$##$#@$%%$^^$EWEWR^^^$#%@$#%^@$%@
@@ -293,6 +334,25 @@ ifdef IOTUS_CONF_COMPILE_MODE
         endif
       endif
       CFLAGS+= -DIOTUS_COMPILE_MODE_STATIC
+
+
+      ############################################################################
+      # Create the radios list, in static mode, only the first radio driver is used
+      RADIO_DRIVER_USED := $(word 1,$(IOTUS_CONF_RADIO_DRIVERS_LIST))
+      $(eval IOTUS_RADIO_DRIVER_NAME := )
+      $(eval THIS_MODULE_FOLDER : = $(RELATIVE_FOLDER_RADIO_DRIVERS)/$(RADIO_DRIVER_USED))
+      $(eval THIS_SUB_MODULES := )
+      $(eval include $(RADIO_DRIVERS_FOLDER)/$(RADIO_DRIVER_USED)/Makefile.$(RADIO_DRIVER_USED))
+      $(eval MODULES += $(THIS_SUB_MODULES) $(THIS_MODULE_FOLDER))
+      $(if $(IOTUS_RADIO_DRIVER_NAME),,\
+        $(error IOTUS_RADIO_DRIVER_NAME for $(RADIO_DRIVER_USED) is not defined!)\
+      )
+      $(eval temp_modules_main_header_list += $(IOTUS_RADIO_DRIVER_NAME).h)
+      $(if $(filter $(IOTUS_RADIO_DRIVER_NAME),$(IOTUS_RADIO_DRIVERS_ENUM_OPTIONS)),\
+        $(error Radio driver name $(IOTUS_RADIO_DRIVER_NAME) is not unique!)\
+      )
+      $(eval IOTUS_STATIC_PROTOCOL_RADIO_DRIVER := $(IOTUS_RADIO_DRIVER_NAME)_protocol) \
+
       ############################################################################
       # Add every service and its dependencies to the list of compilation
       add_protocols_dependencies = \
@@ -383,6 +443,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
       $(info Transport protocol used is: $(IOTUS_STATIC_PROTOCOL_TRANSPORT))
       $(info Routing protocol used is: $(IOTUS_STATIC_PROTOCOL_ROUTING))
       $(info Data link protocol used is: $(IOTUS_STATIC_PROTOCOL_DATA_LINK))
+      $(info Radio driver used is: $(IOTUS_STATIC_PROTOCOL_RADIO_DRIVER))
       $(info Services used are: $(IOTUS_SERVICES_LIST))
 
       # Create the dynamic header file that will carry all the protocols and services includes
@@ -410,8 +471,12 @@ ifdef IOTUS_CONF_COMPILE_MODE
       ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_DATA_LINK=$(IOTUS_STATIC_PROTOCOL_DATA_LINK)
       endif
+      CFLAGS += -DIOTUS_STATIC_PROTOCOL_RADIO_DRIVER=$(IOTUS_STATIC_PROTOCOL_RADIO_DRIVER)
       ######################################################################################
 
+    #$%^$%^$^$^$^#$#%@#%$#%@#$%$@%$#^#$^@#$$^%$^@#$#$^$%^%@$#$^%^@$##$#@$%%$^^$EWEWR^^^$#%@$#%^@$%@
+    #$%^$%^$^$^$^#$#%@#%$#%@#$%$@%$#^#$^   FAILED...   %^%@$#$^%^@$##$#@$%%$^^$EWEWR^^^$#%@$#%^@$%@
+    #$%^$%^$^$^$^#$#%@#%$#%@#$%$@%$#^#$^@#$$^%$^@#$#$^$%^%@$#$^%^@$##$#@$%%$^^$EWEWR^^^$#%@$#%^@$%@
     else
       $(error IoTUS net stack requires IOTUS_CONF_COMPILE_MODE defined as DYNAMIC or STATIC!)
     endif
