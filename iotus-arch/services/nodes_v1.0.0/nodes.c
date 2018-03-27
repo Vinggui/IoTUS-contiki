@@ -1,6 +1,6 @@
 
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "addresses.h"
 #include "global-parameters.h"
 #include "lib/memb.h"
 #include "iotus-core.h"
@@ -34,27 +35,6 @@ MEMB(iotus_nodes_mem, iotus_node_t, IOTUS_NODES_LIST_SIZE);
 LIST(gNodesList);
 
 uint8_t nodes_broadcast_pointer;
-uint8_t nodes_addressess_sizes[IOTUS_NODES_ADD_INFO_TYPE_ADDR_RESERVED];
-
-
-/*---------------------------------------------------------------------*/
-/*
- * \brief Compare two addresses, considering the type requested.
- * \param addr1    The pointer of the first address.
- * \param addr2    The pointer of the second address.
- * \return         True if they match.
- */
-uint8_t
-nodes_compare_address(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
-{
-  uint8_t i;
-  for(i=0; i<addressesSize; i++) {
-    if(addr1 != addr2) {
-      return TRUE;
-    }
-  }
-  return FALSE;
-}
 
 /*---------------------------------------------------------------------*/
 /*
@@ -65,7 +45,7 @@ nodes_compare_address(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
  * \retval  NULL           If the address type is not found. 
  */
 uint8_t *
-nodes_get_address(uint8_t addressType, iotus_node_t *node) {
+nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
   iotus_additional_info_t *addressInfo = pieces_get_additional_info(node->additionalInfoList, addressType);
   if(NULL != addressInfo) {
     //Found this address type...
@@ -83,7 +63,7 @@ nodes_get_address(uint8_t addressType, iotus_node_t *node) {
  * \retval  The pointer to the node, if the address is found. Null otherwise.
  */
 iotus_node_t *
-nodes_get_node_by_address(uint8_t addressType, uint8_t *address)
+nodes_get_node_by_address(iotus_address_type addressType, uint8_t *address)
 {
   if(NULL == address) {
     return NULL;
@@ -95,10 +75,10 @@ nodes_get_node_by_address(uint8_t addressType, uint8_t *address)
     iotus_additional_info_t *addressInfo = pieces_get_additional_info(node->additionalInfoList, addressType);
     if(NULL != addressInfo) {
       //Found this address type...
-      if(TRUE == nodes_compare_address(
+      if(TRUE == addresses_compare(
                     pieces_get_data_pointer(addressInfo),
                     address,
-                    NODES_GET_ADDRESS_TYPE_SIZE(addressType))
+                    ADDRESSES_GET_TYPE_SIZE(addressType))
                     ) {
         //Node found
         break;
@@ -110,12 +90,12 @@ nodes_get_node_by_address(uint8_t addressType, uint8_t *address)
 
 /*---------------------------------------------------------------------*/
 Boolean
-nodes_set_address(iotus_node_t *node, uint8_t addressType, uint8_t *address)
+nodes_set_address(iotus_node_t *node, iotus_address_type addressType, uint8_t *address)
 {
   if(NULL == pieces_set_additional_info(node->additionalInfoList,
                                            IOTUS_NODES_ADD_INFO_TYPE_ADDR_FULL,
                                            address,
-                                           NODES_GET_ADDRESS_TYPE_SIZE(addressType),
+                                           ADDRESSES_GET_TYPE_SIZE(addressType),
                                            TRUE)) {
     SAFE_PRINTF_LOG_ERROR("Set address fail");
     return FALSE;
@@ -150,7 +130,7 @@ create_node(void) {
  * \param time    The pointer of the timestamp to be set.
  */
 iotus_node_t *
-nodes_update_by_address(uint8_t addressType, uint8_t *address)
+nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
 {
   //Verify if this node already exists
   iotus_node_t *h = nodes_get_node_by_address(addressType, address);
