@@ -70,7 +70,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       }
 
       uint8_t testeHeaderFullBytes[3] = {0xbe, 0xef, 0xFF};
-      teste = packet_append_byte_header(3, testeHeaderFullBytes, packet);
+      teste = packet_append_last_header(3, testeHeaderFullBytes, packet);
 
       if(teste > 0) {
         PRINTF("Bytes appended ok! new size %u\n",teste);

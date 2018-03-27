@@ -41,7 +41,7 @@ MEMB(iotus_additional_info_handlers_mem, iotus_additional_info_t, IOTUS_ADDITION
 extern inline uint8_t *
 pieces_get_data_pointer(void *piecePointer)
 {
-  return (uint8_t *)((iotus_additional_info_t *)piecePointer)->data.ptr;
+  return (uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.ptr);
 }
 
 /*---------------------------------------------------------------------*/
@@ -73,24 +73,22 @@ pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t 
   }
 
 
-  #if IOTUS_USING_MALLOC == 0
+#if IOTUS_USING_MALLOC == 0
   if(mmem_alloc(&(newPiece->data), dataSize) == 0) {
     SAFE_PRINTF_LOG_ERROR("Alloc mmem");
     memb_free(m, newPiece);
     return NULL;
   }
-  memcpy(newPiece->data.ptr, data, dataSize);
-  #else
-  uint8_t *dataPointer = malloc(dataSize);
-  if(dataPointer == NULL) {
+#else /* IOTUS_USING_MALLOC == 0 */
+  newPiece->data.ptr = malloc(dataSize);
+  if(newPiece->data.ptr == NULL) {
     SAFE_PRINTF_LOG_ERROR("Alloc malloc");
     free(newPiece);
     return NULL;
   }
-  memcpy(dataPointer, data, dataSize);
-  newPiece->data.ptr = dataPointer;
-  #endif
-
+  newPiece->data.size = dataSize;
+#endif /* IOTUS_USING_MALLOC == 0 */
+  memcpy(newPiece->data.ptr, data, dataSize);
   newPiece->params = 0;
   newPiece->priority = 0;
   newPiece->callbackHandler = NULL;

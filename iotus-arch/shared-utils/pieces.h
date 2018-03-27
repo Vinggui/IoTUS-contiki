@@ -36,10 +36,10 @@
 
 #define COMMON_STRUCT_PIECES(structName) \
   structName *next;\
-  timestamp_t timeout;\
   struct mmem data;\
   uint8_t params;\
   uint8_t priority;\
+  timestamp_t timeout;\
   void *callbackHandler;\
   iotus_node_t *finalDestinationNode;
 

@@ -132,12 +132,12 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece, iotus_piggyback_t *pigg
         piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
       }
       
-      packet_append_byte_header(piggyback_piece->data.size, pieces_get_data_pointer(piggyback_piece), packet_piece);
+      packet_append_last_header(piggyback_piece->data.size, pieces_get_data_pointer(piggyback_piece), packet_piece);
       if(piggyback_with_ext_size) {
         SAFE_PRINTF_LOG_INFO("Extended size");
-        packet_append_byte_header(member_size(iotus_piggyback_t,extendedSize), &(piggyback_piece->extendedSize), packet_piece);
+        packet_append_last_header(member_size(iotus_piggyback_t,extendedSize), &(piggyback_piece->extendedSize), packet_piece);
       }
-      packet_append_byte_header(member_size(iotus_piggyback_t,params), &(piggyback_piece->params), packet_piece);
+      packet_append_last_header(member_size(iotus_piggyback_t,params), &(piggyback_piece->params), packet_piece);
 
       //Operation success
       SAFE_PRINTF_LOG_INFO("Appended. Deleting");

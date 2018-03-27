@@ -62,18 +62,18 @@ packet_destroy(iotus_packet_t *piece) {
 /*---------------------------------------------------------------------*/
 /*
  * \brief verify if a certain parameter is defined
- * \param packet_piece Packet to be read.
+ * \param packetPiece Packet to be read.
  * \param param Parameter to be verified
  * \return Boolean.
  */
 uint8_t
-packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param) {
-  if(NULL == packet_piece) {
+packet_verify_parameter(iotus_packet_t *packetPiece, uint8_t param) {
+  if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return 0;
   }
 
-  if(packet_piece->params & param)
+  if(packetPiece->params & param)
     return TRUE;
   return FALSE;
 }
@@ -82,52 +82,52 @@ packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param) {
 /*---------------------------------------------------------------------*/
 /*
  * \brief Allow other services to set a parameter into a msg
- * \param packet_piece Packet to be set.
+ * \param packetPiece Packet to be set.
  * \param param Parameter to be written
  * \return Boolean.
  */
 void
-packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param) {
-  if(NULL == packet_piece) {
+packet_set_parameter(iotus_packet_t *packetPiece, uint8_t param) {
+  if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return;
   }
 
   /* Encode parameters */
-  packet_piece->params |= param;
+  packetPiece->params |= param;
 }
 
 /*---------------------------------------------------------------------*/
 /*
  * Return the pointer to the node of final destination
- * \param packet_piece       The pointer to the packet to be searched.
+ * \param packetPiece       The pointer to the packet to be searched.
  * \return                The pointer to the node of the final destination.
  */
 iotus_node_t *
-packet_get_final_destination(iotus_packet_t *packet_piece)
+packet_get_final_destination(iotus_packet_t *packetPiece)
 {
-  if(NULL == packet_piece) {
+  if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return NULL;
   }
-  return packet_piece->finalDestinationNode;
+  return packetPiece->finalDestinationNode;
 }
 
 
 /*---------------------------------------------------------------------*/
 /*
  * Return the pointer to the node of next destination
- * \param packet_piece       The pointer to the packet to be searched.
+ * \param packetPiece       The pointer to the packet to be searched.
  * \return                The pointer to the node of the final destination.
  */
 iotus_node_t *
-packet_get_next_destination(iotus_packet_t *packet_piece)
+packet_get_next_destination(iotus_packet_t *packetPiece)
 {
-  if(NULL == packet_piece) {
+  if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return NULL;
   }
-  return packet_piece->nextDestinationNode;
+  return packetPiece->nextDestinationNode;
 }
 
 /*---------------------------------------------------------------------*/
@@ -149,15 +149,13 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
   }
 
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
-  (newMsg)->initialBitHeaderSize = 0;
-  (newMsg)->finalBytesHeaderSize = 0;
+  (newMsg)->firstHeaderBitSize = 0;
+  (newMsg)->lastHeaderSize = 0;
 
-  newMsg->initialBitHeader = NULL;
-  newMsg->finalBytesHeader = NULL;
   newMsg->nextDestinationNode = NULL;
 
   newMsg->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
-  //((struct packet_piece *)newMsg)->timeout = timeout;
+  //((struct packetPiece *)newMsg)->timeout = timeout;
   newMsg->callbackHandler = callbackFunction;
 
   newMsg->finalDestinationNode = finalDestination;
@@ -177,14 +175,12 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
  */
 /*
  * \brief Function to get the total size of a packet
- * \param packet_piece Packet to be read.
+ * \param packetPiece Packet to be read.
  * \return Total size.
  */
-uint16_t
-packet_get_size(iotus_packet_t *packet_piece) {
-  return (packet_piece->initialBitHeaderSize +7)/8 +
-         (packet_piece->finalBytesHeaderSize) +
-         (packet_piece->data.size);
+unsigned int
+packet_get_size(iotus_packet_t *packetPiece) {
+  return (packetPiece->data.size);
 }
 
 
@@ -247,62 +243,74 @@ packet_get_layer_assigned_for(iotus_default_header_chores func)
  * \brief Function to push bits into the header
  * \param bitSequenceSize The amount of bit that will be push into.
  * \param bitSeq An array of bytes containing the bits
- * \param packet_piece Msg to apply this push
+ * \param packetPiece Msg to apply this push
  * \return Packet final size
  */
 uint16_t
 packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
-  iotus_packet_t *packet_piece) {
+  iotus_packet_t *packetPiece) {
 
   uint16_t i;
   uint16_t newSizeInBYTES = 0;
-  uint16_t oldSizeInBYTES = ((packet_piece->initialBitHeaderSize)+7)/8;//round up
+  uint16_t oldSizeInBYTES = ((packetPiece->firstHeaderBitSize)+7)/8;//round up
+  uint16_t packetOldTotalSize = packet_get_size(packetPiece);
   
-  //Verify if the msg piece already has something
-  if(NULL == packet_piece->initialBitHeader) {
+  //Verify if a new byte is required
+  uint16_t freeSpaceInBITS = (oldSizeInBYTES*8)-(packetPiece->firstHeaderBitSize);
+  if(freeSpaceInBITS < bitSequenceSize) {
+    //Reallocate new buffer for this system
+    newSizeInBYTES = (bitSequenceSize - freeSpaceInBITS + 7)/8;//round up
 
-    #if IOTUS_USING_MALLOC == 0
-    packet_piece->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
-    #else
-    packet_piece->initialBitHeader = (uint8_t *)malloc((bitSequenceSize+7)/8);
-    #endif
-    
-    newSizeInBYTES = (bitSequenceSize+7)/8;
 
-    if(packet_piece->initialBitHeader == NULL) {
-      /* Failed to alloc memory */
-      SAFE_PRINTF_LOG_ERROR("allocate memory");
-      return 0;
+    uint8_t newBuff[newSizeInBYTES + packetOldTotalSize];
+    for(i=0;i<newSizeInBYTES;i++) {
+      newBuff[i]=0;
     }
-  } else {
-    //Verify if a new byte is required
-    uint16_t freeSpaceInBITS = (oldSizeInBYTES*8)-(packet_piece->initialBitHeaderSize);
-    if(freeSpaceInBITS < bitSequenceSize) {
-      //Reallocate new buffer for this system
-      newSizeInBYTES = (bitSequenceSize - freeSpaceInBITS + 7)/8;//round up
+    //transfer the old buffer to the new one, backwards!
+    memcpy(newBuff+newSizeInBYTES,pieces_get_data_pointer(packetPiece),packetOldTotalSize);
 
-      uint8_t *newBuff = (uint8_t *)malloc(newSizeInBYTES + oldSizeInBYTES);
 
-      if(newBuff == NULL) {
-        /* Failed to alloc memory */
-        SAFE_PRINTF_LOG_ERROR("allocate memory.");
+    //Delete the old buffer
+#if IOTUS_USING_MALLOC == 0
+    //This sequence of free first then alloc makes more sense in constrained devices
+    mmem_free(&(packetPiece->data));
+    //recreate it...
+    if(0 == mmem_alloc(&(packetPiece->data), newSizeInBYTES + packetOldTotalSize)) {
+      /* Failed to alloc memory */
+      SAFE_PRINTF_LOG_WARNING("Alloc failed");
+      //retore old info...
+      if(0 == mmem_alloc(&(packetPiece->data), packetOldTotalSize)) {
+        SAFE_PRINTF_LOG_ERROR("Recovery Failed!");
         return 0;
       }
-
-      //transfer the old buffer to the new one, backwards!
-      for(i=(newSizeInBYTES + oldSizeInBYTES - 1); i >= oldSizeInBYTES; i--) {
-        newBuff[i] = (packet_piece->initialBitHeader)[i-newSizeInBYTES];
-      }
-
-      //Delete the old buffer
-      free((void *)(packet_piece->initialBitHeader));
-      packet_piece->initialBitHeader = newBuff;
+      memcpy(pieces_get_data_pointer(packetPiece),newBuff+newSizeInBYTES,packetOldTotalSize);
+      return 0;
     }
+#else
+    //This sequence of free first then alloc makes more sense in constrained devices
+    free(pieces_get_data_pointer(packetPiece));
+    //recreate it...
+    packetPiece->data.ptr = malloc(newSizeInBYTES + packetOldTotalSize);
+    if(NULL == packetPiece->data.ptr) {
+      /* Failed to alloc memory */
+      SAFE_PRINTF_LOG_WARNING("Alloc failed");
+      //retore old info...
+      packetPiece->data.ptr = malloc(packetOldTotalSize);
+      if(NULL == packetPiece->data.ptr) {
+        SAFE_PRINTF_LOG_ERROR("Recovery Failed!");
+        return 0;
+      }
+      memcpy(pieces_get_data_pointer(packetPiece),newBuff+newSizeInBYTES,packetOldTotalSize);
+      return 0;
+    }
+    packetPiece->data.size += newSizeInBYTES;
+#endif
+    memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize+newSizeInBYTES);
   }
 
   //Insert the new bits information
-  uint16_t byteToPush = (newSizeInBYTES + oldSizeInBYTES) - ((packet_piece->initialBitHeaderSize)/8);
-  uint8_t bitToPush = ((packet_piece->initialBitHeaderSize)%8);
+  uint16_t byteToPush = (newSizeInBYTES + oldSizeInBYTES) - ((packetPiece->firstHeaderBitSize)/8);
+  uint8_t bitToPush = ((packetPiece->firstHeaderBitSize)%8);
   uint16_t byteToRead = 1 + (bitSequenceSize/8);
   for(i=0; i < bitSequenceSize; i++) {
     //Verify and change the byte to be push into...
@@ -318,14 +326,14 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 
     uint8_t bitRead = (bitSeq[byteToRead] & bitShifted);
     if(bitRead == 0) {
-      (packet_piece->initialBitHeader)[byteToPush] &= ~(1<<bitToPush);
+      (pieces_get_data_pointer(packetPiece))[byteToPush] &= ~(1<<bitToPush);
     } else {
-      (packet_piece->initialBitHeader)[byteToPush] |= (1<<bitToPush);
+      (pieces_get_data_pointer(packetPiece))[byteToPush] |= (1<<bitToPush);
     }
   }
-  packet_piece->initialBitHeaderSize += bitSequenceSize;//counted in bits
+  packetPiece->firstHeaderBitSize += bitSequenceSize;//counted in bits
 
-  return packet_get_size(packet_piece);
+  return packet_get_size(packetPiece);
 }
 
 
@@ -339,54 +347,74 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
  * \brief Function to append full bytes headers into the tail (inversed)
  * \param bytesSize The amount of bytes that will be appended.
  * \param byteSeq An array of bytes in its normal sequence
- * \param packet_piece Msg to apply this append
+ * \param packetPiece Msg to apply this append
  * \return Packet final size
  */
 uint16_t
-packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
-  iotus_packet_t *packet_piece) {
+packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
+  iotus_packet_t *packetPiece) {
   int i;//Verify if the msg piece already has something
-  uint16_t totalFinalSize = 0;
-  if(NULL == packet_piece->finalBytesHeader) {
-    packet_piece->finalBytesHeader = (uint8_t *)malloc(byteSequenceSize);
+  uint16_t packetOldTotalSize = packet_get_size(packetPiece);
+  uint16_t packetNewTotalSize = packetOldTotalSize + byteSequenceSize;
+  //Reallocate new buffer for this system
+  uint8_t newBuff[packetNewTotalSize];
 
-    if(packet_piece->finalBytesHeader == NULL) {
-      /* Failed to alloc memory */
-      SAFE_PRINTF_LOG_ERROR("allocate memory");
-      return 0;
-    }
-    totalFinalSize = byteSequenceSize;
-  } else {
-    //Reallocate new buffer for this system
-    totalFinalSize = byteSequenceSize + packet_piece->finalBytesHeaderSize;
-
-    uint8_t *newBuff = (uint8_t *)malloc(totalFinalSize);
-
-    if(newBuff == NULL) {
-      /* Failed to alloc memory */
-      SAFE_PRINTF_LOG_ERROR("allocate memory");
-      return 0;
-    }
-
-    //transfer the old buffer to the new one! (left to the right)
-    for(i=0; i < (packet_piece->finalBytesHeaderSize); i++) {
-      newBuff[i] = (packet_piece->finalBytesHeader)[i];
-    }
-
-    //Delete the old buffer
-    free((void *)(packet_piece->finalBytesHeader));
-    packet_piece->finalBytesHeader = newBuff;
+/* this was malloc before...
+  if(newBuff == NULL) {
+    SAFE_PRINTF_LOG_ERROR("allocate memory");
+    return 0;
   }
+*/
+
+  //transfer the old buffer to the new one! (left to the right)
+  memcpy(newBuff, pieces_get_data_pointer(packetPiece), packetOldTotalSize);
+
+  //Delete the old buffer
+#if IOTUS_USING_MALLOC == 0
+  //This sequence of free first then alloc makes more sense in constrained devices
+  mmem_free(&(packetPiece->data));
+  //recreate it...
+  if(0 == mmem_alloc(&(packetPiece->data), packetNewTotalSize)) {
+    /* Failed to alloc memory */
+    SAFE_PRINTF_LOG_WARNING("Alloc failed");
+    //retore old info...
+    if(0 == mmem_alloc(&(packetPiece->data), packetOldTotalSize)) {
+      SAFE_PRINTF_LOG_ERROR("Recovery Failed!");
+      return 0;
+    }
+    memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize);
+    return 0;
+  }
+#else
+  //This sequence of free first then alloc makes more sense in constrained devices
+  free(pieces_get_data_pointer(packetPiece));
+  //recreate it...
+  packetPiece->data.ptr = malloc(packetNewTotalSize);
+  if(NULL == packetPiece->data.ptr) {
+    /* Failed to alloc memory */
+    SAFE_PRINTF_LOG_WARNING("Alloc failed");
+    //retore old info...
+    packetPiece->data.ptr = malloc(packetOldTotalSize);
+    if(NULL == packetPiece->data.ptr) {
+      SAFE_PRINTF_LOG_ERROR("Recovery Failed!");
+      return 0;
+    }
+    memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize);
+    return 0;
+  }
+  packetPiece->data.size += byteSequenceSize;
+#endif
+  memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize);
 
   //update size
-  packet_piece->finalBytesHeaderSize = totalFinalSize;
+  packetPiece->lastHeaderSize += byteSequenceSize;
   
   //Insert the new bytes, backwards...
   for(i=0; i < byteSequenceSize; i++) {
-    (packet_piece->finalBytesHeader)[totalFinalSize - i - 1] = ((uint8_t *)headerToAppend)[i];
+    pieces_get_data_pointer(packetPiece)[packetNewTotalSize - i - 1] = headerToAppend[i];
   }
 
-  return packet_get_size(packet_piece);
+  return packet_get_size(packetPiece);
 }
 
 /*---------------------------------------------------------------------*/
@@ -398,27 +426,15 @@ packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 /*
  * \brief  Function to read any byte of a message, given its position
  * \param bytePos The position of the byte
- * \param packet_piece Packet to be read.
+ * \param packetPiece Packet to be read.
  * \return Byte read.
  */
 uint8_t
-packet_read_byte(uint16_t bytePos, iotus_packet_t *packet_piece) {
-  if(packet_get_size(packet_piece) <= bytePos) {
+packet_read_byte(uint16_t bytePos, iotus_packet_t *packetPiece) {
+  if(packet_get_size(packetPiece) <= bytePos) {
     return 0;
   }
-  //firstBitHarderSize starts with the size of the initial Bit header size in Bytes...
-  uint16_t firstBitHarderSize = ((packet_piece->initialBitHeaderSize +7)/8);
-  if (bytePos < firstBitHarderSize) {
-    //This byte is one of the bit headers
-    return (packet_piece->initialBitHeader)[bytePos];
-  }
-  if(bytePos < (firstBitHarderSize + packet_piece->data.size)) {
-    //BytePos is located into payload (data) section
-    return pieces_get_data_pointer(packet_piece)[bytePos - firstBitHarderSize];
-  }
-
-  firstBitHarderSize += packet_piece->data.size;
-  return (packet_piece->finalBytesHeader)[bytePos - firstBitHarderSize];
+  return pieces_get_data_pointer(packetPiece)[bytePos];
 }
 
 /*---------------------------------------------------------------------*/

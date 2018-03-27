@@ -42,10 +42,8 @@ typedef enum IOTUS_PACKET_PRIORITY {IOTUS_PRIORITY_RADIO = 0, IOTUS_PRIORITY_DAT
 typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
   iotus_node_t *nextDestinationNode;
-  uint16_t initialBitHeaderSize;
-  uint8_t *initialBitHeader; //Will be used to build the final packet, processed by the core
-  uint16_t finalBytesHeaderSize;
-  uint8_t *finalBytesHeader; //Will be used to build the final packet, processed by the core
+  uint16_t firstHeaderBitSize;
+  uint16_t lastHeaderSize;
   LIST_STRUCT(additionalInfoList);
 } iotus_packet_t;
 
@@ -94,7 +92,7 @@ packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
 Boolean
 packet_destroy(iotus_packet_t *msgPiece);
 
-uint16_t
+unsigned int
 packet_get_size(iotus_packet_t *packet_piece);
 
 void
@@ -108,7 +106,7 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   iotus_packet_t *packet_piece);
 
 uint16_t
-packet_append_byte_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
+packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   iotus_packet_t *packet_piece);
 
 uint8_t
