@@ -14,13 +14,17 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "addresses.h"
 #include "iotus-core.h"
+#include "lib/mmem.h"
 #include "platform-conf.h"
 
 
-uint8_t addresses_types_sizes[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL];
-
+uint8_t addresses_types_sizes[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL-1];
+struct mmem addresses_mem[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL-1]={{0}};
+uint8_t iotus_node_id_hardcoded[3];
+uint8_t iotus_panid_hardcoded[3];
 
 /*---------------------------------------------------------------------*/
 /*
@@ -29,7 +33,7 @@ uint8_t addresses_types_sizes[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL];
  * \param addr2    The pointer of the second address.
  * \return         True if they match.
  */
-uint8_t
+Boolean
 addresses_compare(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
 {
   uint8_t i;
@@ -40,6 +44,36 @@ addresses_compare(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
   }
   return FALSE;
 }
+/*---------------------------------------------------------------------*/
+/**
+ * \brief       Set the address into the system, given it's type.
+ * @param type  The type of the address to be set.
+ * @param value The array of byte for this address.
+ */
+Status
+addresses_set_value(iotus_address_type type, const uint8_t *value)
+{
+  //The type size must be already set by now.
+  if(ADDRESSES_GET_TYPE_SIZE(type) == 0) {
+    return FAILURE;
+  }
+
+  //Verify if this address already have something...
+  if(addresses_mem[type].size != 0) {
+    mmem_free(&(addresses_mem[type]));
+  }
+
+  if(0 == mmem_alloc(&(addresses_mem[type]),ADDRESSES_GET_TYPE_SIZE(type))) {
+    return FAILURE;
+  }
+
+  memcpy((uint8_t *)MMEM_PTR(&(addresses_mem[type])),value,ADDRESSES_GET_TYPE_SIZE(type));
+
+  return SUCCESS;
+}
+/*---------------------------------------------------------------------*/
+
+
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */
 

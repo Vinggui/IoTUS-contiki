@@ -93,7 +93,7 @@ Boolean
 nodes_set_address(iotus_node_t *node, iotus_address_type addressType, uint8_t *address)
 {
   if(NULL == pieces_set_additional_info(node->additionalInfoList,
-                                           IOTUS_NODES_ADD_INFO_TYPE_ADDR_FULL,
+                                           IOTUS_NODES_ADD_INFO_TYPE_ADDR_LONG,
                                            address,
                                            ADDRESSES_GET_TYPE_SIZE(addressType),
                                            TRUE)) {

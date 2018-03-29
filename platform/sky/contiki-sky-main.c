@@ -47,6 +47,9 @@
 #include "net/linkaddr.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"
+#else
+#include "iotus-core.h"
+#include "addresses.h"
 #endif/*CONTIKI_COMM_NEW_STACK*/
 
 #include "sys/node-id.h"
@@ -217,6 +220,9 @@ main(int argc, char **argv)
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
 #ifdef CONTIKI_COMM_NEW_STACK
+  iotus_node_id_hardcoded[0]= node_id & 0xff;
+  iotus_node_id_hardcoded[1]= (node_id>>8) & 0xff;
+  iotus_node_id_hardcoded[2]= 0;
   #if IOTUS_USING_MALLOC == 0
     mmem_init();
   #endif

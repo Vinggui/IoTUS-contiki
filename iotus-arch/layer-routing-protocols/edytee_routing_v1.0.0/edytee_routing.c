@@ -64,6 +64,7 @@ close(void)
 
 const struct iotus_routing_protocol_struct edytee_routing_protocol = {
   start,
+  NULL,
   run,
   close
 };

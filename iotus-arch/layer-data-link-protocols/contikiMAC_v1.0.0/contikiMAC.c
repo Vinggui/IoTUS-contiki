@@ -48,13 +48,12 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
   for(;;) {
     PROCESS_WAIT_EVENT();
 
-    if(IOTUS_PRIORITY_DATA_LINK == packet_get_layer_assigned_for(IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM)) {
-      SAFE_PRINTF_CLEAN("Deu - CS\n\n\n");
+    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
       piggyback_create_piece(
         8,(const uint8_t *)"merda!!!",0,
         NODES_BROADCAST, 3000);
     }
-    if(IOTUS_PRIORITY_DATA_LINK == packet_get_layer_assigned_for(IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
+    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
       SAFE_PRINTF_CLEAN("Deu - BC\n");
 
       iotus_packet_t *packet = packet_create_msg(9, IOTUS_PRIORITY_DATA_LINK, 5000,
@@ -112,11 +111,48 @@ start(void)
   SAFE_PRINTF_CLEAN("\tContikiMAC\n");
   process_start(&contikiMAC_proc, NULL);
 
-  packet_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_CHECKSUM);
-  packet_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_PANID);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_SHORT_LONG);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_FOR_RADIO);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_ONEHOP_BROADCAST);
   timestamp_mark(&firstTimer,0);
 }
 
+static void
+post_start(void)
+{
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_PANID)) {
+    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
+    uint16_t temppp = 0xbeef;
+    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_PANID, (uint8_t *)&temppp)) {
+      SAFE_PRINTF_LOG_ERROR("Addres not set");
+      return;
+    }
+  }
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_SHORT_LONG)) {
+    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);
+    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG,8);
+
+    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, iotus_node_id_hardcoded)) {
+      SAFE_PRINTF_LOG_ERROR("Addres not set");
+      return;
+    }
+    /*
+    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_LONG, )) {
+      SAFE_PRINTF_LOG_ERROR("Addres not set");
+      return;
+    }*/
+  }
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
+    //Set radio address...
+    radio_value_t value;
+    active_radio_driver->get_value(RADIO_CONST_ADDRESSES_OPTIONS, &value);
+    if(value & 0b0000000010000010) {
+      active_radio_driver->set_value(RADIO_PARAM_ADDRESS_USE_TYPE,IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+    }
+    
+  }
+}
 
 static void
 run(void)
@@ -130,6 +166,7 @@ close(void)
 
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   start,
+  post_start,
   run,
   close
 };

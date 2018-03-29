@@ -42,6 +42,7 @@ close(void)
 
 struct iotus_routing_protocol_struct null_routing_protocol = {
   start,
+  NULL,
   run,
   close
 };

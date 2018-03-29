@@ -59,18 +59,21 @@ typedef uint8_t Status;
 
 struct iotus_transport_protocol_struct {
   void (* start)(void);
+  void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
 };
 
 struct iotus_routing_protocol_struct {
   void (* start)(void);
+  void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
 };
 
 struct iotus_data_link_protocol_struct {
   void (* start)(void);
+  void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
 };
@@ -110,6 +113,7 @@ iotus_core_start_system (
   void
   #endif
 );
+
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

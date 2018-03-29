@@ -67,6 +67,8 @@
 #define CC2420_CONF_AUTOACK 0
 #endif /* CC2420_CONF_AUTOACK */
 
+#define MIN_ADDRESS_SIZE    2
+#define MAX_ADDRESS_SIZE    8
 #define CHECKSUM_LEN        2
 #define FOOTER_LEN          2
 #define FOOTER1_CRC_OK      0x80
@@ -179,6 +181,8 @@ static uint8_t volatile poll_mode = 0;
 /* Do we perform a CCA before sending? */
 static uint8_t send_on_cca = WITH_SEND_CCA;
 
+static iotus_address_type iotus_used_address_type;
+
 static radio_result_t
 get_value(radio_param_t param, radio_value_t *value)
 {
@@ -242,6 +246,13 @@ get_value(radio_param_t param, radio_value_t *value)
   case RADIO_CONST_TXPOWER_MAX:
     *value = OUTPUT_POWER_MAX;
     return RADIO_RESULT_OK;
+  case RADIO_CONST_ADDRESSES_OPTIONS:
+    //*value = (1<<7) | (1<<1)
+    *value = 0b0000000010000010;
+    return RADIO_RESULT_OK;
+  case RADIO_PARAM_ADDRESS_USE_TYPE:
+    *value = iotus_used_address_type;
+    return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
   }
@@ -288,6 +299,21 @@ set_value(radio_param_t param, radio_value_t value)
     return RADIO_RESULT_OK;
   case RADIO_PARAM_CCA_THRESHOLD:
     cc2420_set_cca_threshold(value - RSSI_OFFSET);
+    return RADIO_RESULT_OK;
+  case RADIO_PARAM_ADDRESS_USE_TYPE:
+    //Verify if this size is actually supported
+    if(ADDRESSES_GET_TYPE_SIZE(value) == 2 || ADDRESSES_GET_TYPE_SIZE(value) == 8) {
+      iotus_used_address_type = value;
+      //Search for this address in the system
+      PRINTF("Using address - ");
+      for(i=0;i<ADDRESSES_GET_TYPE_SIZE(value);i++) {
+        if(i!=0) {
+          PRINTF(":");
+        }
+        PRINTF("%02x",addresses_get_pointer(value)[i]);
+      }
+      PRINTF("\n");
+    }
     return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
@@ -571,74 +597,6 @@ set_txpower(uint8_t power)
   reg = getreg(CC2420_TXCTRL);
   reg = (reg & 0xffe0) | (power & 0x1f);
   setreg(CC2420_TXCTRL, reg);
-}
-/*---------------------------------------------------------------------------*/
-void
-cc2420_init(void)
-{
-  PRINTF("\tCC2440 driver\n");
-  uint16_t reg;
-  {
-    int s = splhigh();
-    cc2420_arch_init();   /* Initalize ports and SPI. */
-    CC2420_DISABLE_FIFOP_INT();
-    CC2420_FIFOP_INT_INIT();
-    splx(s);
-  }
-
-  /* Turn on voltage regulator and reset. */
-  SET_VREG_ACTIVE();
-  clock_delay(250);
-  SET_RESET_ACTIVE();
-  clock_delay(127);
-  SET_RESET_INACTIVE();
-  clock_delay(125);
-
-
-  /* Turn on the crystal oscillator. */
-  strobe(CC2420_SXOSCON);
-  /* And wait until it stabilizes */
-  wait_for_status(BV(CC2420_XOSC16M_STABLE));
-
-  /* Set auto-ack and frame filtering */
-  set_auto_ack(CC2420_CONF_AUTOACK);
-  set_frame_filtering(CC2420_CONF_AUTOACK);
-
-  /* Enabling CRC in hardware; this is required by AUTOACK anyway
-     and provides us with RSSI and link quality indication (LQI)
-     information. */
-  reg = getreg(CC2420_MDMCTRL0);
-  reg |= AUTOCRC;
-  setreg(CC2420_MDMCTRL0, reg);
-
-  /* Set transmission turnaround time to the lower setting (8 symbols
-     = 0.128 ms) instead of the default (12 symbols = 0.192 ms). */
-  /*  reg = getreg(CC2420_TXCTRL);
-  reg &= ~(1 << 13);
-  setreg(CC2420_TXCTRL, reg);*/
-
-  
-  /* Change default values as recomended in the data sheet, */
-  /* correlation threshold = 20, RX bandpass filter = 1.3uA. */
-  setreg(CC2420_MDMCTRL1, CORR_THR(20));
-  reg = getreg(CC2420_RXCTRL1);
-  reg |= RXBPF_LOCUR;
-  setreg(CC2420_RXCTRL1, reg);
-
-  /* Set the FIFOP threshold to maximum. */
-  setreg(CC2420_IOCFG0, FIFOP_THR(127));
-
-  init_security();
-
-  cc2420_set_pan_addr(0xffff, 0x0000, NULL);
-  cc2420_set_channel(CC2420_CONF_CHANNEL);
-  cc2420_set_cca_threshold(CC2420_CONF_CCA_THRESH);
-
-  flushrx();
-
-  set_poll_mode(0);
-
-  process_start(&cc2420_process, NULL);
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -1168,6 +1126,80 @@ set_send_on_cca(uint8_t enable)
   send_on_cca = enable;
 }
 /*---------------------------------------------------------------------------*/
+void
+cc2420_init(void)
+{
+  //IOTUS new stuff
+  PRINTF("\tCC2440 driver\n");
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_PKT_CHECKSUM);
+
+
+  uint16_t reg;
+  {
+    int s = splhigh();
+    cc2420_arch_init();   /* Initalize ports and SPI. */
+    CC2420_DISABLE_FIFOP_INT();
+    CC2420_FIFOP_INT_INIT();
+    splx(s);
+  }
+
+  /* Turn on voltage regulator and reset. */
+  SET_VREG_ACTIVE();
+  clock_delay(250);
+  SET_RESET_ACTIVE();
+  clock_delay(127);
+  SET_RESET_INACTIVE();
+  clock_delay(125);
+
+
+  /* Turn on the crystal oscillator. */
+  strobe(CC2420_SXOSCON);
+  /* And wait until it stabilizes */
+  wait_for_status(BV(CC2420_XOSC16M_STABLE));
+
+  /* Set auto-ack and frame filtering */
+  set_auto_ack(CC2420_CONF_AUTOACK);
+  set_frame_filtering(CC2420_CONF_AUTOACK);
+
+  /* Enabling CRC in hardware; this is required by AUTOACK anyway
+     and provides us with RSSI and link quality indication (LQI)
+     information. */
+  reg = getreg(CC2420_MDMCTRL0);
+  reg |= AUTOCRC;
+  setreg(CC2420_MDMCTRL0, reg);
+
+  /* Set transmission turnaround time to the lower setting (8 symbols
+     = 0.128 ms) instead of the default (12 symbols = 0.192 ms). */
+  /*  reg = getreg(CC2420_TXCTRL);
+  reg &= ~(1 << 13);
+  setreg(CC2420_TXCTRL, reg);*/
+
+  
+  /* Change default values as recomended in the data sheet, */
+  /* correlation threshold = 20, RX bandpass filter = 1.3uA. */
+  setreg(CC2420_MDMCTRL1, CORR_THR(20));
+  reg = getreg(CC2420_RXCTRL1);
+  reg |= RXBPF_LOCUR;
+  setreg(CC2420_RXCTRL1, reg);
+
+  /* Set the FIFOP threshold to maximum. */
+  setreg(CC2420_IOCFG0, FIFOP_THR(127));
+
+  init_security();
+
+  cc2420_set_pan_addr(0xffff, 0x0000, NULL);
+  cc2420_set_channel(CC2420_CONF_CHANNEL);
+  cc2420_set_cca_threshold(CC2420_CONF_CCA_THRESH);
+
+  flushrx();
+
+  set_poll_mode(0);
+
+  process_start(&cc2420_process, NULL);
+}
+/*---------------------------------------------------------------------------*/
 
 static void
 close(void)
@@ -1178,6 +1210,7 @@ close(void)
 const struct iotus_radio_driver_struct cc2420_radio_driver =
   {
     cc2420_init,
+    NULL,
     NULL,
     close,
     cc2420_prepare,

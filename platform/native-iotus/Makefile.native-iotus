@@ -14,7 +14,7 @@ CONTIKI_TARGET_SOURCEFILES = contiki-main.c clock.c leds.c leds-arch.c \
                 sensors.c irq.c cfs-posix.c cfs-posix-dir.c ctk-curses.c
 
 
-IOTUS_CONF_RADIO_DRIVERS_LIST = null_radio
+IOTUS_CONF_RADIO_DRIVERS_LIST = native_radio
 #cc2420-for-iotus
 include $(CONTIKI)/iotus-arch/Makefile.iotus
 

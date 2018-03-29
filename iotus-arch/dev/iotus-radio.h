@@ -185,7 +185,14 @@ enum {
   /* The minimum transmission power in dBm. */
   RADIO_CONST_TXPOWER_MIN,
   /* The maximum transmission power in dBm. */
-  RADIO_CONST_TXPOWER_MAX
+  RADIO_CONST_TXPOWER_MAX,
+
+  /* The minimum and maximum address size supported by this radio */
+  RADIO_CONST_ADDRESSES_OPTIONS,
+
+  /* The size to be used by the radio */
+  RADIO_PARAM_ADDRESS_USE_TYPE
+
 };
 
 /* Radio power modes */
@@ -241,6 +248,7 @@ enum {
  */
 struct iotus_radio_driver_struct {
   void (* start)(void);
+  void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
 

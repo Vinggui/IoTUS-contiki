@@ -58,4 +58,6 @@ typedef   signed char    int8_t;
 typedef          short  int16_t;
 #endif
 
+extern uint16_t node_id;
+
 #endif /* PLATFORM_CONF_H_ */

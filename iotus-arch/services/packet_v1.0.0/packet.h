@@ -20,7 +20,7 @@
 #include "pieces.h"
 #include "nodes.h"
 #include "packet-default-additional-info.h"
-#include "packet-default-chores.h"
+#include "chores.h"
 
 #ifndef IOTUS_RADIO_FULL_ADDRESS
   #error Please define IOTUS_RADIO_FULL_ADDRESS into platform-conf.h
@@ -34,11 +34,6 @@
 ///////////////////////////////////////////////////////
 //             Defines of this module                //
 ///////////////////////////////////////////////////////
-/* This PRIORITY can have only 4 value, since it uses only 2 bits in the system. */
-typedef enum IOTUS_PACKET_PRIORITY {IOTUS_PRIORITY_RADIO = 0, IOTUS_PRIORITY_DATA_LINK,
-    IOTUS_PRIORITY_ROUTING, IOTUS_PRIORITY_TRANSPORT} iotus_packets_priority;
-
-
 typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
   iotus_node_t *nextDestinationNode;
@@ -94,7 +89,7 @@ int8_t
 packet_get_tx_power(iotus_packet_t *packetPiece);
 
 iotus_packet_t *
-packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
+packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
     uint16_t timeout, const uint8_t* payload,
     iotus_node_t *finalDestination, void *callbackFunction);
 
@@ -103,12 +98,6 @@ packet_destroy(iotus_packet_t *msgPiece);
 
 unsigned int
 packet_get_size(iotus_packet_t *packet_piece);
-
-Status
-packet_subscribe_for_chore(iotus_packets_priority priority, iotus_default_header_chores func);
-
-int8_t
-packet_get_layer_assigned_for(iotus_default_header_chores func);
 
 uint16_t
 packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,

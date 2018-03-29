@@ -192,6 +192,18 @@ iotus_core_start_system (
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
   ACTIVE_RADIO_DRIVER(start);
 
+  /* Call the post start functions */
+  #if IOTUS_CONF_USING_TRANSPORT == 1
+  ACTIVE_TRANSPORT_PROTOCOL(post_start);
+  #endif
+  #if IOTUS_CONF_USING_ROUTING == 1
+  ACTIVE_ROUTING_PROTOCOL(post_start);
+  #endif
+  #if IOTUS_CONF_USING_DATA_LINK == 1
+  ACTIVE_DATA_LINK_PROTOCOL(post_start);
+  #endif
+  ACTIVE_RADIO_DRIVER(post_start);
+
   process_start(&iotus_core_process, NULL);
 }
 
@@ -233,7 +245,6 @@ PROCESS_THREAD(iotus_core_process, ev, data)
   // any process must end with this, even if it is never reached.
   PROCESS_END();
 }
-
 
 
 /* The following stuff ends the \defgroup block at the beginning of

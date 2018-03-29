@@ -7,7 +7,7 @@
  */
 
 /*
- * null_radio.c
+ * native_radio.c
  *
  *  Created on: Nov 18, 2017
  *      Author: vinicius
@@ -20,7 +20,7 @@
 #include "platform-conf.h"
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
-#define THIS_LOG_FILE_NAME_DESCRITOR "null-radio"
+#define THIS_LOG_FILE_NAME_DESCRITOR "native-radio"
 #include "safe-printer.h"
 
 static iotus_address_type iotus_used_address_type;
@@ -43,8 +43,14 @@ get_value(radio_param_t param, radio_value_t *value)
   case RADIO_CONST_CHANNEL_MAX:
   case RADIO_CONST_TXPOWER_MIN:
   case RADIO_CONST_TXPOWER_MAX:
+    return RADIO_RESULT_NOT_SUPPORTED;
   case RADIO_CONST_ADDRESSES_OPTIONS:
+    //*value = (1<<7) | (1<<1)
+    *value = 0b0000000010000010;
+    return RADIO_RESULT_OK;
   case RADIO_PARAM_ADDRESS_USE_TYPE:
+    *value = iotus_used_address_type;
+    return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
   }
@@ -61,7 +67,22 @@ set_value(radio_param_t param, radio_value_t value)
   case RADIO_PARAM_TX_MODE:
   case RADIO_PARAM_TXPOWER:
   case RADIO_PARAM_CCA_THRESHOLD:
+    return RADIO_RESULT_NOT_SUPPORTED;
   case RADIO_PARAM_ADDRESS_USE_TYPE:
+    //Verify if this size is actually supported
+    if(ADDRESSES_GET_TYPE_SIZE(value) == 2 || ADDRESSES_GET_TYPE_SIZE(value) == 8) {
+      iotus_used_address_type = value;
+      //Search for this address in the system
+      SAFE_PRINT("Using address - ");
+      for(i=0;i<ADDRESSES_GET_TYPE_SIZE(value);i++) {
+        if(i!=0) {
+          SAFE_PRINT(":");
+        }
+        SAFE_PRINTF_CLEAN("%02x",addresses_get_pointer(value)[i]);
+      }
+      SAFE_PRINT("\n");
+    }
+    return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
   }
@@ -70,6 +91,9 @@ set_value(radio_param_t param, radio_value_t value)
 static int
 send(iotus_packet_t *packet)
 {
+  SAFE_PRINTF_CLEAN("Null radio sending %u bytes:\n<",packet->data.size);
+  SAFE_PRINT_BUF((char *)pieces_get_data_pointer(packet),packet->data.size);
+  SAFE_PRINT(">\n");
   return 1;
 }
 
@@ -90,7 +114,7 @@ close(void)
 {
 }
 
-const struct iotus_radio_driver_struct null_radio_radio_driver = {
+const struct iotus_radio_driver_struct native_radio_radio_driver = {
   start,
   NULL,//post_start
   run,
