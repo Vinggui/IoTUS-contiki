@@ -57,22 +57,22 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
     if(IOTUS_PRIORITY_DATA_LINK == packet_get_layer_assigned_for(IOTUS_DEFAULT_HEADER_CHORE_ONEHOP_BROADCAST)) {
       SAFE_PRINTF_CLEAN("Deu - BC\n");
 
-      iotus_packet_t *packet = packet_create_msg(6, IOTUS_PRIORITY_DATA_LINK, 5000,
-        (const uint8_t *)"Teste",
+      iotus_packet_t *packet = packet_create_msg(9, IOTUS_PRIORITY_DATA_LINK, 5000,
+        (const uint8_t *)"Teste msg",
         NODES_BROADCAST, NULL);
 
       if(NULL == packet) {
         continue;
       }
 
-      uint8_t testeHeader[1] = {0b00000111};
+      uint8_t testeHeader[1] = {'1'};
       uint16_t teste = packet_push_bit_header(3, testeHeader, packet);
 
       if(teste > 0) {
         SAFE_PRINTF_CLEAN("Bits pushed ok! new size %u\n",teste);
       }
 
-      uint8_t testeHeaderFullBytes[3] = {0xbe, 0xef, 0xFF};
+      uint8_t testeHeaderFullBytes[3] = {'G', 'o', 'D'};
       teste = packet_append_last_header(3, testeHeaderFullBytes, packet);
 
       if(teste > 0) {
