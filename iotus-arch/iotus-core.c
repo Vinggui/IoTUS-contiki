@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include "contiki.h"
 #include "iotus-core.h"
-#include "radio.h"
+#include "iotus-radio.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
 */
@@ -31,53 +31,53 @@
 //                           Setup dynamic/static enums and arrays                          //
 //////////////////////////////////////////////////////////////////////////////////////////////
 #if IOTUS_CONF_USING_TRANSPORT == 1
+  struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-    static struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;
-    #define ACTIVE_TRANSPORT_PROTOCOL(func) if(active_transport_protocol->func)active_transport_protocol->func()
     static const struct iotus_transport_protocol_struct *available_transport_protocols_array[] =
     IOTUS_PROTOCOL_TRANSPORT_LIST;
     static const uint8_t iotus_transport_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
     IOTUS_LAYER_TRANSPORT_SERVICE_ARRAY;
   #else
-    #define ACTIVE_TRANSPORT_PROTOCOL(func) if(IOTUS_STATIC_PROTOCOL_TRANSPORT.func)IOTUS_STATIC_PROTOCOL_TRANSPORT.func()
+    active_transport_protocol = &IOTUS_STATIC_PROTOCOL_TRANSPORT;
   #endif
+  #define ACTIVE_TRANSPORT_PROTOCOL(func) if(active_transport_protocol->func)active_transport_protocol->func()
 #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
 
 #if IOTUS_CONF_USING_ROUTING == 1
+  struct iotus_routing_protocol_struct const *active_routing_protocol = NULL;
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-    static struct iotus_routing_protocol_struct const *active_routing_protocol = NULL;
-    #define ACTIVE_ROUTING_PROTOCOL(func) if(active_routing_protocol->func)active_routing_protocol->func()
     static const struct iotus_routing_protocol_struct *available_routing_protocols_array[] =
     IOTUS_PROTOCOL_ROUTING_LIST;
     static const uint8_t iotus_routing_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
     IOTUS_LAYER_ROUTING_SERVICE_ARRAY;
   #else
-    #define ACTIVE_ROUTING_PROTOCOL(func) if(IOTUS_STATIC_PROTOCOL_ROUTING.func)IOTUS_STATIC_PROTOCOL_ROUTING.func()
+    active_routing_protocol = &IOTUS_STATIC_PROTOCOL_ROUTING;
   #endif
+  #define ACTIVE_ROUTING_PROTOCOL(func) if(active_routing_protocol->func)active_routing_protocol->func()
 #endif/*IOTUS_CONF_USING_ROUTING == 1*/
 
 #if IOTUS_CONF_USING_DATA_LINK == 1
+  struct iotus_data_link_protocol_struct const *active_data_link_protocol = NULL;
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-    static struct iotus_data_link_protocol_struct const *active_data_link_protocol = NULL;
-    #define ACTIVE_DATA_LINK_PROTOCOL(func) if(active_data_link_protocol->func)active_data_link_protocol->func()
     static const struct iotus_data_link_protocol_struct *available_data_link_protocols_array[] =
     IOTUS_PROTOCOL_DATA_LINK_LIST;
     static const uint8_t iotus_data_link_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
     IOTUS_LAYER_DATA_LINK_SERVICE_ARRAY;
   #else
-    #define ACTIVE_DATA_LINK_PROTOCOL(func) if(IOTUS_STATIC_PROTOCOL_DATA_LINK.func)IOTUS_STATIC_PROTOCOL_DATA_LINK.func()
+    active_data_link_protocol = &IOTUS_STATIC_PROTOCOL_DATA_LINK;
   #endif
+  #define ACTIVE_DATA_LINK_PROTOCOL(func) if(active_data_link_protocol->func)active_data_link_protocol->func()
 #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
 
 
+struct iotus_radio_driver_struct const *active_radio_driver = NULL;
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  static struct iotus_radio_driver_struct const *active_radio_driver = NULL;
-  #define ACTIVE_RADIO_DRIVER(func) if(active_radio_driver->func)active_radio_driver->func()
   static const struct iotus_radio_driver_struct *available_radio_drivers_array[] =
   IOTUS_RADIO_DRIVERS_LIST;
 #else
-  #define ACTIVE_RADIO_DRIVER(func) if(IOTUS_STATIC_RADIO_DRIVERS.func)IOTUS_STATIC_RADIO_DRIVERS.func()
+  active_radio_driver = &IOTUS_STATIC_RADIO_DRIVERS;
 #endif
+#define ACTIVE_RADIO_DRIVER(func) if(active_radio_driver->func)active_radio_driver->func()
 
 /* Define the list of functions that are available by the services */
 typedef void (*iotus_core_signal_process_function) (iotus_service_signal, void*);

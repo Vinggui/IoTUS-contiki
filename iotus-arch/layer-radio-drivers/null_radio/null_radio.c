@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "iotus-core.h"
+#include "iotus-radio.h"
 #include "platform-conf.h"
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY

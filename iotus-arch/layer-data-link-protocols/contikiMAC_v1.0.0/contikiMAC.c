@@ -19,6 +19,7 @@
 #include "piggyback.h"
 #include "nodes.h"
 #include "timestamp.h"
+#include "iotus-radio.h"
 
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
@@ -60,6 +61,10 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
         (const uint8_t *)"Teste",
         NODES_BROADCAST, NULL);
 
+      if(NULL == packet) {
+        continue;
+      }
+
       uint8_t testeHeader[1] = {0b00000111};
       uint16_t teste = packet_push_bit_header(3, testeHeader, packet);
 
@@ -88,7 +93,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       unsigned long elapsed = timestamp_elapsed(&firstTimer);
       SAFE_PRINTF_CLEAN("Elapsed time is: %lu\n",elapsed);
 
-
+      active_radio_driver->send(packet);
     }
 
 

@@ -11,8 +11,9 @@ endif
 include $(CONTIKI)/platform/sky/Makefile.common
 
 ifneq (,$(findstring IoTUS,$(CONTIKI_COMM_NEW_STACK)))
-MODULES += iotus-arch/layer-radio-drivers/cc2420-for-iotus dev/sht11 dev/ds2411 \
+MODULES += dev/sht11 dev/ds2411 \
 
+IOTUS_CONF_RADIO_DRIVERS_LIST = cc2420
 include $(CONTIKI)/iotus-arch/Makefile.iotus
 
 else

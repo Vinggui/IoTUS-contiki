@@ -48,7 +48,7 @@
 #include "cc2420_const.h"
 #include "lib/aes-128.h"
 
-int cc2420_init(void);
+void cc2420_init(void);
 
 #define CC2420_MAX_PACKET_LEN      127
 
@@ -64,7 +64,7 @@ extern uint8_t cc2420_last_correlation;
 
 int cc2420_rssi(void);
 
-extern const struct radio_driver cc2420_driver;
+extern const struct iotus_radio_driver_struct cc2420_radio_driver;
 
 /**
  * \param power Between 1 and 31.

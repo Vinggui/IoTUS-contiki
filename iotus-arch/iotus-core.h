@@ -75,10 +75,23 @@ struct iotus_data_link_protocol_struct {
   void (* close)(void);
 };
 
+///////////////////////////////////////////////////////////////////////
+//                                Externs                            //
+///////////////////////////////////////////////////////////////////////
+#if IOTUS_CONF_USING_TRANSPORT == 1
+  extern struct iotus_transport_protocol_struct const *active_transport_protocol;
+#endif
+#if IOTUS_CONF_USING_ROUTING == 1
+  extern struct iotus_routing_protocol_struct const *active_routing_protocol;
+#endif
+#if IOTUS_CONF_USING_DATA_LINK == 1
+  extern struct iotus_data_link_protocol_struct const *active_data_link_protocol;
+#endif
+extern struct iotus_radio_driver_struct const *active_radio_driver;
 
-//************************************************************************
-//                  Prototypes
-//************************************************************************
+//////////////////////////////////////////////////////////////////////////
+//                                Prototypes                            //
+//////////////////////////////////////////////////////////////////////////
 /* Call this macro instead of the function iotus_core_start_system itself*/
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
 #define IOTUS_CORE_START(transport, routing, data_link, radio) iotus_core_start_system(transport, routing, data_link, radio)

@@ -54,6 +54,9 @@
 #include "cfs/cfs-coffee.h"
 #include "sys/autostart.h"
 
+#if IOTUS_USING_MALLOC == 0
+#include "lib/mmem.h"
+#endif
 
 #if DCOSYNCH_CONF_ENABLED
 static struct timer mgt_timer;
@@ -182,11 +185,10 @@ main(int argc, char **argv)
 
   init_platform();
 
-  //set_rime_addr();
-  
-  cc2420_init();
 #ifndef CONTIKI_COMM_NEW_STACK
 //This bracket is not necessary for the new architecture
+  set_rime_addr();
+  cc2420_init();
   {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -215,7 +217,9 @@ main(int argc, char **argv)
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
 #ifdef CONTIKI_COMM_NEW_STACK
-  //start_new_comm_stack();
+  #if IOTUS_USING_MALLOC == 0
+    mmem_init();
+  #endif
 #else /*CONTIKI_COMM_NEW_STACK*/
   //This bracket preserves the old contiki architecture
   NETSTACK_RDC.init();

@@ -1,22 +1,22 @@
 # Makefile for the new architeture developed into contiki
 # This makefile is called by the makefile of the mote platform
 
-IOTUS_FOLDER_MAIN          = iotus-arch
-IOTUS_FOLDER_SERVICE       = services
-IOTUS_FOLDER_TRANSPORT     = layer-transport-protocols
-IOTUS_FOLDER_ROUTING       = layer-routing-protocols
-IOTUS_FOLDER_DATA_LINK     = layer-data-link-protocols
-IOTUS_FOLDER_RADIO_DRIVERS = layer-radio-drivers
-IOTUS_FOLDER_SHARED_UTILS  = shared-utils
-IOTUS_DYNAMIC_HEADER_FILE  = dyn-iotus-include-list.h
-IOTUS_FOLDER_NET_DEFINES   = net-defines
+IOTUS_FOLDER_MAIN             =  iotus-arch
+IOTUS_FOLDER_SERVICE          =  services
+IOTUS_FOLDER_TRANSPORT        =  layer-transport-protocols
+IOTUS_FOLDER_ROUTING          =  layer-routing-protocols
+IOTUS_FOLDER_DATA_LINK        =  layer-data-link-protocols
+IOTUS_FOLDER_RADIO_DRIVERS    =  layer-radio-drivers
+IOTUS_FOLDER_SHARED_UTILS     =  shared-utils
+IOTUS_DYNAMIC_HEADER_FILE     =  dyn-iotus-include-list.h
+IOTUS_FOLDER_DEV              =  dev
 
-IOTUS_FOLDER          := $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
-SERVICES_FOLDER       := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
-TRANSPORT_FOLDER      := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
-ROUTING_FOLDER        := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
-DATA_LINK_FOLDER      := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
-RADIO_DRIVERS_FOLDER  := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_RADIO_DRIVERS)
+IOTUS_FOLDER                  := $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
+SERVICES_FOLDER               := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
+TRANSPORT_FOLDER              := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
+ROUTING_FOLDER                := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
+DATA_LINK_FOLDER              := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
+RADIO_DRIVERS_FOLDER          := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_RADIO_DRIVERS)
 
 RELATIVE_FOLDER_SERVICES      := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SERVICE)
 RELATIVE_FOLDER_TRANSPORT     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_TRANSPORT)
@@ -24,7 +24,7 @@ RELATIVE_FOLDER_ROUTING       := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_ROUTING)
 RELATIVE_FOLDER_DATA_LINK     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DATA_LINK)
 RELATIVE_FOLDER_RADIO_DRIVERS := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_RADIO_DRIVERS)
 RELATIVE_FOLDER_SHARED_UTILS  := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SHARED_UTILS)
-RELATIVE_FOLDER_NET_DEFINED   := $(IOTUS_FOLDER_MAIN)/dev/$(IOTUS_FOLDER_NET_DEFINES)
+RELATIVE_FOLDER_DEV           := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DEV)
 
 comma:=,
 empty:=
@@ -52,6 +52,16 @@ recursirve_add_dependencies = $(if $(1),\
     $(eval $(2) := $(new_services_to_include) $($(2))) \
     $(call recursirve_add_dependencies,$(new_services_to_include),$(2))\
   ))
+
+##################################################################################
+#                      Ignore some default file from contiki                     #
+##################################################################################
+# Ignore... Core/dev/radio.h
+CFLAGS += -DRADIO_H_=1
+# Ignore sources
+IGNORE_SOURCE_FILE_LIST += nullradio.c
+
+
 
 # Verify if user defined which layer will be used
 ifndef IOTUS_CONF_USING_TRANSPORT
@@ -486,4 +496,4 @@ ifdef IOTUS_CONF_COMPILE_MODE
 else
   $(error IoTUS net stack requires IOTUS_CONF_COMPILE_MODE defined as DYNAMIC or STATIC!)
 endif
-MODULES += $(IOTUS_FOLDER_MAIN) $(RELATIVE_FOLDER_SHARED_UTILS) $(RELATIVE_FOLDER_NET_DEFINES)
+MODULES += $(RELATIVE_FOLDER_DEV) $(IOTUS_FOLDER_MAIN) $(RELATIVE_FOLDER_SHARED_UTILS)

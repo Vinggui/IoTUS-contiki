@@ -133,6 +133,62 @@ packet_get_next_destination(iotus_packet_t *packetPiece)
 }
 
 /*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific tx power for a packet transmission
+ * @param packetPiece   Packet to set.
+ * @param power         The power in dBm, generally varing from 0 to -25
+ * \return              Status of this set.
+ */
+Status
+packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power)
+{
+  iotus_additional_info_t *txBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
+                    IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
+
+  packet_tx_block_input_t txBlock_var;
+  if(NULL == txBlockInfo) {
+    txBlock_var.txPower = power;
+    //This packet does not have this block yet
+    txBlockInfo = pieces_set_additional_info(packetPiece->additionalInfoList,
+                                IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
+                                (uint8_t *)(&txBlock_var),
+                                sizeof(packet_tx_block_input_t),
+                                TRUE);
+    if(txBlockInfo == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Add info no set");
+      return FAILURE;
+    }
+  }
+  //Just set the value into the buffer
+  uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
+  memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
+  txBlock_var.txPower = power;
+  memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
+  return SUCCESS;
+}
+
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Get a specific tx power for a packet transmission
+ * @param packetPiece   Packet to check.
+ * \return              The power selected, 0xFF for no selection
+ */
+int8_t
+packet_get_tx_power(iotus_packet_t *packetPiece)
+{
+  iotus_additional_info_t *txBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
+                    IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
+
+  if(NULL == txBlockInfo) {
+    return 0xFF;
+  }
+  //Just set the value into the buffer
+  packet_tx_block_input_t *txBlock_var = (packet_tx_block_input_t *)pieces_get_data_pointer(txBlockInfo);
+  return txBlock_var->txPower;
+}
+
+/*---------------------------------------------------------------------*/
 /*
  * 
  * \param 
@@ -203,20 +259,21 @@ packet_subscribe_for_chore(iotus_packets_priority priority,
 
   uint8_t posByteRequested = chore/8;
   uint8_t posBitRequested = chore%8;
-  uint8_t choreRequested = default_chores_requested[posByteRequested] & (1<posBitResquest);
+  uint8_t choreRequested = default_chores_requested[posByteRequested] & (1<<posBitRequested);
 
   if(choreRequested > 0) {
     //There is some layer responsible for this chore...
     if(layerPriorityForChore <= (priority<<posBit)) {
       //This request has lower priority (higher value)
-      return;
+      return FAILURE;
     }
     default_layers_chores_header[posByte] &= ~(11<<posBit);
   }
   //This request has higher priority (lower value)
   //substitute this chore to this request
   default_layers_chores_header[posByte] |= (priority<<posBit);
-  default_chores_requested[posByteRequested] |= (1<posBitResquest);
+  default_chores_requested[posByteRequested] |= (1<<posBitRequested);
+  return SUCCESS;
 }
 
 /*---------------------------------------------------------------------*/
@@ -228,10 +285,9 @@ packet_subscribe_for_chore(iotus_packets_priority priority,
 int8_t
 packet_get_layer_assigned_for(iotus_default_header_chores chore)
 {
-
   uint8_t posByteRequested = chore/8;
   uint8_t posBitRequested = chore%8;
-  if(0 == default_chores_requested[posByteRequested] & (1<posBitResquest)) {
+  if(0 == (default_chores_requested[posByteRequested] & (1<<posBitRequested))) {
     return -1;
   }
 

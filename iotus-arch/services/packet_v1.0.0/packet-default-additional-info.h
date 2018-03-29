@@ -46,8 +46,8 @@ enum packet_additionalInfoList_types {
  */
 typedef struct packet_rcv_additional_info {
   uint16_t networkID;
-  uint8_t linkQuality;
-  uint8_t RSSI; //got from CCA
+  int16_t linkQuality;
+  int16_t RSSI; //got from CCA
   uint8_t reTxAttemps;
 } packet_rcv_block_output_t;
 
@@ -55,7 +55,8 @@ typedef struct packet_rcv_additional_info {
  * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK
  */
 typedef struct packet_tx_additional_info {
-  uint8_t nodefinitionyet;
+  uint8_t txPower;
+  uint8_t channel;
 } packet_tx_block_input_t;
 
 /* 

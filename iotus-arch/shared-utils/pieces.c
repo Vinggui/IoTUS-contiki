@@ -34,17 +34,6 @@ MEMB(iotus_additional_info_handlers_mem, iotus_additional_info_t, IOTUS_ADDITION
 #endif
 
 /*---------------------------------------------------------------------*/
-/**
- * \brief   Return the pointer to the data part of this piece
- * \param   piecePointer  The pointer to the piece
- */
-extern inline uint8_t *
-pieces_get_data_pointer(void *piecePointer)
-{
-  return (uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.ptr);
-}
-
-/*---------------------------------------------------------------------*/
 /* \brief     This function is created separated so that this module
  *            memory allocation can be easily changed.
  *            Also, the generic_piece has the common initial as the msg, so
@@ -205,7 +194,9 @@ pieces_clean_additional_info_list(list_t list)
  * \return               The pointer to this additional information.
  */
 iotus_additional_info_t *
-pieces_set_additional_info(list_t list, uint8_t type, uint8_t *data, uint16_t dataSize, Boolean copyIntoBuffer)
+pieces_set_additional_info(list_t list, uint8_t type,
+                          uint8_t *data, uint16_t dataSize,
+                          Boolean copyIntoBuffer)
 {
   if(NULL == list) {
     return NULL;

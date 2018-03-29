@@ -45,6 +45,12 @@
 #include "dev/spi.h"
 #include "cc2420.h"
 #include "cc2420_const.h"
+#include "global-parameters.h"
+#include "packet.h"
+#include "packet-default-additional-info.h"
+#include "pieces.h"
+#include "iotus-radio.h"
+#include "timestamp.h"
 
 #define WITH_SEND_CCA 1
 
@@ -147,9 +153,9 @@ int cc2420_off(void);
 
 static int cc2420_read(void *buf, unsigned short bufsize);
 
-static int cc2420_prepare(const void *data, unsigned short len);
-static int cc2420_transmit(unsigned short len);
-static int cc2420_send(const void *data, unsigned short len);
+static int cc2420_prepare(iotus_packet_t *packet);
+static int cc2420_transmit(iotus_packet_t *packet);
+static int cc2420_send(iotus_packet_t *packet);
 
 static int cc2420_receiving_packet(void);
 static int pending_packet(void);
@@ -292,15 +298,9 @@ static radio_result_t
 get_object(radio_param_t param, void *dest, size_t size)
 {
   if(param == RADIO_PARAM_LAST_PACKET_TIMESTAMP) {
-#if CC2420_CONF_SFD_TIMESTAMPS
-    if(size != sizeof(rtimer_clock_t) || !dest) {
-      return RADIO_RESULT_INVALID_VALUE;
-    }
-    *(rtimer_clock_t*)dest = cc2420_sfd_start_time;
+
+    //*(timestamp_t *)dest = (timestamp_t *)NULL;
     return RADIO_RESULT_OK;
-#else
-    return RADIO_RESULT_NOT_SUPPORTED;
-#endif
   }
   return RADIO_RESULT_NOT_SUPPORTED;
 }
@@ -308,28 +308,9 @@ get_object(radio_param_t param, void *dest, size_t size)
 static radio_result_t
 set_object(radio_param_t param, const void *src, size_t size)
 {
+  //set addresses here
   return RADIO_RESULT_NOT_SUPPORTED;
 }
-
-const struct radio_driver cc2420_driver =
-  {
-    NULL,
-    NULL,
-    NULL,
-    cc2420_prepare,
-    cc2420_transmit,
-    cc2420_send,
-    cc2420_read,
-    cc2420_cca,
-    cc2420_receiving_packet,
-    pending_packet,
-    cc2420_on,
-    cc2420_off,
-    get_value,
-    set_value,
-    get_object,
-    set_object
-  };
 
 /*---------------------------------------------------------------------------*/
 /* Sends a strobe */
@@ -592,13 +573,14 @@ set_txpower(uint8_t power)
   setreg(CC2420_TXCTRL, reg);
 }
 /*---------------------------------------------------------------------------*/
-static void
-start(void)
+void
+cc2420_init(void)
 {
+  PRINTF("\tCC2440 driver\n");
   uint16_t reg;
   {
     int s = splhigh();
-    cc2420_arch_init();		/* Initalize ports and SPI. */
+    cc2420_arch_init();   /* Initalize ports and SPI. */
     CC2420_DISABLE_FIFOP_INT();
     CC2420_FIFOP_INT_INIT();
     splx(s);
@@ -657,25 +639,30 @@ start(void)
   set_poll_mode(0);
 
   process_start(&cc2420_process, NULL);
-  return 1;
 }
 /*---------------------------------------------------------------------------*/
 static int
-cc2420_transmit(unsigned short payload_len)
+cc2420_transmit(iotus_packet_t *packet)
 {
   int i, txpower;
   
   GET_LOCK();
 
   txpower = 0;
-#error ARRUMAR AQUI
-  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+
+  int8_t tempTxPower = packet_get_tx_power(packet);
+  if(tempTxPower >= OUTPUT_POWER_MIN && tempTxPower <= OUTPUT_POWER_MAX) {
+    /* Find the closest higher PA_LEVEL for the desired output power */
+    for(i = 1; i < OUTPUT_NUM; i++) {
+      if(tempTxPower > output_power[i].power) {
+        break;
+      }
+    }
     /* Remember the current transmission power */
     txpower = cc2420_get_txpower();
     /* Set the specified transmission power */
-    set_txpower(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) - 1);
+    cc2420_set_txpower(output_power[i - 1].config);
   }
-#error ARRUMAR AQUIF
 
   /* The TX FIFO can only hold one packet. Make sure to not overrun
    * FIFO by waiting for transmission to start here and synchronizing
@@ -699,19 +686,20 @@ cc2420_transmit(unsigned short payload_len)
   }
   for(i = LOOP_20_SYMBOLS; i > 0; i--) {
     if(CC2420_SFD_IS_1) {
-#error ARRUMAR AQUI
+/* Check if inserting timestamp is necessary
 #if PACKETBUF_WITH_PACKET_TYPE
       {
         rtimer_clock_t sfd_timestamp;
         sfd_timestamp = cc2420_sfd_start_time;
         if(packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE) ==
            PACKETBUF_ATTR_PACKET_TYPE_TIMESTAMP) {
-          /* Write timestamp to last two bytes of packet in TXFIFO. */
+          // Write timestamp to last two bytes of packet in TXFIFO.
           write_ram((uint8_t *) &sfd_timestamp, CC2420RAM_TXFIFO + payload_len - 1, 2, WRITE_RAM_IN_ORDER);
         }
       }
-#endif /* PACKETBUF_WITH_PACKET_TYPE */
-#error ARRUMAR AQUIF
+#endif
+*/
+
 
       if(!(get_status() & BV(CC2420_TX_ACTIVE))) {
         /* SFD went high but we are not transmitting. This means that
@@ -721,11 +709,11 @@ cc2420_transmit(unsigned short payload_len)
         return RADIO_TX_COLLISION;
       }
       if(receive_on) {
-	ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
+        ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
       }
       ENERGEST_ON(ENERGEST_TYPE_TRANSMIT);
       /* We wait until transmission has ended so that we get an
-	 accurate measurement of the transmission time.*/
+   accurate measurement of the transmission time.*/
       wait_for_transmission();
 
 #ifdef ENERGEST_CONF_LEVELDEVICE_LEVELS
@@ -733,14 +721,14 @@ cc2420_transmit(unsigned short payload_len)
 #endif
       ENERGEST_OFF(ENERGEST_TYPE_TRANSMIT);
       if(receive_on) {
-	ENERGEST_ON(ENERGEST_TYPE_LISTEN);
+        ENERGEST_ON(ENERGEST_TYPE_LISTEN);
       } else {
-	/* We need to explicitly turn off the radio,
-	 * since STXON[CCA] -> TX_ACTIVE -> RX_ACTIVE */
-	off();
+        /* We need to explicitly turn off the radio,
+         * since STXON[CCA] -> TX_ACTIVE -> RX_ACTIVE */
+        off();
       }
-#error ARRUMAR AQUI
-      if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+
+      if(tempTxPower >= OUTPUT_POWER_MIN && tempTxPower <= OUTPUT_POWER_MAX) {
         /* Restore the transmission power */
         set_txpower(txpower & 0xff);
       }
@@ -749,23 +737,23 @@ cc2420_transmit(unsigned short payload_len)
       return RADIO_TX_OK;
     }
   }
-#error ARRUMAR AQUIF
+
   /* If we send with cca (cca_on_send), we get here if the packet wasn't
      transmitted because of other channel activity. */
-  RIMESTATS_ADD(contentiondrop);
+  iotus_parameters_radio_events.collisions++;
+
   PRINTF("cc2420: do_send() transmission never started\n");
-#error ARRUMAR AQUI
-  if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
+
+  if(tempTxPower >= OUTPUT_POWER_MIN && tempTxPower <= OUTPUT_POWER_MAX) {
     /* Restore the transmission power */
     set_txpower(txpower & 0xff);
   }
-#error ARRUMAR AQUIF
   RELEASE_LOCK();
   return RADIO_TX_COLLISION;
 }
 /*---------------------------------------------------------------------------*/
 static int
-cc2420_prepare(const void *payload, unsigned short payload_len)
+cc2420_prepare(iotus_packet_t *packet)
 {
   uint8_t total_len;
   
@@ -773,7 +761,7 @@ cc2420_prepare(const void *payload, unsigned short payload_len)
 
   PRINTF("cc2420: sending %d bytes\n", payload_len);
 
-  RIMESTATS_ADD(lltx);
+  iotus_parameters_radio_events.transmission++;
 
   /* Wait for any previous transmission to finish. */
   /*  while(status() & BV(CC2420_TX_ACTIVE));*/
@@ -781,19 +769,20 @@ cc2420_prepare(const void *payload, unsigned short payload_len)
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
 
-  total_len = payload_len + CHECKSUM_LEN;
+  PRINTF("corrigir address e checksum");
+  total_len = packet->data.size + CHECKSUM_LEN;
   write_fifo_buf(&total_len, 1);
-  write_fifo_buf(payload, payload_len);
+  write_fifo_buf(pieces_get_data_pointer(packet), packet->data.size);
   
   RELEASE_LOCK();
   return 0;
 }
 /*---------------------------------------------------------------------------*/
 static int
-cc2420_send(const void *payload, unsigned short payload_len)
+cc2420_send(iotus_packet_t *packet)
 {
-  cc2420_prepare(payload, payload_len);
-  return cc2420_transmit(payload_len);
+  cc2420_prepare(packet);
+  return cc2420_transmit(packet);
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -883,6 +872,7 @@ cc2420_set_pan_addr(unsigned pan,
                     unsigned addr,
                     const uint8_t *ieee_addr)
 {
+  PRINTF("CORRIGIR PAN ADRESS\n");
   GET_LOCK();
   
   write_ram((uint8_t *) &pan, CC2420RAM_PANID, 2, WRITE_RAM_IN_ORDER);
@@ -909,7 +899,7 @@ cc2420_interrupt(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(cc2420_process, ev, data)
 {
-  int len;
+  //int len;
   PROCESS_BEGIN();
 
   PRINTF("cc2420_process: started\n");
@@ -918,15 +908,12 @@ PROCESS_THREAD(cc2420_process, ev, data)
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
 
     PRINTF("cc2420_process: calling receiver callback\n");
-#error ARRUMAR AQUI
-    packetbuf_clear();
-    packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-    
-    packetbuf_set_datalen(len);
-    
-    NETSTACK_RDC.input();
-#error ARRUMAR AQUIF
+
+    PRINTF("SETar timestamp");
+    //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
+    //len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+    //packetbuf_set_datalen(len);
+    //NETSTACK_RDC.input();
   }
 
   PROCESS_END();
@@ -948,11 +935,11 @@ cc2420_read(void *buf, unsigned short bufsize)
 
   if(len > CC2420_MAX_PACKET_LEN) {
     /* Oops, we must be out of sync. */
-    RIMESTATS_ADD(badsynch);
+    iotus_parameters_radio_events.badSynch++;
   } else if(len <= FOOTER_LEN) {
-    RIMESTATS_ADD(tooshort);
+    iotus_parameters_radio_events.badRxPacketShort++;
   } else if(len - FOOTER_LEN > bufsize) {
-    RIMESTATS_ADD(toolong);
+    iotus_parameters_radio_events.badRxPacketLong++;
   } else {
     getrxdata((uint8_t *) buf, len - FOOTER_LEN);
     getrxdata(footer, FOOTER_LEN);
@@ -961,19 +948,21 @@ cc2420_read(void *buf, unsigned short bufsize)
       cc2420_last_rssi = footer[0] + RSSI_OFFSET;
       cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
       if(!poll_mode) {
-#error ARRUMAR AQUI
+
         /* Not in poll mode: packetbuf should not be accessed in interrupt context.
          * In poll mode, the last packet RSSI and link quality can be obtained through
          * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
-        packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
-        packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
-#error ARRUMAR AQUIF
+        //packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
+        //packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
+        iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
+        iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
+
         
       }
 
-      RIMESTATS_ADD(llrx);
+      iotus_parameters_radio_events.receptions++;
     } else {
-      RIMESTATS_ADD(badcrc);
+      iotus_parameters_radio_events.badRxChecksumFail++;
       len = FOOTER_LEN;
     }
 
@@ -1180,26 +1169,28 @@ set_send_on_cca(uint8_t enable)
 }
 /*---------------------------------------------------------------------------*/
 
-
-static void
-start(void)
-{
-  SAFE_PRINTF_CLEAN("\tCC2440 driver\n");
-}
-
-
-static void
-run(void)
-{
-}
-
 static void
 close(void)
 {
 }
 
-const struct iotus_radio_struct cc2420_radio_driver = {
-  start,
-  run,
-  close
-};
+/*------------------------------------------------------*/
+const struct iotus_radio_driver_struct cc2420_radio_driver =
+  {
+    cc2420_init,
+    NULL,
+    close,
+    cc2420_prepare,
+    cc2420_transmit,
+    cc2420_send,
+    cc2420_read,
+    cc2420_cca,
+    cc2420_receiving_packet,
+    pending_packet,
+    cc2420_on,
+    cc2420_off,
+    get_value,
+    set_value,
+    get_object,
+    set_object
+  };

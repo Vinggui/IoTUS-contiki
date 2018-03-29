@@ -84,6 +84,15 @@ packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param);
 iotus_node_t *
 packet_get_final_destination(iotus_packet_t *packet_piece);
 
+iotus_node_t *
+packet_get_next_destination(iotus_packet_t *packetPiece);
+
+Status
+packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power);
+
+int8_t
+packet_get_tx_power(iotus_packet_t *packetPiece);
+
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_packets_priority priority,
     uint16_t timeout, const uint8_t* payload,

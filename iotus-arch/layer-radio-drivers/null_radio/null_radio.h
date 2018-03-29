@@ -23,6 +23,7 @@
 #define IOTUS_ARCH_LAYER_RADIO_NULL_RADIO_H_
 
 #include "platform-conf.h"
+#include "radio.h"
 
 extern const struct iotus_radio_driver_struct null_radio_radio_driver;
 

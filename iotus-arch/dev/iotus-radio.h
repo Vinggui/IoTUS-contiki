@@ -39,7 +39,6 @@
  *         Niclas Finne <nfi@sics.se>
  *         Nicolas Tsiftes <nvt@sics.se>
  */
-
 /**
  * \addtogroup dev
  * @{
@@ -58,6 +57,7 @@
 #define IOTUS_RADIO_H_
 
 #include <stddef.h>
+#include "packet.h"
 
 /**
  * Each radio has a set of parameters that designate the current
@@ -245,13 +245,13 @@ struct iotus_radio_driver_struct {
   void (* close)(void);
 
   /** Prepare the radio with a packet to be sent. */
-  int (* prepare)(const void *payload, unsigned short payload_len);
+  int (* prepare)(iotus_packet_t *packet);
 
   /** Send the packet that has previously been prepared. */
-  int (* transmit)(unsigned short transmit_len);
+  int (* transmit)(iotus_packet_t *packet);
 
   /** Prepare & transmit a packet. */
-  int (* send)(const void *payload, unsigned short payload_len);
+  int (* send)(iotus_packet_t *packet);
 
   /** Read a received packet into a buffer. */
   int (* read)(void *buf, unsigned short buf_len);
@@ -291,7 +291,6 @@ struct iotus_radio_driver_struct {
    */
   radio_result_t (* set_object)(radio_param_t param, const void *src,
                                 size_t size);
-
 };
 
 #endif /* IOTUS_RADIO_H_ */

@@ -38,12 +38,18 @@ typedef enum {
 /* This parameter should be written only by the radio layer */
 typedef struct iotus_radio_events {
   uint16_t collisions;
-  uint16_t transmitTime;//in ms
+  uint16_t transmission;
+  uint16_t receptions;
+  uint16_t lastTransmitTime;//in ms
   int16_t lastRSSI;
   int16_t lastLinkQuality;
-
+  uint8_t badSynch; //When packet len is bigger then allowed
+  uint8_t badRxPacketLong; //When packet len is bigger then allowed
+  uint8_t badRxPacketShort; //When packet len is bigger then allowed
+  uint8_t badRxChecksumFail; //When packet len is bigger then allowed
 } iotus_parameters_radio_events_t;
 
+extern iotus_parameters_radio_events_t iotus_parameters_radio_events;
 extern uint8_t iotus_radio_address_size;
 extern uint16_t iotus_radio_max_message;
 

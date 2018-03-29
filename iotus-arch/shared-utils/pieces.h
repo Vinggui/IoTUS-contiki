@@ -58,12 +58,14 @@ typedef struct generic_additional_info {
   COMMON_ADDITIONAL_INFO_HEADER(struct generic_additional_info);
 } iotus_additional_info_t;
 
+///////////////////////////////////////////
+//             MACROS                    //
+///////////////////////////////////////////
+#define pieces_get_data_pointer(piecePointer) ((uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.ptr))
 
 //////////////////////////////////////////
 //             Functions                //
 //////////////////////////////////////////
-uint8_t *
-pieces_get_data_pointer(void *piecePointer);
 
 iotus_generic_piece_t *
 pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t dataSize);
