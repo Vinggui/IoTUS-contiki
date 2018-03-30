@@ -884,7 +884,6 @@ cc2420_interrupt(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(cc2420_process, ev, data)
 {
-  //int len;
   PROCESS_BEGIN();
 
   PRINTF("cc2420_process: started\n");
@@ -892,10 +891,12 @@ PROCESS_THREAD(cc2420_process, ev, data)
   while(1) {
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
 
+    
     PRINTF("cc2420_process: calling receiver callback\n");
     static uint8_t merda[200];
     PRINTF("SETar timestamp");
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
+    int len;
     len = cc2420_read(merda, 100);
     //packetbuf_set_datalen(len);
     //NETSTACK_RDC.input();
