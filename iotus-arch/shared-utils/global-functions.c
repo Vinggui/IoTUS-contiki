@@ -26,8 +26,20 @@
 #endif /* DEBUG */
 
 /***********************************************************************
-                              
+                              Functions
  ***********************************************************************/
+/**
+ * \brief      Proceed the checksum for some given buffer
+ * @param buf  The buffer pointer to operate.
+ * @param size The size of this buffer.
+ * \return  the checksum value.
+ */
+uint16_t
+checksum_buf(uint8_t *buf, uint16_t size)
+{
+  //TODO create checksum
+  return 0xFEED;
+}
 
 
 

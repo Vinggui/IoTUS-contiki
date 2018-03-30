@@ -121,36 +121,35 @@ start(void)
 static void
 post_start(void)
 {
+  radio_value_t value;
   if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_PANID)) {
-    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
-    uint16_t temppp = 0xbeef;
-    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_PANID, (uint8_t *)&temppp)) {
+    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_PANID, iotus_pan_id_hardcoded)) {
       SAFE_PRINTF_LOG_ERROR("Addres not set");
       return;
     }
   }
   if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_SHORT_LONG)) {
-    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);
-    ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG,8);
-
     if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, iotus_node_id_hardcoded)) {
       SAFE_PRINTF_LOG_ERROR("Addres not set");
       return;
     }
-    /*
-    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_LONG, )) {
-      SAFE_PRINTF_LOG_ERROR("Addres not set");
-      return;
-    }*/
+    if(ADDRESSES_GET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG) != 0) {
+      if(ADDRESSES_GET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG) <= 8) {//8 is the maximum size of the hardcoded pan id
+        if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_LONG, iotus_node_id_hardcoded)) {
+          SAFE_PRINTF_LOG_ERROR("Addres not set");
+          return;
+        }
+      } else {
+        //work with bigger long values...
+      }
+    }
   }
   if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
     //Set radio address...
-    radio_value_t value;
     active_radio_driver->get_value(RADIO_CONST_ADDRESSES_OPTIONS, &value);
-    if(value & 0b0000000010000010) {
+    if(RADIO_ADDR_OPTIONS_MATCH(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,value)) {
       active_radio_driver->set_value(RADIO_PARAM_ADDRESS_USE_TYPE,IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
     }
-    
   }
 }
 

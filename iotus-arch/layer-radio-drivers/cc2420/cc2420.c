@@ -45,6 +45,7 @@
 #include "dev/spi.h"
 #include "cc2420.h"
 #include "cc2420_const.h"
+#include "global-functions.h"
 #include "global-parameters.h"
 #include "packet.h"
 #include "packet-default-additional-info.h"
@@ -250,6 +251,10 @@ get_value(radio_param_t param, radio_value_t *value)
     //*value = (1<<7) | (1<<1)
     *value = 0b0000000010000010;
     return RADIO_RESULT_OK;
+  case RADIO_CONST_PAN_ID_OPTIONS:
+    //*value = (1<<7) | (1<<1)
+    *value = 0b0000000000000010;
+    return RADIO_RESULT_OK;
   case RADIO_PARAM_ADDRESS_USE_TYPE:
     *value = iotus_used_address_type;
     return RADIO_RESULT_OK;
@@ -302,19 +307,33 @@ set_value(radio_param_t param, radio_value_t value)
     return RADIO_RESULT_OK;
   case RADIO_PARAM_ADDRESS_USE_TYPE:
     //Verify if this size is actually supported
-    if(ADDRESSES_GET_TYPE_SIZE(value) == 2 || ADDRESSES_GET_TYPE_SIZE(value) == 8) {
-      iotus_used_address_type = value;
+    if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT || value == IOTUS_ADDRESSES_TYPE_ADDR_LONG) {
+      uint16_t *panId = (uint16_t *)addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
+      
       //Search for this address in the system
-      PRINTF("Using address - ");
-      for(i=0;i<ADDRESSES_GET_TYPE_SIZE(value);i++) {
-        if(i!=0) {
-          PRINTF(":");
-        }
-        PRINTF("%02x",addresses_get_pointer(value)[i]);
+      uint16_t *shortAddr = (uint16_t *)addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+
+      if(panId == 0 || shortAddr == 0) {
+        PRINTF("No address to set!\n");
+        return RADIO_RESULT_INVALID_VALUE;
       }
-      PRINTF("\n");
+
+      //Give it a try to check the long adress size too...
+      uint8_t *longAddr = addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
+
+      cc2420_set_pan_addr(*panId,*shortAddr,longAddr);
+
+      if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
+        iotus_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+        PRINTF("Using Short address");
+      } else {
+        iotus_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+        PRINTF("Using Long address");
+      }
+      return RADIO_RESULT_OK;
     }
-    return RADIO_RESULT_OK;
+    return RADIO_RESULT_INVALID_VALUE;
+    
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
   }
@@ -727,8 +746,16 @@ cc2420_prepare(iotus_packet_t *packet)
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
 
-  PRINTF("corrigir address e checksum");
-  total_len = packet->data.size + CHECKSUM_LEN;
+
+
+  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(IOTUS_CHORE_PKT_CHECKSUM)) {
+    uint16_t csum = checksum_buf(pieces_get_data_pointer(packet), packet->data.size);
+    packet_append_last_header(2,(uint8_t *)&csum,packet);
+    total_len = packet->data.size + CHECKSUM_LEN;
+  } else {
+    total_len = packet->data.size;
+  }
+
   write_fifo_buf(&total_len, 1);
   write_fifo_buf(pieces_get_data_pointer(packet), packet->data.size);
   
@@ -866,10 +893,10 @@ PROCESS_THREAD(cc2420_process, ev, data)
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
 
     PRINTF("cc2420_process: calling receiver callback\n");
-
+    static uint8_t merda[200];
     PRINTF("SETar timestamp");
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    //len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+    len = cc2420_read(merda, 100);
     //packetbuf_set_datalen(len);
     //NETSTACK_RDC.input();
   }
@@ -1131,6 +1158,10 @@ cc2420_init(void)
 {
   //IOTUS new stuff
   PRINTF("\tCC2440 driver\n");
+  ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
+  ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);
+  ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG,8);
+
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_PKT_CHECKSUM);
@@ -1202,6 +1233,15 @@ cc2420_init(void)
 /*---------------------------------------------------------------------------*/
 
 static void
+post_start(void)
+{
+  //Self config in case no layer took control for it...
+  if(-1 == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
+    set_value(RADIO_PARAM_ADDRESS_USE_TYPE,IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+  }
+}
+
+static void
 close(void)
 {
 }
@@ -1210,7 +1250,7 @@ close(void)
 const struct iotus_radio_driver_struct cc2420_radio_driver =
   {
     cc2420_init,
-    NULL,
+    post_start,
     NULL,
     close,
     cc2420_prepare,

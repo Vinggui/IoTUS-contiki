@@ -189,6 +189,7 @@ enum {
 
   /* The minimum and maximum address size supported by this radio */
   RADIO_CONST_ADDRESSES_OPTIONS,
+  RADIO_CONST_PAN_ID_OPTIONS,
 
   /* The size to be used by the radio */
   RADIO_PARAM_ADDRESS_USE_TYPE
@@ -242,6 +243,8 @@ enum {
   RADIO_TX_COLLISION,
   RADIO_TX_NOACK,
 };
+
+#define RADIO_ADDR_OPTIONS_MATCH(type,value) ((1<<ADDRESSES_GET_TYPE_SIZE(type))&value)
 
 /**
  * The structure of a device driver for a radio in Contiki.

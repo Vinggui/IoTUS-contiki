@@ -22,9 +22,10 @@
 
 
 uint8_t addresses_types_sizes[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL-1];
-struct mmem addresses_mem[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL-1]={{0}};
-uint8_t iotus_node_id_hardcoded[3];
-uint8_t iotus_panid_hardcoded[3];
+struct mmem addresses_mem[IOTUS_ADDRESSES_TYPE_ADDR_TOTAL-1]={{NULL,0,NULL}};
+uint8_t iotus_node_id_hardcoded[4]={0};
+uint8_t iotus_node_long_id_hardcoded[8]={0};
+uint8_t iotus_pan_id_hardcoded[8]={0};
 
 /*---------------------------------------------------------------------*/
 /*
@@ -58,18 +59,42 @@ addresses_set_value(iotus_address_type type, const uint8_t *value)
     return FAILURE;
   }
 
-  //Verify if this address already have something...
-  if(addresses_mem[type].size != 0) {
-    mmem_free(&(addresses_mem[type]));
+
+  if(IOTUS_ADDRESSES_TYPE_ADDR_SHORT == type) {
+    memcpy(iotus_node_id_hardcoded,value,ADDRESSES_GET_TYPE_SIZE(type));
+  } else if(IOTUS_ADDRESSES_TYPE_ADDR_LONG == type) {
+    memcpy(iotus_node_long_id_hardcoded,value,ADDRESSES_GET_TYPE_SIZE(type));
+  } else if(IOTUS_ADDRESSES_TYPE_ADDR_PANID == type) {
+    memcpy(iotus_pan_id_hardcoded,value,ADDRESSES_GET_TYPE_SIZE(type));
+  } else {
+    //Verify if this address already have something...
+    if(addresses_mem[type].size != 0) {
+      mmem_free(&(addresses_mem[type]));
+    }
+    if(0 == mmem_alloc(&(addresses_mem[type]),ADDRESSES_GET_TYPE_SIZE(type))) {
+      return FAILURE;
+    }
+    
+    memcpy((uint8_t *)MMEM_PTR(&(addresses_mem[type])),value,ADDRESSES_GET_TYPE_SIZE(type));
   }
-
-  if(0 == mmem_alloc(&(addresses_mem[type]),ADDRESSES_GET_TYPE_SIZE(type))) {
-    return FAILURE;
-  }
-
-  memcpy((uint8_t *)MMEM_PTR(&(addresses_mem[type])),value,ADDRESSES_GET_TYPE_SIZE(type));
-
   return SUCCESS;
+}
+/*---------------------------------------------------------------------*/
+/**
+ * 
+ */
+uint8_t *
+addresses_get_pointer(iotus_address_type type)
+{
+  if(IOTUS_ADDRESSES_TYPE_ADDR_SHORT == type) {
+    return iotus_node_id_hardcoded;
+  } else if(IOTUS_ADDRESSES_TYPE_ADDR_LONG == type) {
+    return iotus_node_long_id_hardcoded;
+  } else if(IOTUS_ADDRESSES_TYPE_ADDR_PANID == type) {
+    return iotus_pan_id_hardcoded;
+  } else {
+    return ((uint8_t *)MMEM_PTR(&(addresses_mem[type])));
+  }
 }
 /*---------------------------------------------------------------------*/
 

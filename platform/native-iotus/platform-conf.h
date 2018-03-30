@@ -48,7 +48,11 @@
 #define IOTUS_USING_MALLOC                      0
 #define MMEM_CONF_SIZE                          100000//bytes
 
-
+#ifdef IEEE802154_CONF_PANID
+#define IOTUS_PANID           IEEE802154_CONF_PANID
+#else /* IEEE802154_CONF_PANID */
+#define IOTUS_PANID           0xBEEF
+#endif /* IEEE802154_CONF_PANID */
 
 
 #ifndef uint8_t

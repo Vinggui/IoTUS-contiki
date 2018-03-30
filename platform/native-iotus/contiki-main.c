@@ -174,7 +174,9 @@ main(int argc, char **argv)
 #endif
   iotus_node_id_hardcoded[0]= (node_id>>8) & 0xff;
   iotus_node_id_hardcoded[1]= node_id & 0xff;
-  iotus_node_id_hardcoded[2]= 0;
+  
+  iotus_pan_id_hardcoded[0]= IOTUS_PANID & 0xff;
+  iotus_pan_id_hardcoded[1]= (IOTUS_PANID>>8) & 0xff;
 
 
 #if WITH_GUI
