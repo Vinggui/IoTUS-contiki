@@ -49,10 +49,17 @@ typedef struct iotus_radio_events {
   uint8_t badRxChecksumFail; //When packet len is bigger then allowed
 } iotus_parameters_radio_events_t;
 
-extern iotus_parameters_radio_events_t iotus_parameters_radio_events;
-extern uint8_t iotus_radio_address_size;
-extern uint16_t iotus_radio_max_message;
+typedef struct iotus_packet_size_limits {
+  uint16_t total_size;
+  uint8_t radio_headers;
+  uint8_t data_link_headers;
+  uint8_t routing_headers;
+  uint8_t transport_headers;
+} iotus_packet_dimensions_t;
 
+
+extern iotus_parameters_radio_events_t iotus_parameters_radio_events;
+extern iotus_packet_dimensions_t iotus_packet_dimensions;
 
 /////////////////////////////////////////////////////
 //               QoS parameters                    //

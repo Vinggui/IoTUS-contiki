@@ -45,8 +45,8 @@ typedef enum iotus_addresses_types {
 /////////////////////////////////////////
 //                MACRO                //
 /////////////////////////////////////////
-#define ADDRESSES_GET_TYPE_SIZE(type)         addresses_types_sizes[type]
-#define ADDRESSES_SET_TYPE_SIZE(type,size)    addresses_types_sizes[type]=size
+#define ADDRESSES_GET_TYPE_SIZE(type)         addresses_types_sizes[type-1]
+#define ADDRESSES_SET_TYPE_SIZE(type,size)    addresses_types_sizes[type-1]=size
 
 ///////////////////////////////////////////
 //            Externs                    //

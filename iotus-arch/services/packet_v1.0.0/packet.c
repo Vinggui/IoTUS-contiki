@@ -191,7 +191,10 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
     iotus_node_t *finalDestination, void *callbackFunction)
 {
 
-  iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(&iotus_packet_struct_mem, sizeof(iotus_packet_t), payload, payloadSize);
+  iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(
+                                    &iotus_packet_struct_mem,
+                                    sizeof(iotus_packet_t),
+                                    payload, payloadSize);
   if(NULL == newMsg) {
     SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
@@ -204,7 +207,7 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
   newMsg->nextDestinationNode = NULL;
 
   newMsg->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
-  //((struct packetPiece *)newMsg)->timeout = timeout;
+  timestamp_mark(&(newMsg->timeout), timeout);
   newMsg->callbackHandler = callbackFunction;
 
   newMsg->finalDestinationNode = finalDestination;
@@ -347,7 +350,7 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
  * \param bytesSize The amount of bytes that will be appended.
  * \param byteSeq An array of bytes in its normal sequence
  * \param packetPiece Msg to apply this append
- * \return Packet final size
+ * \return Packet final size, 0 if failed.
  */
 uint16_t
 packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,

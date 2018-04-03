@@ -15,6 +15,7 @@
  */
 #include <stdio.h>
 #include "contiki.h"
+#include "iotus-data-link.h"
 
 #define DEBUG 1
 #if DEBUG

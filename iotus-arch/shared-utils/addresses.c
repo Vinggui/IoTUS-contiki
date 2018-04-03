@@ -68,14 +68,17 @@ addresses_set_value(iotus_address_type type, const uint8_t *value)
     memcpy(iotus_pan_id_hardcoded,value,ADDRESSES_GET_TYPE_SIZE(type));
   } else {
     //Verify if this address already have something...
-    if(addresses_mem[type].size != 0) {
-      mmem_free(&(addresses_mem[type]));
+    if(addresses_mem[type-1].size != 0) {
+      mmem_free(&(addresses_mem[type-1]));
     }
-    if(0 == mmem_alloc(&(addresses_mem[type]),ADDRESSES_GET_TYPE_SIZE(type))) {
+    if(0 == mmem_alloc(&(addresses_mem[type-1]),
+                  ADDRESSES_GET_TYPE_SIZE(type))) {
       return FAILURE;
     }
     
-    memcpy((uint8_t *)MMEM_PTR(&(addresses_mem[type])),value,ADDRESSES_GET_TYPE_SIZE(type));
+    memcpy((uint8_t *)MMEM_PTR(&(addresses_mem[type-1])),
+          value,
+          ADDRESSES_GET_TYPE_SIZE(type));
   }
   return SUCCESS;
 }
@@ -93,7 +96,7 @@ addresses_get_pointer(iotus_address_type type)
   } else if(IOTUS_ADDRESSES_TYPE_ADDR_PANID == type) {
     return iotus_pan_id_hardcoded;
   } else {
-    return ((uint8_t *)MMEM_PTR(&(addresses_mem[type])));
+    return ((uint8_t *)MMEM_PTR(&(addresses_mem[type-1])));
   }
 }
 /*---------------------------------------------------------------------*/

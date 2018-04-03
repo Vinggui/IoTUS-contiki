@@ -18,6 +18,7 @@
  */
 #include <stdio.h>
 #include "contiki.h"
+#include "iotus-data-link.h"
 #include "packet.h"
 
 #define DEBUG 1
@@ -72,7 +73,9 @@ run(void)
 
 static void
 close(void)
-{}
+{
+
+}
 
 const struct iotus_data_link_protocol_struct edytee_MAC_protocol = {
   start,

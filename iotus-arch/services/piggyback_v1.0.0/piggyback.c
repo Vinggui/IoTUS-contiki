@@ -108,7 +108,8 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
 
 /*---------------------------------------------------------------------*/
 static Boolean
-insert_piggyback_to_packet(iotus_packet_t *packet_piece, iotus_piggyback_t *piggyback_piece, Boolean stick)
+insert_piggyback_to_packet(iotus_packet_t *packet_piece,
+                    iotus_piggyback_t *piggyback_piece, Boolean stick)
 {
   if(packet_verify_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
     //TODO This packet allows fragmentation...
@@ -123,7 +124,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece, iotus_piggyback_t *pigg
 
     uint16_t packetOldSize = packet_get_size(packet_piece);
     uint16_t piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE)? 1:0;
-    if((iotus_radio_max_message - packetOldSize) >= 
+    if((get_safe_pdu_for_layer(2) - packetOldSize) >= 
           piggyback_piece->data.size + member_size(iotus_piggyback_t,params) + piggyback_with_ext_size) {
       //This piggyback will fit...
       

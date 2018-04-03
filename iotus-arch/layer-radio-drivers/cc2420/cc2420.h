@@ -52,43 +52,17 @@ void cc2420_init(void);
 
 #define CC2420_MAX_PACKET_LEN      127
 
-int cc2420_set_channel(int channel);
-int cc2420_get_channel(void);
-
-void cc2420_set_pan_addr(unsigned pan,
-                                unsigned addr,
-                                const uint8_t *ieee_addr);
-
 extern signed char cc2420_last_rssi;
 extern uint8_t cc2420_last_correlation;
 
-int cc2420_rssi(void);
-
 extern const struct iotus_radio_driver_struct cc2420_radio_driver;
 
-/**
- * \param power Between 1 and 31.
- */
-void cc2420_set_txpower(uint8_t power);
-int cc2420_get_txpower(void);
-#define CC2420_TXPOWER_MAX  31
-#define CC2420_TXPOWER_MIN   0
 
 /**
  * Interrupt function, called from the simple-cc2420-arch driver.
  *
  */
 int cc2420_interrupt(void);
-
-/* XXX hack: these will be made as Chameleon packet attributes */
-extern rtimer_clock_t cc2420_time_of_arrival,
-  cc2420_time_of_departure;
-extern int cc2420_authority_level_of_sender;
-
-int cc2420_on(void);
-int cc2420_off(void);
-
-void cc2420_set_cca_threshold(int value);
 
 extern const struct aes_128_driver cc2420_aes_128_driver;
 

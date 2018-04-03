@@ -17,31 +17,49 @@
 #include <stdlib.h>
 #include "iotus-core.h"
 #include "platform-conf.h"
+#include "global-parameters.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */
 #define PRINTF(...)
 #endif /* DEBUG */
 
-/***********************************************************************
-                              Functions
- ***********************************************************************/
+
+//////////////////////////////////////////////////////////////////
+//                        Packet related                        //
+//////////////////////////////////////////////////////////////////
 /**
- * \brief      Proceed the checksum for some given buffer
- * @param buf  The buffer pointer to operate.
- * @param size The size of this buffer.
- * \return  the checksum value.
+ * \brief       Calculates the amount of bytes safe to be used
+ *              per layer, given that they will insert their
+ *              headers.
+ * @param layer 2 - Data link
+ *              3 - Routing
+ *              4 - Transport
+ *              5 - Application
+ * \return      The amount of bytes available to be used, per packet.
  */
 uint16_t
-checksum_buf(uint8_t *buf, uint16_t size)
+get_safe_pdu_for_layer(uint8_t layer)
 {
-  //TODO create checksum
-  return 0xFEED;
+  uint16_t available_pdu;
+  available_pdu = iotus_packet_dimensions.total_size
+                  - iotus_packet_dimensions.radio_headers;
+  if(layer == 2) {
+    return available_pdu;
+  }
+  available_pdu -= iotus_packet_dimensions.data_link_headers;
+  if(layer == 3) {
+    return available_pdu;
+  }
+  available_pdu -= iotus_packet_dimensions.routing_headers;
+  if(layer == 4) {
+    return available_pdu;
+  }
+  available_pdu -= iotus_packet_dimensions.transport_headers;
+  return available_pdu;
 }
-
-
 
 
 

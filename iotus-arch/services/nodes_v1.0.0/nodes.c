@@ -46,6 +46,9 @@ uint8_t nodes_broadcast_pointer;
  */
 uint8_t *
 nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
+  if(node == NODES_BROADCAST) {
+    return addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_BROADCAST);
+  }
   iotus_additional_info_t *addressInfo = pieces_get_additional_info(node->additionalInfoList, addressType);
   if(NULL != addressInfo) {
     //Found this address type...

@@ -220,7 +220,6 @@ public class UDGM extends AbstractRadioMedium {
       double distance = senderPos.getDistanceTo(recvPos);
       if (distance <= moteTransmissionRange) {
         /* Within transmission range */
-
         if (!recv.isRadioOn()) {
           newConnection.addInterfered(recv);
           recv.interfereAnyReception();

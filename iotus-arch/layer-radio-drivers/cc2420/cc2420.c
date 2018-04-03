@@ -45,12 +45,13 @@
 #include "dev/spi.h"
 #include "cc2420.h"
 #include "cc2420_const.h"
+#include "iotus-radio.h"
+#include "iotus-data-link.h"
 #include "global-functions.h"
 #include "global-parameters.h"
 #include "packet.h"
 #include "packet-default-additional-info.h"
 #include "pieces.h"
-#include "iotus-radio.h"
 #include "timestamp.h"
 
 #define WITH_SEND_CCA 1
@@ -89,7 +90,7 @@ enum write_ram_order {
   WRITE_RAM_REVERSE
 };
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -151,10 +152,23 @@ PROCESS(cc2420_process, "CC2420 driver");
 #define FIFOP_THR(n) ((n) & 0x7f)
 #define RXBPF_LOCUR (1 << 13);
 
+#define CC2420_TXPOWER_MAX  31
+#define CC2420_TXPOWER_MIN   0
+
+int cc2420_set_channel(int channel);
+int cc2420_get_channel(void);
+
+void cc2420_set_pan_addr(unsigned pan,
+                                unsigned addr,
+                                const uint8_t *ieee_addr);
+int cc2420_rssi(void);void cc2420_set_txpower(uint8_t power);
+int cc2420_get_txpower(void);
+void cc2420_set_cca_threshold(int value);
+
 int cc2420_on(void);
 int cc2420_off(void);
 
-static int cc2420_read(void *buf, unsigned short bufsize);
+static iotus_packet_t * cc2420_read(void);
 
 static int cc2420_prepare(iotus_packet_t *packet);
 static int cc2420_transmit(iotus_packet_t *packet);
@@ -182,7 +196,8 @@ static uint8_t volatile poll_mode = 0;
 /* Do we perform a CCA before sending? */
 static uint8_t send_on_cca = WITH_SEND_CCA;
 
-static iotus_address_type iotus_used_address_type;
+static iotus_address_type g_used_address_type;
+static uint8_t g_software_addr_filtering;
 
 static radio_result_t
 get_value(radio_param_t param, radio_value_t *value)
@@ -207,8 +222,14 @@ get_value(radio_param_t param, radio_value_t *value)
     if(getreg(CC2420_MDMCTRL0) & AUTOACK) {
       *value |= RADIO_RX_MODE_AUTOACK;
     }
+    if(getreg(CC2420_MDMCTRL0) & AUTOCRC) {
+      *value |= RADIO_RX_MODE_HARDWARD_CRC;
+    }
     if(poll_mode) {
       *value |= RADIO_RX_MODE_POLL_MODE;
+    }
+    if(g_software_addr_filtering) {
+      *value |= RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER;
     }
     return RADIO_RESULT_OK;
   case RADIO_PARAM_TX_MODE:
@@ -256,7 +277,11 @@ get_value(radio_param_t param, radio_value_t *value)
     *value = 0b0000000000000010;
     return RADIO_RESULT_OK;
   case RADIO_PARAM_ADDRESS_USE_TYPE:
-    *value = iotus_used_address_type;
+    *value = g_used_address_type;
+    return RADIO_RESULT_OK;
+  case RADIO_CONST_HAS_AUTO_ACK:
+  case RADIO_CONST_IS_802154:
+    *value = TRUE;
     return RADIO_RESULT_OK;
   default:
     return RADIO_RESULT_NOT_SUPPORTED;
@@ -276,13 +301,25 @@ set_value(radio_param_t param, radio_value_t value)
     cc2420_set_channel(value);
     return RADIO_RESULT_OK;
   case RADIO_PARAM_RX_MODE:
-    if(value & ~(RADIO_RX_MODE_ADDRESS_FILTER |
-        RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE)) {
+    if(value & ~(RADIO_RX_MODE_ADDRESS_FILTER | RADIO_RX_MODE_HARDWARD_CRC |
+        RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE |
+        RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER)) {
       return RADIO_RESULT_INVALID_VALUE;
     }
     set_frame_filtering((value & RADIO_RX_MODE_ADDRESS_FILTER) != 0);
+    /* Avoid turning off CRC */
+    //set_frame_filtering((value & RADIO_RX_MODE_HARDWARD_CRC) != 0);
     set_auto_ack((value & RADIO_RX_MODE_AUTOACK) != 0);
     set_poll_mode((value & RADIO_RX_MODE_POLL_MODE) != 0);
+    if(value & RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER) {
+      if(IOTUS_PRIORITY_RADIO != iotus_get_layer_assigned_for(
+        IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+        PRINTF("Software address filtering requires IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS assigned to RADIO");
+        return RADIO_RESULT_INVALID_VALUE;
+      }
+      PRINTF("Software address Filtering\n");
+      g_software_addr_filtering = value & RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER;
+    }
     return RADIO_RESULT_OK;
   case RADIO_PARAM_TX_MODE:
     if(value & ~(RADIO_TX_MODE_SEND_ON_CCA)) {
@@ -324,11 +361,23 @@ set_value(radio_param_t param, radio_value_t value)
       cc2420_set_pan_addr(*panId,*shortAddr,longAddr);
 
       if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
-        iotus_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+        g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
         PRINTF("Using Short address");
       } else {
-        iotus_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+        g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
         PRINTF("Using Long address");
+      }
+
+      //Update header size...
+      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                  IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+        iotus_packet_dimensions.radio_headers = CHECKSUM_LEN
+                    + ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
+      }
+      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                  IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+        iotus_packet_dimensions.radio_headers +=
+                      ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
       }
       return RADIO_RESULT_OK;
     }
@@ -736,7 +785,7 @@ cc2420_prepare(iotus_packet_t *packet)
   
   GET_LOCK();
 
-  PRINTF("cc2420: sending %d bytes\n", payload_len);
+  PRINTF("cc2420: sending %d bytes\n", packet->data.size);
 
   iotus_parameters_radio_events.transmission++;
 
@@ -745,17 +794,37 @@ cc2420_prepare(iotus_packet_t *packet)
 
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
+  /* verify if any layer is inserting the address... */
+  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                  IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+    if(0 == packet_append_last_header(
+                ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                addresses_get_pointer(g_used_address_type),
+                packet)) {
+      PRINTF("Failed to insert source address.");
+      return -1;
+    }
+    //PRINTF("Prev addr inserted\n");
+  }
+  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                  IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+    if(0 == packet_append_last_header(
+                ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                nodes_get_address(g_used_address_type,packet->nextDestinationNode),
+                packet)) {
+      PRINTF("Failed to insert destination address.");
+      return -1;
+    }
+    PRINTF("merda de egua %02x %02x\n",nodes_get_address(g_used_address_type,packet->nextDestinationNode)[0],nodes_get_address(g_used_address_type,packet->nextDestinationNode)[1]);
+    //PRINTF("Next addr inserted\n");
+  }
 
-
-
-  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(IOTUS_CHORE_PKT_CHECKSUM)) {
-    uint16_t csum = checksum_buf(pieces_get_data_pointer(packet), packet->data.size);
-    packet_append_last_header(2,(uint8_t *)&csum,packet);
+  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                IOTUS_CHORE_PKT_CHECKSUM)) {
     total_len = packet->data.size + CHECKSUM_LEN;
   } else {
     total_len = packet->data.size;
   }
-
   write_fifo_buf(&total_len, 1);
   write_fifo_buf(pieces_get_data_pointer(packet), packet->data.size);
   
@@ -857,7 +926,6 @@ cc2420_set_pan_addr(unsigned pan,
                     unsigned addr,
                     const uint8_t *ieee_addr)
 {
-  PRINTF("CORRIGIR PAN ADRESS\n");
   GET_LOCK();
   
   write_ram((uint8_t *) &pan, CC2420RAM_PANID, 2, WRITE_RAM_IN_ORDER);
@@ -891,22 +959,20 @@ PROCESS_THREAD(cc2420_process, ev, data)
   while(1) {
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
 
-    
     PRINTF("cc2420_process: calling receiver callback\n");
-    static uint8_t merda[200];
-    PRINTF("SETar timestamp");
+    //PRINTF("SETar timestamp");
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    int len;
-    len = cc2420_read(merda, 100);
+    iotus_packet_t *packet;
+    packet = cc2420_read();
     //packetbuf_set_datalen(len);
-    //NETSTACK_RDC.input();
+    active_data_link_protocol->receive(packet);
   }
 
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
-static int
-cc2420_read(void *buf, unsigned short bufsize)
+static iotus_packet_t *
+cc2420_read(void)
 {
   uint8_t footer[FOOTER_LEN];
   uint8_t len;
@@ -924,10 +990,23 @@ cc2420_read(void *buf, unsigned short bufsize)
     iotus_parameters_radio_events.badSynch++;
   } else if(len <= FOOTER_LEN) {
     iotus_parameters_radio_events.badRxPacketShort++;
-  } else if(len - FOOTER_LEN > bufsize) {
-    iotus_parameters_radio_events.badRxPacketLong++;
   } else {
-    getrxdata((uint8_t *) buf, len - FOOTER_LEN);
+    /* reserve space for this packet */
+    iotus_packet_t *packet = packet_create_msg(
+                                len - FOOTER_LEN,
+                                IOTUS_PRIORITY_RADIO,
+                                0,
+                                NULL,
+                                NULL,
+                                NULL);
+    if(packet == NULL) {
+      PRINTF("No storage to receive pkt\n");
+      //Drop packet or try later...
+      flushrx();
+      return NULL;
+    }
+
+    getrxdata(pieces_get_data_pointer(packet), len - FOOTER_LEN);
     getrxdata(footer, FOOTER_LEN);
     
     if(footer[1] & FOOTER1_CRC_OK) {
@@ -942,8 +1021,6 @@ cc2420_read(void *buf, unsigned short bufsize)
         //packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
         iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
         iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
-
-        
       }
 
       iotus_parameters_radio_events.receptions++;
@@ -967,12 +1044,12 @@ cc2420_read(void *buf, unsigned short bufsize)
     }
     
     RELEASE_LOCK();
-    return len - FOOTER_LEN;
+    return packet;
   }
   
   flushrx();
   RELEASE_LOCK();
-  return 0;
+  return NULL;
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -1101,8 +1178,10 @@ set_auto_ack(uint8_t enable)
 
   uint16_t reg = getreg(CC2420_MDMCTRL0);
   if(enable) {
+    PRINTF("Radio autoAck\n");
     reg |= AUTOACK;
   } else {
+    PRINTF("Radio not autoAck\n");
     reg &= ~(AUTOACK);
   }
 
@@ -1119,8 +1198,10 @@ set_frame_filtering(uint8_t enable)
   /* Turn on/off address decoding. */
   uint16_t reg = getreg(CC2420_MDMCTRL0);
   if(enable) {
+    PRINTF("Radio filtering address\n");
     reg |= ADR_DECODE;
   } else {
+    PRINTF("Radio not filtering address\n");
     reg &= ~(ADR_DECODE);
   }
 
@@ -1157,17 +1238,23 @@ set_send_on_cca(uint8_t enable)
 void
 cc2420_init(void)
 {
-  //IOTUS new stuff
+  ////////////////////////////////////////
+  //       IOTUS new features           //
+  ////////////////////////////////////////
   PRINTF("\tCC2440 driver\n");
+  iotus_packet_dimensions.total_size = CC2420_MAX_PACKET_LEN;
+
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG,8);
+  ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_BROADCAST,2);
 
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS);
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_PKT_CHECKSUM);
+  g_software_addr_filtering = 0;
 
-
+  ////////////////////////////////////
+  //       contiki old configs      //
+  ////////////////////////////////////
   uint16_t reg;
   {
     int s = splhigh();
@@ -1252,7 +1339,7 @@ const struct iotus_radio_driver_struct cc2420_radio_driver =
   {
     cc2420_init,
     post_start,
-    NULL,
+    post_start,
     close,
     cc2420_prepare,
     cc2420_transmit,

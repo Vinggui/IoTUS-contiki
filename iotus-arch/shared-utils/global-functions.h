@@ -19,7 +19,7 @@
 #define member_size(type, member) sizeof(((type *)0)->member)
 
 uint16_t
-checksum_buf(uint8_t *buf, uint16_t size);
+get_safe_pdu_for_layer(uint8_t layer);
 
 #endif /* IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_ */
 

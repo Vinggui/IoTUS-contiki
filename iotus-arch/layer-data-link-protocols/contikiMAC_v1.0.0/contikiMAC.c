@@ -14,12 +14,13 @@
  */
 #include <stdio.h>
 #include "contiki.h"
+#include "iotus-data-link.h"
+#include "iotus-radio.h"
 #include "packet.h"
 #include "packet-defs.h"
 #include "piggyback.h"
 #include "nodes.h"
 #include "timestamp.h"
-#include "iotus-radio.h"
 
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
@@ -64,7 +65,7 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
         continue;
       }
 
-      uint8_t testeHeader[1] = {'1'};
+      uint8_t testeHeader[1] = {0b00000111};
       uint16_t teste = packet_push_bit_header(3, testeHeader, packet);
 
       if(teste > 0) {
@@ -92,6 +93,8 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
       unsigned long elapsed = timestamp_elapsed(&firstTimer);
       SAFE_PRINTF_CLEAN("Elapsed time is: %lu\n",elapsed);
 
+      packet->nextDestinationNode = NODES_BROADCAST;
+
       active_radio_driver->send(packet);
     }
 
@@ -104,6 +107,11 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
   PROCESS_END();
 }
 
+static void
+receive(iotus_packet_t *packet)
+{
+  SAFE_PRINTF_CLEAN("Rcv pkt len: %u\n",packet->data.size);
+}
 
 static void
 start(void)
@@ -111,10 +119,20 @@ start(void)
   SAFE_PRINTF_CLEAN("\tContikiMAC\n");
   process_start(&contikiMAC_proc, NULL);
 
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_PANID);
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_SHORT_LONG);
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_SET_ADDR_FOR_RADIO);
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_ONEHOP_BROADCAST);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK,
+    IOTUS_CHORE_SET_ADDR_PANID);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK,
+   IOTUS_CHORE_SET_ADDR_SHORT_LONG);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK,
+   IOTUS_CHORE_SET_ADDR_FOR_RADIO);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK,
+   IOTUS_CHORE_ONEHOP_BROADCAST);
+
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO,
+   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO,
+   IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS);
+
   timestamp_mark(&firstTimer,0);
 }
 
@@ -122,35 +140,32 @@ static void
 post_start(void)
 {
   radio_value_t value;
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_PANID)) {
-    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_PANID, iotus_pan_id_hardcoded)) {
-      SAFE_PRINTF_LOG_ERROR("Addres not set");
-      return;
-    }
+  if(IOTUS_PRIORITY_DATA_LINK == 
+    iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_PANID)) {
+    //Don`t do anything. it`s already hardcoded.
   }
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_SHORT_LONG)) {
-    if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, iotus_node_id_hardcoded)) {
-      SAFE_PRINTF_LOG_ERROR("Addres not set");
-      return;
-    }
-    if(ADDRESSES_GET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG) != 0) {
-      if(ADDRESSES_GET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG) <= 8) {//8 is the maximum size of the hardcoded pan id
-        if(FAILURE == addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_LONG, iotus_node_id_hardcoded)) {
-          SAFE_PRINTF_LOG_ERROR("Addres not set");
-          return;
-        }
-      } else {
-        //work with bigger long values...
-      }
-    }
+  if(IOTUS_PRIORITY_DATA_LINK == 
+    iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_SHORT_LONG)) {
+    //Don`t do anything. it`s already hardcoded.
   }
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
+  if(IOTUS_PRIORITY_DATA_LINK == 
+    iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
     //Set radio address...
     active_radio_driver->get_value(RADIO_CONST_ADDRESSES_OPTIONS, &value);
     if(RADIO_ADDR_OPTIONS_MATCH(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,value)) {
-      active_radio_driver->set_value(RADIO_PARAM_ADDRESS_USE_TYPE,IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+      active_radio_driver->set_value(RADIO_PARAM_ADDRESS_USE_TYPE,
+                              IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
     }
   }
+
+
+  uint8_t broadcastAddr[4] = {0xff,0xff,0xff,0xff};
+  addresses_set_value(IOTUS_ADDRESSES_TYPE_ADDR_BROADCAST,broadcastAddr);
+
+  //Drop packets not destined to us
+  active_radio_driver->set_value(RADIO_PARAM_RX_MODE,
+    RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER);
+  active_radio_driver->on();
 }
 
 static void
@@ -167,7 +182,10 @@ const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   start,
   post_start,
   run,
-  close
+  close,
+  NULL,
+  NULL,
+  receive
 };
 
 /* The following stuff ends the \defgroup block at the beginning of

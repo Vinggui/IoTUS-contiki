@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "clock.h"
+#include "iotus-core.h"
 #include "lib/memb.h"
 #include "lib/mmem.h"
 #include "list.h"
@@ -46,7 +47,8 @@ MEMB(iotus_additional_info_handlers_mem, iotus_additional_info_t, IOTUS_ADDITION
  * \return          The pointer to this piece.
  */
 iotus_generic_piece_t *
-pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t dataSize) {
+pieces_malloc(struct memb *m, uint16_t allocSize,
+         const uint8_t *data, uint16_t dataSize) {
   #if IOTUS_USING_MALLOC == 0
   iotus_generic_piece_t *newPiece = (iotus_generic_piece_t *)memb_alloc(m);
   allocSize = allocSize;
@@ -77,7 +79,10 @@ pieces_malloc(struct memb *m, uint16_t allocSize, const uint8_t *data, uint16_t 
   }
   newPiece->data.size = dataSize;
 #endif /* IOTUS_USING_MALLOC == 0 */
-  memcpy(newPiece->data.ptr, data, dataSize);
+  if(NULL != data) {
+    memcpy(newPiece->data.ptr, data, dataSize);
+  }
+  
   newPiece->params = 0;
   newPiece->priority = 0;
   newPiece->callbackHandler = NULL;

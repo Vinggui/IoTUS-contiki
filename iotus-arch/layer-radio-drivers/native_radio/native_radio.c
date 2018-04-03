@@ -97,6 +97,19 @@ send(iotus_packet_t *packet)
   return 1;
 }
 
+int
+on(void) {
+  SAFE_PRINT("Radio is on!\n");
+  return 1;
+}
+
+
+int
+off(void) {
+  SAFE_PRINT("Radio is off!\n");
+  return 1;
+}
+
 static void
 start(void)
 {
@@ -126,8 +139,8 @@ const struct iotus_radio_driver_struct native_radio_radio_driver = {
   NULL,//cc2420_cca,
   NULL,//cc2420_receiving_packet,
   NULL,//pending_packet,
-  NULL,//cc2420_on,
-  NULL,//cc2420_off,
+  on,//cc2420_on,
+  off,//cc2420_off,
   get_value,
   set_value,
   NULL,//get_object,

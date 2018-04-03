@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include "contiki.h"
 #include "iotus-core.h"
+#include "iotus-data-link.h"
 #include "iotus-radio.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
@@ -162,10 +163,22 @@ iotus_core_start_system (
     #endif /*IOTUS_CONF_USING_DATA_LINK == 1*/
   #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
 
-  // Call the start of each service
+  ////////////////////////////////////////////
+  //             Start Radio                //
+  ////////////////////////////////////////////
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+  active_radio_driver = available_radio_drivers_array[radio_driver];
+  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
+  ACTIVE_RADIO_DRIVER(start);
+
+  /////////////////////////////////////////////
+  //      Call the start of each service     //
+  /////////////////////////////////////////////
   send_signal_to_services(IOTUS_START_SERVICE, NULL);
 
-  //Call the start of each protocols
+  /////////////////////////////////////////////
+  //     Call the start of each protocols    //
+  /////////////////////////////////////////////
   #if IOTUS_CONF_USING_TRANSPORT == 1
     #ifdef IOTUS_COMPILE_MODE_DYNAMIC
     active_transport_protocol = available_transport_protocols_array[transport];
@@ -187,10 +200,10 @@ iotus_core_start_system (
     ACTIVE_DATA_LINK_PROTOCOL(start);
   #endif /* IOTUS_CONF_USING_DATA_LINK == 1 */
 
-  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  active_radio_driver = available_radio_drivers_array[radio_driver];
-  #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
-  ACTIVE_RADIO_DRIVER(start);
+  ///////////////////////////////////////////
+  //     execute post_start functions      //
+  ///////////////////////////////////////////
+  ACTIVE_RADIO_DRIVER(post_start);
 
   /* Call the post start functions */
   #if IOTUS_CONF_USING_TRANSPORT == 1
@@ -202,7 +215,6 @@ iotus_core_start_system (
   #if IOTUS_CONF_USING_DATA_LINK == 1
   ACTIVE_DATA_LINK_PROTOCOL(post_start);
   #endif
-  ACTIVE_RADIO_DRIVER(post_start);
 
   process_start(&iotus_core_process, NULL);
 }

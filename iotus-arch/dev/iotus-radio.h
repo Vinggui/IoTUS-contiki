@@ -192,7 +192,11 @@ enum {
   RADIO_CONST_PAN_ID_OPTIONS,
 
   /* The size to be used by the radio */
-  RADIO_PARAM_ADDRESS_USE_TYPE
+  RADIO_PARAM_ADDRESS_USE_TYPE,
+
+  RADIO_CONST_HAS_AUTO_ACK,
+
+  RADIO_CONST_IS_802154
 
 };
 
@@ -214,9 +218,11 @@ enum {
  * NETSTACK_RADIO.set_value(RADIO_PARAM_RX_MODE,
  *       RADIO_RX_MODE_ADDRESS_FILTER | RADIO_RX_MODE_AUTOACK);
  */
-#define RADIO_RX_MODE_ADDRESS_FILTER   (1 << 0)
-#define RADIO_RX_MODE_AUTOACK          (1 << 1)
-#define RADIO_RX_MODE_POLL_MODE        (1 << 2)
+#define RADIO_RX_MODE_ADDRESS_FILTER            (1 << 0)
+#define RADIO_RX_MODE_AUTOACK                   (1 << 1)
+#define RADIO_RX_MODE_POLL_MODE                 (1 << 2)
+#define RADIO_RX_MODE_HARDWARD_CRC              (1 << 3)
+#define RADIO_RX_MODE_ADDRESS_SOFTWARE_FILTER   (1 << 4)
 
 /**
  * The radio transmission mode controls whether transmissions should
@@ -244,7 +250,7 @@ enum {
   RADIO_TX_NOACK,
 };
 
-#define RADIO_ADDR_OPTIONS_MATCH(type,value) ((1<<ADDRESSES_GET_TYPE_SIZE(type))&value)
+#define RADIO_ADDR_OPTIONS_MATCH(type,value) ((1<<(ADDRESSES_GET_TYPE_SIZE(type)-1))&value)
 
 /**
  * The structure of a device driver for a radio in Contiki.
@@ -265,7 +271,7 @@ struct iotus_radio_driver_struct {
   int (* send)(iotus_packet_t *packet);
 
   /** Read a received packet into a buffer. */
-  int (* read)(void *buf, unsigned short buf_len);
+  iotus_packet_t * (* read)(void);
 
   /** Perform a Clear-Channel Assessment (CCA) to find out if there is
       a packet in the air or not. */
