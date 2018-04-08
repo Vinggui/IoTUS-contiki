@@ -25,6 +25,7 @@ enum packet_additionalInfoList_types {
   IOTUS_PACKET_INFO_TYPE_P2P_ADDRESSES,
   IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
   IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
+  IOTUS_PACKET_INFO_TYPE_RETX_ATTEMPTS_DID,
 
   //Values generally sensed and available from the radio after receiving a packet
   IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK,
@@ -46,9 +47,8 @@ enum packet_additionalInfoList_types {
  */
 typedef struct packet_rcv_additional_info {
   uint16_t networkID;
-  int16_t linkQuality;
-  int16_t RSSI; //got from CCA
-  uint8_t reTxAttemps;
+  int8_t linkQuality;
+  int8_t rssi; //got from CCA
 } packet_rcv_block_output_t;
 
 /**

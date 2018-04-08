@@ -51,14 +51,14 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
       piggyback_create_piece(
-        8,(const uint8_t *)"merda!!!",0,
+        8,(const uint8_t *)"cacho!!!",0,
         NODES_BROADCAST, 3000);
     }
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
       SAFE_PRINTF_CLEAN("Deu - BC\n");
 
-      iotus_packet_t *packet = packet_create_msg(9, IOTUS_PRIORITY_DATA_LINK, 5000,
-        (const uint8_t *)"Teste msg",
+      iotus_packet_t *packet = packet_create_msg(10, IOTUS_PRIORITY_DATA_LINK, 5000,
+        (const uint8_t *)"BUeste msg", TRUE,
         NODES_BROADCAST, NULL);
 
       if(NULL == packet) {
@@ -111,6 +111,10 @@ static void
 receive(iotus_packet_t *packet)
 {
   SAFE_PRINTF_CLEAN("Rcv pkt len: %u\n",packet->data.size);
+  if(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
+    SAFE_PRINTF_CLEAN("Rcv pkt broadcast\n");
+  }
+  
 }
 
 static void

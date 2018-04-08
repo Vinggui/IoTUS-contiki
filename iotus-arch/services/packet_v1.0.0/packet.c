@@ -47,7 +47,7 @@ LIST(gPacketMsgList);
 Boolean
 packet_destroy(iotus_packet_t *piece) {
   list_remove(gPacketMsgList, piece);
-
+  pieces_clean_additional_info_list(piece->additionalInfoList);
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
 
@@ -131,7 +131,7 @@ packet_get_next_destination(iotus_packet_t *packetPiece)
  * \return              Status of this set.
  */
 Status
-packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power)
+packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel)
 {
   iotus_additional_info_t *txBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
                     IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
@@ -146,18 +146,54 @@ packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power)
                                 sizeof(packet_tx_block_input_t),
                                 TRUE);
     if(txBlockInfo == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Add info no set");
+      SAFE_PRINTF_LOG_ERROR("Add info not set");
       return FAILURE;
     }
   }
-  //Just set the value into the buffer
-  uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
-  memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
-  txBlock_var.txPower = power;
-  memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
+  /*
+    Not necessary anymore...
+      //Just set the value into the buffer
+      uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
+      memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
+      txBlock_var.txPower = power;
+      memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
+   */
   return SUCCESS;
 }
 
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific rx block for a packet transmission
+ * \param packetPiece   Packet to set.
+ * \param netId         The network Id of this packet (PanID).
+ * \param linkQuality   The link quality received with this packet.
+ * \param rssi          This RSSI value received with this packet.
+ * \return              Status of this set.
+ */
+Status
+packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQuality, uint8_t rssi)
+{
+  iotus_additional_info_t *rxBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
+                    IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK);
+
+  packet_rcv_block_output_t rxBlock_var;
+  if(NULL == rxBlockInfo) {
+    rxBlock_var.networkID = netId;
+    rxBlock_var.linkQuality = linkQuality;
+    rxBlock_var.rssi = rssi;
+    //This packet does not have this block yet
+    rxBlockInfo = pieces_set_additional_info(packetPiece->additionalInfoList,
+                                IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
+                                (uint8_t *)(&rxBlock_var),
+                                sizeof(packet_rcv_block_output_t),
+                                TRUE);
+    if(rxBlockInfo == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Add info not set");
+      return FAILURE;
+    }
+  }
+  return SUCCESS;
+}
 
 /*---------------------------------------------------------------------*/
 /**
@@ -187,7 +223,7 @@ packet_get_tx_power(iotus_packet_t *packetPiece)
  */
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
-    uint16_t timeout, const uint8_t* payload,
+    uint16_t timeout, const uint8_t* payload, Boolean insertIotusHeader,
     iotus_node_t *finalDestination, void *callbackFunction)
 {
 
@@ -200,18 +236,28 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
     return NULL;
   }
 
-  LIST_STRUCT_INIT(newMsg, additionalInfoList);
-  (newMsg)->firstHeaderBitSize = 0;
-  (newMsg)->lastHeaderSize = 0;
-
-  newMsg->nextDestinationNode = NULL;
-
-  newMsg->params |= (PACKET_PARAMETERS_PRIORITY_FIELD & priority);
   timestamp_mark(&(newMsg->timeout), timeout);
+  LIST_STRUCT_INIT(newMsg, additionalInfoList);
+  
+  //this packet will go down the stack, towards the physical layer
+  newMsg->firstHeaderBitSize = 0;
+  newMsg->lastHeaderSize = 0;
+  newMsg->nextDestinationNode = NULL;
+  newMsg->params = 0;
+  newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
+  newMsg->priority = priority;
   newMsg->callbackHandler = callbackFunction;
-
+  
   newMsg->finalDestinationNode = finalDestination;
 
+  //Set some params into this packet
+  if(TRUE == insertIotusHeader) {
+    packet_set_parameter(newMsg,PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM);
+  }
+  if(finalDestination == NODES_BROADCAST) {
+    SAFE_PRINT("It`s broadcast\n");
+    newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
+  }
 
   //Link the message into the list, sorting...
   pieces_insert_timeout_priority(gPacketMsgList, newMsg);
@@ -220,11 +266,6 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
 }
 
 /*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return Packet final size
- */
 /*
  * \brief Function to get the total size of a packet
  * \param packetPiece Packet to be read.
@@ -237,11 +278,6 @@ packet_get_size(iotus_packet_t *packetPiece) {
 
 /*---------------------------------------------------------------------*/
 /*
- * 
- * \param 
- * \return Packet final size
- */
-/*
  * \brief Function to push bits into the header
  * \param bitSequenceSize The amount of bit that will be push into.
  * \param bitSeq An array of bytes containing the bits
@@ -252,11 +288,16 @@ uint16_t
 packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   iotus_packet_t *packetPiece) {
 
+  /* This operation is only allowed to packets going down the stack (to be transmitted) */
+  if(packetPiece->priority == IOTUS_PRIORITY_RADIO) {
+    return 0;
+  }
   uint16_t i;
   uint16_t newSizeInBYTES = 0;
   uint16_t oldSizeInBYTES = ((packetPiece->firstHeaderBitSize)+7)/8;//round up
   uint16_t packetOldTotalSize = packet_get_size(packetPiece);
   
+
   //Verify if a new byte is required
   uint16_t freeSpaceInBITS = (oldSizeInBYTES*8)-(packetPiece->firstHeaderBitSize);
   if(freeSpaceInBITS < bitSequenceSize) {
@@ -270,7 +311,6 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
     }
     //transfer the old buffer to the new one, backwards!
     memcpy(newBuff+newSizeInBYTES,pieces_get_data_pointer(packetPiece),packetOldTotalSize);
-
 
     //Delete the old buffer
 #if IOTUS_USING_MALLOC == 0
@@ -311,27 +351,30 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   }
 
   //Insert the new bits information
-  uint16_t byteToPush = (newSizeInBYTES + oldSizeInBYTES) - ((packetPiece->firstHeaderBitSize)/8);
+  uint16_t byteToPushToPkt = (newSizeInBYTES + oldSizeInBYTES) - 1 - ((packetPiece->firstHeaderBitSize)/8);
   uint8_t bitToPush = ((packetPiece->firstHeaderBitSize)%8);
-  uint16_t byteToRead = 1 + (bitSequenceSize/8);
+  // this 1 + is due to the sequence in which this value is decreased.
+  uint16_t byteToReadFromInput = 1 + (bitSequenceSize/8);
+  
   for(i=0; i < bitSequenceSize; i++) {
     //Verify and change the byte to be push into...
     if(bitToPush > 8) {
       bitToPush = 0;
-      byteToPush--;
+      byteToPushToPkt--;
     }
     //Read the bits from the source
     uint8_t bitShifted = (1<<(i%8));
     if((i%8) == 0) {
-      byteToRead--;
+      byteToReadFromInput--;
     }
 
-    uint8_t bitRead = (bitSeq[byteToRead] & bitShifted);
+    uint8_t bitRead = (bitSeq[byteToReadFromInput] & bitShifted);
     if(bitRead == 0) {
-      (pieces_get_data_pointer(packetPiece))[byteToPush] &= ~(1<<bitToPush);
+      (pieces_get_data_pointer(packetPiece))[byteToPushToPkt] &= ~(1<<bitToPush);
     } else {
-      (pieces_get_data_pointer(packetPiece))[byteToPush] |= (1<<bitToPush);
+      (pieces_get_data_pointer(packetPiece))[byteToPushToPkt] |= (1<<bitToPush);
     }
+    bitToPush++;
   }
   packetPiece->firstHeaderBitSize += bitSequenceSize;//counted in bits
 
@@ -340,11 +383,6 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
 
 
 /*---------------------------------------------------------------------*/
-/*
- * 
- * \param 
- * \return Packet final size
- */
 /*
  * \brief Function to append full bytes headers into the tail (inversed)
  * \param bytesSize The amount of bytes that will be appended.
@@ -356,6 +394,12 @@ uint16_t
 packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppend,
   iotus_packet_t *packetPiece) {
   int i;//Verify if the msg piece already has something
+
+  /* This operation is only allowed to packets going down the stack (to be transmitted) */
+  if(packetPiece->priority == IOTUS_PRIORITY_RADIO) {
+    return 0;
+  }
+
   uint16_t packetOldTotalSize = packet_get_size(packetPiece);
   uint16_t packetNewTotalSize = packetOldTotalSize + byteSequenceSize;
   //Reallocate new buffer for this system
@@ -421,18 +465,14 @@ packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 
 /*---------------------------------------------------------------------*/
 /*
- * 
- * \param 
- * \return Packet final size
- */
-/*
  * \brief  Function to read any byte of a message, given its position
  * \param bytePos The position of the byte
  * \param packetPiece Packet to be read.
  * \return Byte read.
  */
 uint8_t
-packet_read_byte(uint16_t bytePos, iotus_packet_t *packetPiece) {
+packet_read_byte(uint16_t bytePos, iotus_packet_t *packetPiece)
+{
   if(packet_get_size(packetPiece) <= bytePos) {
     return 0;
   }
@@ -441,10 +481,109 @@ packet_read_byte(uint16_t bytePos, iotus_packet_t *packetPiece) {
 
 /*---------------------------------------------------------------------*/
 /*
- * 
- * \param 
- * \return Packet final size
+ * \brief  Read bytes appended in an incoming packet.
+ * \param packetPiece Packet to be read.
+ * \param buf         The buf to save the read data into.
+ * \param num         The number of byes to be read.
+ * \return Byte read.
  */
+Status
+packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t num)
+{
+  if(buf == NULL || packetPiece == NULL) {
+    return FAILURE;
+  }
+  uint16_t i;
+  int32_t pos;
+  for(i=0;i<num;i++) {
+    pos = packetPiece->data.size -1 - packetPiece->lastHeaderSize;
+    if(pos < 0) {
+      return FAILURE;
+    }
+
+    *buf = pieces_get_data_pointer(packetPiece)[pos];
+    buf++;
+    packetPiece->lastHeaderSize++;
+  }
+  return SUCCESS;
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief  Read bits pushed in an incoming packet. Max of 32 bit a at time.
+ * \param 
+ * \param packetPiece Packet to be read.
+ * \return The sequence of Bit read.
+ */
+uint32_t
+packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, uint8_t num)
+{
+  if(packetPiece == NULL || num > 32) {
+    return 0;
+  }
+  uint32_t result;
+  uint16_t byteToStart;
+  /**
+   * Adding this remainder is necessary for correct read of the whole requested
+   * num size.
+   */
+  num += packetPiece->firstHeaderBitSize%8;
+  byteToStart = packetPiece->firstHeaderBitSize/8;
+
+  result = 0;
+  while(num/8 > 0) {
+    result = (result<<8);
+    result |= (uint32_t)pieces_get_data_pointer(packetPiece)[byteToStart];
+    num -= 8;
+    byteToStart++;
+    packetPiece->firstHeaderBitSize += 8;
+  }
+  //Complete getting the rest of the bits
+  for(;num>0;num--) {
+    byteToStart = packetPiece->firstHeaderBitSize/8;
+    result = (result<<1);
+    result |= (1 & (uint32_t)pieces_get_data_pointer(packetPiece)[byteToStart]);
+    packetPiece->firstHeaderBitSize++;
+  }
+  return result;
+}
+
+/*---------------------------------------------------------------------*/
+void
+packet_parse(iotus_packet_t *packetPiece) {
+  if(packetPiece == NULL) {
+    return;
+  }
+
+  if(IOTUS_PRIORITY_RADIO == packetPiece->priority) {
+    //Radio priority means that this pkt is going up the stack, towards app layer
+    packetPiece->firstHeaderBitSize = 0;
+
+    /**
+     * Find the first set bit in this packet and jump to the next bit
+     * of the iotus dynamic header.
+     */
+    uint8_t i;
+    i=packet_read_byte(0,packetPiece);
+    while(i>0) {
+      i/=2;
+      packetPiece->firstHeaderBitSize++;
+    }
+    packetPiece->firstHeaderBitSize = 9-packetPiece->firstHeaderBitSize;
+    //Now that we found the first bit of the packet, we can ignore it.
+    uint8_t byteMapToReset = 1<< (8-packetPiece->firstHeaderBitSize);
+    *pieces_get_data_pointer(packetPiece) &= ~(byteMapToReset);
+
+    //Get the dynamic header now
+    packetPiece->iotusHeader = packet_unwrap_pushed_bit(packetPiece,sizeof(packetPiece->iotusHeader));
+    
+    if(packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
+      packetPiece->nextDestinationNode = NODES_BROADCAST;
+    }
+  }
+}
+
+/*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service
  */

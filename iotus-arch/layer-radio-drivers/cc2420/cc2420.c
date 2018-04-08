@@ -50,6 +50,7 @@
 #include "global-functions.h"
 #include "global-parameters.h"
 #include "packet.h"
+#include "packet-defs.h"
 #include "packet-default-additional-info.h"
 #include "pieces.h"
 #include "timestamp.h"
@@ -198,6 +199,7 @@ static uint8_t send_on_cca = WITH_SEND_CCA;
 
 static iotus_address_type g_used_address_type;
 static uint8_t g_software_addr_filtering;
+static Boolean g_expect_new_iotus_packet_hdr;
 
 static radio_result_t
 get_value(radio_param_t param, radio_value_t *value)
@@ -794,30 +796,48 @@ cc2420_prepare(iotus_packet_t *packet)
 
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
-  /* verify if any layer is inserting the address... */
-  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                  IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-    if(0 == packet_append_last_header(
-                ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                addresses_get_pointer(g_used_address_type),
-                packet)) {
-      PRINTF("Failed to insert source address.");
+  
+  if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
+    g_expect_new_iotus_packet_hdr = TRUE;
+    /* verify if any layer is inserting the address... */
+    if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                    IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+      if(0 == packet_append_last_header(
+                  ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                  addresses_get_pointer(g_used_address_type),
+                  packet)) {
+        PRINTF("Failed to insert source address.\n");
+        return -1;
+      }
+      //PRINTF("Prev addr inserted\n");
+    }
+    //In cases where broadcast is sent, only the source addr is necessary,
+    //because the bit of broadcast in the iotus dynamic header is already set
+    if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+      //If this is not a broadcast, then we can try to insert send to a specific node.
+      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                      IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+        if(0 == packet_append_last_header(
+                    ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                    nodes_get_address(g_used_address_type,packet->nextDestinationNode),
+                    packet)) {
+          PRINTF("Failed to insert destination address.");
+          return -1;
+        }
+        //PRINTF("Next addr inserted\n");
+      }
+    }
+
+
+    if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
+                                  &(packet->iotusHeader),
+                                  packet)) {
+      PRINTF("Failed insert iotus dyn hdr.");
       return -1;
     }
-    //PRINTF("Prev addr inserted\n");
   }
-  if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                  IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-    if(0 == packet_append_last_header(
-                ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                nodes_get_address(g_used_address_type,packet->nextDestinationNode),
-                packet)) {
-      PRINTF("Failed to insert destination address.");
-      return -1;
-    }
-    PRINTF("merda de egua %02x %02x\n",nodes_get_address(g_used_address_type,packet->nextDestinationNode)[0],nodes_get_address(g_used_address_type,packet->nextDestinationNode)[1]);
-    //PRINTF("Next addr inserted\n");
-  }
+
+  PRINTF("msg: %x %x %s",pieces_get_data_pointer(packet)[0], pieces_get_data_pointer(packet)[1],pieces_get_data_pointer(packet)+1);
 
   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                 IOTUS_CHORE_PKT_CHECKSUM)) {
@@ -997,6 +1017,7 @@ cc2420_read(void)
                                 IOTUS_PRIORITY_RADIO,
                                 0,
                                 NULL,
+                                FALSE,
                                 NULL,
                                 NULL);
     if(packet == NULL) {
@@ -1008,10 +1029,69 @@ cc2420_read(void)
 
     getrxdata(pieces_get_data_pointer(packet), len - FOOTER_LEN);
     getrxdata(footer, FOOTER_LEN);
-    
+
     if(footer[1] & FOOTER1_CRC_OK) {
       cc2420_last_rssi = footer[0] + RSSI_OFFSET;
       cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
+
+
+      //Check the address and filtering options
+      if(g_expect_new_iotus_packet_hdr == TRUE) {
+        packet_parse(packet);
+
+        if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+          /**
+           * In cases where broadcast is sent, only the source addr is received
+           * If this is not a broadcast, then we can try to receive to a specific node.
+           */
+
+          if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                          IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+            uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+            if(FAILURE == packet_unwrap_appended_byte(
+                              packet,
+                              address,
+                              ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+              PRINTF("Failed couldn't unwrap.");
+              packet_destroy(packet);
+              return NULL;
+            }
+
+            PRINTF("Got source addr %u %u\n",address[1],address[0]);
+            if(FALSE == addresses_compare(address,
+                          addresses_get_pointer(g_used_address_type),
+                          ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+              //This message is not for us... Drop it?
+              PRINTF("Dropping pckt!, wrong dest.");
+              packet_destroy(packet);
+              return NULL;
+            }
+            //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
+            //EXTRAIR INFORMACOES PARA O PACOTE
+          }
+        }
+
+        if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                        IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+          uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+          if(FAILURE == packet_unwrap_appended_byte(
+                            packet,
+                            address,
+                            ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+            PRINTF("Failed to get prev address.");
+            packet_destroy(packet);
+            return NULL;
+          }
+          if(NULL == pieces_set_additional_info(packet->additionalInfoList,
+                                     IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+                                     address,
+                                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                                     TRUE)) {
+            PRINTF("Failed to create additional info");
+          }
+        }
+      }
+
       if(!poll_mode) {
 
         /* Not in poll mode: packetbuf should not be accessed in interrupt context.
@@ -1021,12 +1101,22 @@ cc2420_read(void)
         //packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
         iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
         iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
+        //Add the other information in this packet
+        if(FAILURE == packet_set_rx_block(
+                        packet,
+                        0,
+                        cc2420_last_correlation,
+                        cc2420_last_rssi)) {
+          PRINTF("Failed add rx block info.");
+        }
       }
 
       iotus_parameters_radio_events.receptions++;
     } else {
       iotus_parameters_radio_events.badRxChecksumFail++;
       len = FOOTER_LEN;
+      packet_destroy(packet);
+      return NULL;
     }
 
     if(!poll_mode) {
@@ -1251,6 +1341,7 @@ cc2420_init(void)
 
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_PKT_CHECKSUM);
   g_software_addr_filtering = 0;
+  g_expect_new_iotus_packet_hdr = TRUE;
 
   ////////////////////////////////////
   //       contiki old configs      //

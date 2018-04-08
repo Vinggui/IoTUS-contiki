@@ -16,12 +16,13 @@
 #ifndef IOTUS_ARCH_SHARED_UTILS_PIECES_H_
 #define IOTUS_ARCH_SHARED_UTILS_PIECES_H_  
 
+#include "clock.h"
 #include "lib/memb.h"
 #include "lib/mmem.h"
+#include "chores.h"
 #include "platform-conf.h"
-#include "clock.h"
-#include "timestamp.h"
 #include "nodes.h"
+#include "timestamp.h"
 
 
 #ifndef IOTUS_RADIO_FULL_ADDRESS
@@ -38,7 +39,7 @@
   structName *next;\
   struct mmem data;\
   uint8_t params;\
-  uint8_t priority;\
+  iotus_layer_priority priority;\
   timestamp_t timeout;\
   void *callbackHandler;\
   iotus_node_t *finalDestinationNode;

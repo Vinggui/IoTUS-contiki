@@ -145,6 +145,9 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
       list_remove(gPiggybackFramesList, piggyback_piece);
       //TODO CALL the CB function of the header
       piggyback_destroy(piggyback_piece);
+
+      //Set this variable to this packet transmission
+      packet_set_parameter(packet_piece,PACKET_IOTUS_HDR_HAS_PIGGYBACK);
       return TRUE;
     }
   }
@@ -161,7 +164,8 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
  */
 uint16_t
 piggyback_apply(iotus_packet_t *packet_piece) {
-  if(!packet_verify_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK)) {
+  if(!packet_verify_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK) ||
+     !(PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM & packet_piece->params)) {
     SAFE_PRINTF_LOG_ERROR("Pkt cant piggyback");
     //No piggyback allowed for this packet
     return 0;
@@ -171,6 +175,7 @@ piggyback_apply(iotus_packet_t *packet_piece) {
   iotus_piggyback_t *h;
   iotus_piggyback_t *nextH;
   
+
   h = list_head(gPiggybackFramesList);
   if(h == NULL) {
     SAFE_PRINTF_LOG_ERROR("Piggy search NULL");
@@ -190,6 +195,7 @@ piggyback_apply(iotus_packet_t *packet_piece) {
     }
     h = nextH;
   }
+
 
   return packet_get_size(packet_piece);
 }

@@ -37,6 +37,7 @@
 typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
   iotus_node_t *nextDestinationNode;
+  uint8_t iotusHeader;
   uint16_t firstHeaderBitSize;
   uint16_t lastHeaderSize;
   LIST_STRUCT(additionalInfoList);
@@ -83,14 +84,17 @@ iotus_node_t *
 packet_get_next_destination(iotus_packet_t *packetPiece);
 
 Status
-packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power);
+packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel);
+
+Status
+packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQuality, uint8_t rssi);
 
 int8_t
 packet_get_tx_power(iotus_packet_t *packetPiece);
 
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
-    uint16_t timeout, const uint8_t* payload,
+    uint16_t timeout, const uint8_t* payload, Boolean insertIotusHeader,
     iotus_node_t *finalDestination, void *callbackFunction);
 
 Boolean
@@ -110,6 +114,14 @@ packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 uint8_t
 packet_read_byte(uint16_t bytePos, iotus_packet_t *packet_piece);
 
+Status
+packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t num);
+
+uint32_t
+packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, uint8_t num);
+
+void
+packet_parse(iotus_packet_t *packetPiece);
 
 /* This function provides the core access to basic operations into this service */
 void

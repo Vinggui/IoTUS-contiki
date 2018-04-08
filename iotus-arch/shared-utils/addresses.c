@@ -89,7 +89,9 @@ addresses_set_value(iotus_address_type type, const uint8_t *value)
 uint8_t *
 addresses_get_pointer(iotus_address_type type)
 {
-  if(IOTUS_ADDRESSES_TYPE_ADDR_SHORT == type) {
+  if(0 == type) {
+    return NULL;
+  } else if(IOTUS_ADDRESSES_TYPE_ADDR_SHORT == type) {
     return iotus_node_id_hardcoded;
   } else if(IOTUS_ADDRESSES_TYPE_ADDR_LONG == type) {
     return iotus_node_long_id_hardcoded;
