@@ -118,7 +118,7 @@ Status
 packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t num);
 
 uint32_t
-packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, uint8_t num);
+packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num);
 
 void
 packet_parse(iotus_packet_t *packetPiece);

@@ -1,5 +1,5 @@
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -7,7 +7,7 @@
  */
 
 /*
- * edytee-MAC.c
+ * testMAC.c
  *
  *  Created on: Nov 18, 2017
  *      Author: vinicius
@@ -51,12 +51,10 @@ PROCESS_THREAD(contikiMAC_proc, ev, data)
 
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
       piggyback_create_piece(
-        8,(const uint8_t *)"cacho!!!",0,
+        8,(const uint8_t *)"Tides!!!",0,
         NODES_BROADCAST, 3000);
     }
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
-      SAFE_PRINTF_CLEAN("Deu - BC\n");
-
       iotus_packet_t *packet = packet_create_msg(10, IOTUS_PRIORITY_DATA_LINK, 5000,
         (const uint8_t *)"BUeste msg", TRUE,
         NODES_BROADCAST, NULL);
@@ -114,6 +112,7 @@ receive(iotus_packet_t *packet)
   if(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
     SAFE_PRINTF_CLEAN("Rcv pkt broadcast\n");
   }
+  SAFE_PRINTF_CLEAN("msg data %x",pieces_get_data_pointer(packet)[0]);
   
 }
 
@@ -182,7 +181,7 @@ close(void)
 {
 }
 
-const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
+const struct iotus_data_link_protocol_struct testMAC_protocol = {
   start,
   post_start,
   run,

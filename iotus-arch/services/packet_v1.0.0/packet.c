@@ -516,34 +516,46 @@ packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t 
  * \return The sequence of Bit read.
  */
 uint32_t
-packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, uint8_t num)
+packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num)
 {
-  if(packetPiece == NULL || num > 32) {
+  if(packetPiece == NULL || num > 32 || num < 1) {
     return 0;
   }
   uint32_t result;
-  uint16_t byteToStart;
+  uint16_t byteToRead;
+  uint8_t bitMask;
+
   /**
    * Adding this remainder is necessary for correct read of the whole requested
    * num size.
    */
-  num += packetPiece->firstHeaderBitSize%8;
-  byteToStart = packetPiece->firstHeaderBitSize/8;
+  byteToRead = packetPiece->firstHeaderBitSize/8;
 
+  //Create a mask for the first byte of this reading
+  bitMask = (1<<(8-packetPiece->firstHeaderBitSize%8))-1;
+
+  //Do the first read
   result = 0;
-  while(num/8 > 0) {
+  result |= (uint32_t)pieces_get_data_pointer(packetPiece)[byteToRead];
+  result &= bitMask;
+  /**
+   * bitMask won`t be used anymore... reusing it for counting...
+   */
+  bitMask = 8-packetPiece->firstHeaderBitSize%8;
+  num -= bitMask;
+  packetPiece->firstHeaderBitSize += bitMask;
+
+  while(num > 0) {
     result = (result<<8);
-    result |= (uint32_t)pieces_get_data_pointer(packetPiece)[byteToStart];
+    byteToRead++;
+    result |= (uint32_t)pieces_get_data_pointer(packetPiece)[byteToRead];
     num -= 8;
-    byteToStart++;
     packetPiece->firstHeaderBitSize += 8;
   }
-  //Complete getting the rest of the bits
-  for(;num>0;num--) {
-    byteToStart = packetPiece->firstHeaderBitSize/8;
-    result = (result<<1);
-    result |= (1 & (uint32_t)pieces_get_data_pointer(packetPiece)[byteToStart]);
-    packetPiece->firstHeaderBitSize++;
+  /* If num is negative... */
+  if(num) {
+    result = result>>(-num);
+    packetPiece->firstHeaderBitSize += num;
   }
   return result;
 }
@@ -572,10 +584,11 @@ packet_parse(iotus_packet_t *packetPiece) {
     packetPiece->firstHeaderBitSize = 9-packetPiece->firstHeaderBitSize;
     //Now that we found the first bit of the packet, we can ignore it.
     uint8_t byteMapToReset = 1<< (8-packetPiece->firstHeaderBitSize);
-    *pieces_get_data_pointer(packetPiece) &= ~(byteMapToReset);
+    
+    pieces_get_data_pointer(packetPiece)[0] &= ~(byteMapToReset);
 
     //Get the dynamic header now
-    packetPiece->iotusHeader = packet_unwrap_pushed_bit(packetPiece,sizeof(packetPiece->iotusHeader));
+    packetPiece->iotusHeader = packet_unwrap_pushed_bit(packetPiece,PACKET_IOTUS_HDR_FIRST_BIT_POS-1);
     
     if(packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
       packetPiece->nextDestinationNode = NODES_BROADCAST;

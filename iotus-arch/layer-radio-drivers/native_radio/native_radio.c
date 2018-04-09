@@ -23,6 +23,7 @@
 #include "packet-defs.h"
 #include "packet-default-additional-info.h"
 #include "platform-conf.h"
+#include <string.h>
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "native-radio"
@@ -30,6 +31,7 @@
 
 #define OUTPUT_POWER_MAX   0
 #define OUTPUT_POWER_MIN -25
+#define FOOTER_LEN        2
 
 static iotus_address_type g_used_address_type;
 static uint8_t g_software_addr_filtering;
@@ -37,6 +39,8 @@ static Boolean g_expect_new_iotus_packet_hdr;
 
 static uint8_t receive_on;
 static int channel;
+
+uint8_t emu_msg[200];
 
 /*---------------------------------------------------------------------------*/
 static radio_result_t
@@ -178,12 +182,19 @@ prepare(iotus_packet_t *packet)
   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                 IOTUS_CHORE_PKT_CHECKSUM)) {
     total_len = packet->data.size + 2;
+    emu_msg[total_len-1] = 21;
+    emu_msg[total_len-2] = 42;
   } else {
     total_len = packet->data.size;
   }
 
   //Nothing to do right now
   total_len = total_len;
+  
+
+  emu_msg[0]= total_len;
+  memcpy(emu_msg+1, pieces_get_data_pointer(packet), packet->data.size);
+
   return 0;
 }
 
@@ -206,7 +217,136 @@ transmit(iotus_packet_t *packet)
     SAFE_PRINTF_LOG_INFO("Power set by packet to %d",tempTxPower);
   }
 
+
+  SAFE_PRINTF_CLEAN("Null radio sending %u bytes:\n<",packet->data.size);
+  SAFE_PRINT_BUF((char *)pieces_get_data_pointer(packet),packet->data.size);
+  SAFE_PRINT(">\n");
+
   return RADIO_RESULT_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static iotus_packet_t *
+read(void)
+{
+  uint8_t footer[FOOTER_LEN];
+  uint8_t len;
+
+  //Emulated input...
+  len=emu_msg[0];
+
+  if(len > 200) {
+    /* Oops, we must be out of sync. */
+    iotus_parameters_radio_events.badSynch++;
+  } else if(len <= FOOTER_LEN) {
+    iotus_parameters_radio_events.badRxPacketShort++;
+  } else {
+    /* reserve space for this packet */
+    iotus_packet_t *packet = packet_create_msg(
+                                len - FOOTER_LEN,
+                                IOTUS_PRIORITY_RADIO,
+                                0,
+                                NULL,
+                                FALSE,
+                                NULL,
+                                NULL);
+    if(packet == NULL) {
+      SAFE_PRINTF_LOG_ERROR("No storage to receive pkt\n");
+      //Drop packet or try later...
+      return NULL;
+    }
+
+    memcpy(pieces_get_data_pointer(packet),emu_msg+1, len - FOOTER_LEN);
+    memcpy(footer, emu_msg+1+len, FOOTER_LEN);
+
+    //if(footer[1] & FOOTER1_CRC_OK) {
+    if(1) {//Jump CS verification...
+      //cc2420_last_rssi = footer[0] + RSSI_OFFSET;
+      //cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
+
+
+      //Check the address and filtering options
+      if(g_expect_new_iotus_packet_hdr == TRUE) {
+        packet_parse(packet);
+
+        if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+          /**
+           * In cases where broadcast is sent, only the source addr is received
+           * If this is not a broadcast, then we can try to receive to a specific node.
+           */
+
+          if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                          IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+            uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+            if(FAILURE == packet_unwrap_appended_byte(
+                              packet,
+                              address,
+                              ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+              SAFE_PRINTF_LOG_ERROR("Failed couldn't unwrap.");
+              packet_destroy(packet);
+              return NULL;
+            }
+
+            SAFE_PRINTF_LOG_ERROR("Got source addr %u %u\n",address[1],address[0]);
+            if(FALSE == addresses_compare(address,
+                          addresses_get_pointer(g_used_address_type),
+                          ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+              //This message is not for us... Drop it?
+              SAFE_PRINTF_LOG_ERROR("Dropping pckt!, wrong dest.");
+              packet_destroy(packet);
+              return NULL;
+            }
+            //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
+            //EXTRAIR INFORMACOES PARA O PACOTE
+          }
+        }
+
+        if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+                                        IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+          uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+          if(FAILURE == packet_unwrap_appended_byte(
+                            packet,
+                            address,
+                            ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+            SAFE_PRINTF_LOG_ERROR("Failed to get prev address.");
+            packet_destroy(packet);
+            return NULL;
+          }
+          if(NULL == pieces_set_additional_info(packet->additionalInfoList,
+                                     IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+                                     address,
+                                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                                     TRUE)) {
+            SAFE_PRINTF_LOG_ERROR("Failed to create additional info");
+          }
+        }
+      }
+
+      uint8_t header = packet_unwrap_pushed_bit(packet,3);
+
+      iotus_parameters_radio_events.lastRSSI = footer[0];
+      iotus_parameters_radio_events.lastLinkQuality = footer[1];
+      //Add the other information in this packet
+      if(FAILURE == packet_set_rx_block(
+                      packet,
+                      0,
+                      footer[1],
+                      footer[0])) {
+        SAFE_PRINTF_LOG_ERROR("Failed add rx block info.");
+      }
+
+      iotus_parameters_radio_events.receptions++;
+    } else {
+      iotus_parameters_radio_events.badRxChecksumFail++;
+      len = FOOTER_LEN;
+      packet_destroy(packet);
+      return NULL;
+    }
+
+    return packet;
+  }
+  return NULL;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -215,9 +355,10 @@ static int
 send(iotus_packet_t *packet)
 {
   prepare(packet);
-  SAFE_PRINTF_CLEAN("Null radio sending %u bytes:\n<",packet->data.size);
-  SAFE_PRINT_BUF((char *)pieces_get_data_pointer(packet),packet->data.size);
-  SAFE_PRINT(">\n");
+  transmit(packet);
+
+  //test
+  read();
   return 1;
 }
 
@@ -273,7 +414,7 @@ const struct iotus_radio_driver_struct native_radio_radio_driver = {
   prepare,
   transmit,
   send,
-  NULL,//cc2420_read,
+  read,
   NULL,//cc2420_cca,
   NULL,//cc2420_receiving_packet,
   NULL,//pending_packet,
