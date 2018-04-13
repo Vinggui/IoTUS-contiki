@@ -52,30 +52,6 @@ packet_destroy(iotus_packet_t *piece) {
 }
 
 /*---------------------------------------------------------------------*/
-/**
- * Return the pointer to the variable of interest
- */
-static Status
-get_a_additional_info_var(iotus_packet_t *packetPiece, uint8_t type, void *var, uint16_t size)
-{
-  iotus_additional_info_t *addInfoPiece =
-            pieces_get_additional_info(packetPiece->additionalInfoList, type);
-  if(NULL == addInfoPiece) {
-    addInfoPiece = pieces_set_additional_info(packetPiece->additionalInfoList,
-                                type,
-                                (uint8_t *)(&txBlock_var),
-                                sizeof(packet_tx_block_input_t),
-                                TRUE);
-    if(addInfoPiece == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Add info creation");
-      return FAILURE;
-    }
-  }
-  (void *)pieces_get_data_pointer(addInfoPiece);
-  return SUCCESS;
-}
-
-/*---------------------------------------------------------------------*/
 /*
  * \brief verify if a certain parameter is defined
  * \param packetPiece Packet to be read.
@@ -168,14 +144,62 @@ packet_set_final_destination(iotus_packet_t *packetPiece, iotus_node_t *node)
 }
 /*---------------------------------------------------------------------*/
 Boolean
-packet_holds_broadcast(iotus_packet_t *packetiece)
+packet_holds_broadcast(iotus_packet_t *packetPiece)
 {
-  if(NULL == packetiece) {
+  if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return FAILURE;
   }
   return packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST?TRUE:FALSE;
 }
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific tx channel for a packet transmission
+ * @param packetPiece   Packet to set.
+ * @param channel       The channel to be used, accordingly to the radios limits.
+ * \return              Status of this set.
+ */
+Status
+packet_set_tx_channel(iotus_packet_t *packetPiece, uint8_t channel)
+{
+  packet_tx_block_input_t  *txBlockInfo = pieces_modify_additional_info_var(
+                                            packetPiece->additionalInfoList,
+                                            IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
+                                            sizeof(packet_tx_block_input_t),
+                                            TRUE);
+  if(txBlockInfo == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info not set");
+    return FAILURE;
+  }
+  //Just set the value into the buffer
+  txBlockInfo->channel = channel;
+  return SUCCESS;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Get a specific Tx channel for a packet transmission
+ * @param packetPiece   Packet to check.
+ * \return              The channel to be used. -1 if operation fails.
+ */
+int16_t
+packet_get_tx_channel(iotus_packet_t *packetPiece)
+{
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(
+                                              packetPiece->additionalInfoList,
+                                              IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
+  if(NULL == addInfo) {
+    //Found this address type...
+    SAFE_PRINTF_LOG_ERROR("Add info not found");
+    return -1;
+  }
+
+  packet_tx_block_input_t *txBlockInfo = (packet_tx_block_input_t *)pieces_get_data_pointer(addInfo);
+  
+  return (uint16_t)(txBlockInfo->channel);
+}
+
 /*---------------------------------------------------------------------*/
 /**
  * \brief               Set a specific tx power for a packet transmission
@@ -184,90 +208,19 @@ packet_holds_broadcast(iotus_packet_t *packetiece)
  * \return              Status of this set.
  */
 Status
-packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel)
+packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power)
 {
-  iotus_additional_info_t *txBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
-                    IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
-
-  packet_tx_block_input_t txBlock_var;
-  txBlock_var.txPower = power;
-  txBlock_var.channel = channel;
-  if(NULL == txBlockInfo) {
-    //This packet does not have this block yet
-    txBlockInfo = pieces_set_additional_info(packetPiece->additionalInfoList,
-                                IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
-                                (uint8_t *)(&txBlock_var),
-                                sizeof(packet_tx_block_input_t),
-                                TRUE);
-    if(txBlockInfo == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Add info not set");
-      return FAILURE;
-    }
-  } else {
-    //Just set the value into the buffer
-    uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
-    memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
-    txBlock_var.txPower = power;
-    memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
+  packet_tx_block_input_t  *txBlockInfo = pieces_modify_additional_info_var(
+                                            packetPiece->additionalInfoList,
+                                            IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
+                                            sizeof(packet_tx_block_input_t),
+                                            TRUE);
+  if(txBlockInfo == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info not set");
+    return FAILURE;
   }
-  return SUCCESS;
-}
-
-/*---------------------------------------------------------------------*/
-
-Status
-packet_set_sequence_number(iotus_packet_t *packetPiece, uint8_t sequence)
-{
-  iotus_additional_info_t *sequenceNum = pieces_get_additional_info(packetPiece->additionalInfoList,
-                    IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER);
-
-  if(NULL == sequenceNum) {
-    //This packet does not have this block yet
-    sequenceNum = pieces_set_additional_info(packetPiece->additionalInfoList,
-                                IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
-                                &sequence,
-                                1,
-                                TRUE);
-    if(sequenceNum == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Add info not set");
-      return FAILURE;
-    }
-  }
-  return SUCCESS;
-}
-
-/*---------------------------------------------------------------------*/
-/**
- * \brief               Set a specific rx block for a packet transmission
- * \param packetPiece   Packet to set.
- * \param netId         The network Id of this packet (PanID).
- * \param linkQuality   The link quality received with this packet.
- * \param rssi          This RSSI value received with this packet.
- * \return              Status of this set.
- */
-Status
-
-packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQuality, uint8_t rssi)
-{
-  iotus_additional_info_t *rxBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
-                    IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK);
-
-  packet_rcv_block_output_t rxBlock_var;
-  if(NULL == rxBlockInfo) {
-    rxBlock_var.networkID = netId;
-    rxBlock_var.linkQuality = linkQuality;
-    rxBlock_var.rssi = rssi;
-    //This packet does not have this block yet
-    rxBlockInfo = pieces_set_additional_info(packetPiece->additionalInfoList,
-                                IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
-                                (uint8_t *)(&rxBlock_var),
-                                sizeof(packet_rcv_block_output_t),
-                                TRUE);
-    if(rxBlockInfo == NULL) {
-      SAFE_PRINTF_LOG_ERROR("Add info not set");
-      return FAILURE;
-    }
-  }
+  //Just set the value into the buffer
+  txBlockInfo->txPower = power;
   return SUCCESS;
 }
 
@@ -280,15 +233,129 @@ packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQua
 int8_t
 packet_get_tx_power(iotus_packet_t *packetPiece)
 {
-  iotus_additional_info_t *txBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,
-                    IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
-
-  if(NULL == txBlockInfo) {
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(
+                                          packetPiece->additionalInfoList,
+                                          IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
+  if(NULL == addInfo) {
+    //Found this address type...
+    SAFE_PRINTF_LOG_ERROR("Add info not found");
     return 0xFF;
   }
+
+  packet_tx_block_input_t *txBlockInfo = (packet_tx_block_input_t *)pieces_get_data_pointer(addInfo);
+
+  return txBlockInfo->txPower;
+}
+
+/*---------------------------------------------------------------------*/
+Status
+packet_set_sequence_number(iotus_packet_t *packetPiece, uint8_t sequence)
+{
+  uint8_t *sequenceNum = pieces_modify_additional_info_var(
+                              packetPiece->additionalInfoList,
+                              IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
+                              1,
+                              TRUE);
+  if(sequenceNum == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info not set");
+    return FAILURE;
+  }
+  *sequenceNum = sequence;
+  return SUCCESS;
+}
+
+/*---------------------------------------------------------------------*/
+
+int16_t
+packet_get_sequence_number(iotus_packet_t *packetPiece)
+{
+
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(
+                                          packetPiece->additionalInfoList,
+                                          IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER);
+  if(NULL == addInfo) {
+    //Found this address type...
+    SAFE_PRINTF_LOG_ERROR("Add info not found");
+    return -1;
+  }
+
+  return (uint16_t)(*(pieces_get_data_pointer(addInfo)));
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific Rx netID for a packet reception
+ * @param packetPiece   Packet to set.
+ * @param netID         The netID (PanID) to be set.
+ * \return              Status of this set.
+ */
+Status
+packet_set_rx_netID(iotus_packet_t *packetPiece, uint16_t netID)
+{
+  packet_rcv_block_output_t  *rxBlockInfo = pieces_modify_additional_info_var(
+                                            packetPiece->additionalInfoList,
+                                            IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK,
+                                            sizeof(packet_rcv_block_output_t),
+                                            TRUE);
+  if(rxBlockInfo == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info not set");
+    return FAILURE;
+  }
   //Just set the value into the buffer
-  packet_tx_block_input_t *txBlock_var = (packet_tx_block_input_t *)pieces_get_data_pointer(txBlockInfo);
-  return txBlock_var->txPower;
+  rxBlockInfo->networkID = netID;
+  return SUCCESS;
+}
+
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific Rx link quality for a packet reception
+ * @param packetPiece   Packet to set.
+ * @param linkQuality   The link quality to be set.
+ * @param rssi          The rssi to be set.
+ * \return              Status of this set.
+ */
+Status
+packet_set_rx_linkQuality_RSSI(iotus_packet_t *packetPiece, uint8_t linkQuality, uint8_t rssi)
+{
+  packet_rcv_block_output_t  *rxBlockInfo = pieces_modify_additional_info_var(
+                                            packetPiece->additionalInfoList,
+                                            IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK,
+                                            sizeof(packet_rcv_block_output_t),
+                                            TRUE);
+  if(rxBlockInfo == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Add info not set");
+    return FAILURE;
+  }
+  //Just set the value into the buffer
+  rxBlockInfo->linkQuality = linkQuality;
+  rxBlockInfo->rssi = rssi;
+  return SUCCESS;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief               Set a specific Rx link quality for a packet reception
+ * @param packetPiece   Packet to set.
+ * @param linkQuality   The link quality to be set.
+ * @param rssi          The rssi to be set.
+ * \return              Status of this set.
+ */
+packet_rcv_block_output_t *
+packet_get_rx_block(iotus_packet_t *packetPiece)
+{
+
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(
+                                          packetPiece->additionalInfoList,
+                                          IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK);
+  if(NULL == addInfo) {
+    //Found this address type...
+    SAFE_PRINTF_LOG_ERROR("Add info not found");
+    return NULL;
+  }
+
+  packet_rcv_block_output_t *rxBlockInfo = (packet_rcv_block_output_t *)pieces_get_data_pointer(addInfo);
+  return rxBlockInfo;
 }
 
 /*---------------------------------------------------------------------*/

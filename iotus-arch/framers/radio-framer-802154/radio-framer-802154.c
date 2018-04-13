@@ -53,13 +53,13 @@ create_frame(iotus_packet_t *packet)
 
   /* Build the FCF. */
   params.fcf.frame_type = packet->type;
-  params.fcf.frame_pending = packet_verify_parameter(packet,PACKET_PARAMETERS_PENDING);
+  params.fcf.frame_pending = packet_get_parameter(packet,PACKET_PARAMETERS_PENDING);
   if(packet_holds_broadcast(packet)) {
     params.fcf.ack_required = 0;
     /* Suppress seqno on broadcast if supported (frame v2 or more) */
     params.fcf.sequence_number_suppression = FRAME802154_VERSION >= FRAME802154_IEEE802154E_2012;
   } else {
-    params.fcf.ack_required = packet_verify_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
+    params.fcf.ack_required = packet_get_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
     params.fcf.sequence_number_suppression = FRAME802154_SUPPR_SEQNO;
   }
   /* We do not compress PAN ID in outgoing frames, i.e. include one PAN ID (dest by default)
@@ -91,11 +91,7 @@ create_frame(iotus_packet_t *packet)
 #endif /* LLSEC802154_USES_AUX_HEADER */
 
   /* Increment and set the data sequence number. */
-  if(!do_create) {
-    /* Only length calculation - no sequence number is needed and
-       should not be consumed. */
-
-  } else if(packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO)) {
+ if(packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO)) {
     params.seq = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
 
   } else {

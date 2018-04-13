@@ -1084,13 +1084,17 @@ cc2420_read(void)
             packet_destroy(packet);
             return NULL;
           }
-          if(NULL == pieces_set_additional_info(packet->additionalInfoList,
-                                     IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
-                                     address,
-                                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                                     TRUE)) {
+          uint8_t *addrPointer = pieces_modify_additional_info_var(
+                                      packet->additionalInfoList,
+                                      IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+                                      ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+                                      TRUE);
+          if(NULL == addrPointer) {
             PRINTF("Failed to create additional info");
+          } else {
+            memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
           }
+          
         }
       }
 

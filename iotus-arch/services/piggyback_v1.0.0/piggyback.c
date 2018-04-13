@@ -111,7 +111,7 @@ static Boolean
 insert_piggyback_to_packet(iotus_packet_t *packet_piece,
                     iotus_piggyback_t *piggyback_piece, Boolean stick)
 {
-  if(packet_verify_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
+  if(packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
     //TODO This packet allows fragmentation...
     SAFE_PRINT("Packet w/ fragTODO\n");
   } else {
@@ -164,7 +164,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
  */
 uint16_t
 piggyback_apply(iotus_packet_t *packet_piece) {
-  if(!packet_verify_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK) ||
+  if(!packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK) ||
      !(PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM & packet_piece->params)) {
     SAFE_PRINTF_LOG_ERROR("Pkt cant piggyback");
     //No piggyback allowed for this packet

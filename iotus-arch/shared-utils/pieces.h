@@ -48,7 +48,7 @@
   structName *next;\
   struct mmem data;\
   uint8_t type;\
-  uint8_t isCopied;
+  uint8_t isBuffered;
 
 
 typedef struct generic_piece {
@@ -80,8 +80,10 @@ pieces_clean_additional_info_list(list_t list);
 iotus_additional_info_t *
 pieces_get_additional_info(list_t list, uint8_t type);
 
-iotus_additional_info_t *
-pieces_set_additional_info(list_t list, uint8_t type, uint8_t *data, uint16_t dataSize, Boolean copyIntoBuffer);
+void *
+pieces_modify_additional_info_var(list_t list, uint8_t type,
+                                  uint16_t varSize,
+                                  Boolean createBuffer);
 
 Boolean
 pieces_destroy(struct memb *m, void *h);

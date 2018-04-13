@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "addresses.h"
 #include "global-parameters.h"
 #include "lib/memb.h"
@@ -49,7 +50,9 @@ nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
   if(node == NODES_BROADCAST) {
     return addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_BROADCAST);
   }
-  iotus_additional_info_t *addressInfo = pieces_get_additional_info(node->additionalInfoList, addressType);
+  iotus_additional_info_t *addressInfo = pieces_get_additional_info(
+                                              node->additionalInfoList,
+                                              addressType);
   if(NULL != addressInfo) {
     //Found this address type...
     return pieces_get_data_pointer(addressInfo);
@@ -95,14 +98,16 @@ nodes_get_node_by_address(iotus_address_type addressType, uint8_t *address)
 Boolean
 nodes_set_address(iotus_node_t *node, iotus_address_type addressType, uint8_t *address)
 {
-  if(NULL == pieces_set_additional_info(node->additionalInfoList,
-                                           IOTUS_NODES_ADD_INFO_TYPE_ADDR_LONG,
-                                           address,
-                                           ADDRESSES_GET_TYPE_SIZE(addressType),
-                                           TRUE)) {
+  uint8_t *addrPointer = pieces_modify_additional_info_var(
+                              node->additionalInfoList,
+                              addressType,
+                              ADDRESSES_GET_TYPE_SIZE(addressType),
+                              TRUE);
+  if(NULL == addrPointer) {
     SAFE_PRINTF_LOG_ERROR("Set address fail");
     return FALSE;
   }
+  memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(addressType));
   return TRUE;
 }
 

@@ -100,13 +100,31 @@ Boolean
 packet_holds_broadcast(iotus_packet_t *packetiece);
 
 Status
-packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel);
+packet_set_tx_channel(iotus_packet_t *packetPiece, uint8_t channel);
+
+int16_t
+packet_get_tx_channel(iotus_packet_t *packetPiece);
 
 Status
-packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQuality, uint8_t rssi);
+packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power);
 
 int8_t
 packet_get_tx_power(iotus_packet_t *packetPiece);
+
+int16_t
+packet_get_sequence_number(iotus_packet_t *packetPiece);
+
+int16_t
+packet_get_sequence_number(iotus_packet_t *packetPiece);
+
+Status
+packet_set_rx_netID(iotus_packet_t *packetPiece, uint16_t netID);
+
+Status
+packet_set_rx_linkQuality_RSSI(iotus_packet_t *packetPiece, uint8_t linkQuality, uint8_t rssi);
+
+packet_rcv_block_output_t *
+packet_get_rx_block(iotus_packet_t *packetPiece);
 
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,

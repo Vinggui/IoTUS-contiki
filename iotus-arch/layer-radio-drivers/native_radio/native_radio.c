@@ -315,13 +315,14 @@ read(void)
             packet_destroy(packet);
             return NULL;
           }
-          if(NULL == pieces_set_additional_info(packet->additionalInfoList,
+          uint8_t *addrPointer = pieces_modify_additional_info_var(packet->additionalInfoList,
                                      IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
-                                     address,
                                      ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                                     TRUE)) {
+                                     TRUE);
+          if(NULL == addrPointer) {
             SAFE_PRINTF_LOG_ERROR("Failed to create additional info");
           }
+          memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
         }
       }
 
@@ -330,9 +331,8 @@ read(void)
       iotus_parameters_radio_events.lastRSSI = footer[0];
       iotus_parameters_radio_events.lastLinkQuality = footer[1];
       //Add the other information in this packet
-      if(FAILURE == packet_set_rx_block(
+      if(FAILURE == packet_set_rx_linkQuality_RSSI(
                       packet,
-                      0,
                       footer[1],
                       footer[0])) {
         SAFE_PRINTF_LOG_ERROR("Failed add rx block info.");
@@ -409,7 +409,7 @@ close(void)
 /*---------------------------------------------------------------------------*/
 
 const struct iotus_radio_driver_struct native_radio_radio_driver = {
-  "native radio";
+  "native radio",
   start,
   post_start,
   run,

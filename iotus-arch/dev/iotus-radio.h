@@ -252,6 +252,13 @@ enum {
 
 #define RADIO_ADDR_OPTIONS_MATCH(type,value) ((1<<(ADDRESSES_GET_TYPE_SIZE(type)-1))&value)
 
+
+struct framer {
+  int (* length)(void);
+  int (* create)(iotus_packet_t *packet);
+  int (* parse)(iotus_packet_t *packet);
+};
+
 /**
  * The structure of a device driver for a radio in Contiki.
  */

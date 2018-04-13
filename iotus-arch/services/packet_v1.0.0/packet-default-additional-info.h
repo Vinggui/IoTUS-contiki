@@ -45,7 +45,7 @@ enum packet_additionalInfoList_types {
 /**
  * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_RADIO_RCV_BLCK
  */
-typedef struct packet_rcv_additional_info {
+typedef struct __attribute__ ((__packed__)) packet_rcv_additional_info {
   uint16_t networkID;
   int8_t linkQuality;
   int8_t rssi; //got from CCA
@@ -54,7 +54,7 @@ typedef struct packet_rcv_additional_info {
 /**
  * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK
  */
-typedef struct packet_tx_additional_info {
+typedef struct __attribute__ ((__packed__)) packet_tx_additional_info {
   uint8_t txPower;
   uint8_t channel;
 } packet_tx_block_input_t;
@@ -63,7 +63,7 @@ typedef struct packet_tx_additional_info {
  * This struct is preceded by the type IOTUS_PACKET_INFO_TYPE_P2P_ADDRESSES
  * Used to inform end to end communications
  */
-typedef struct packet_e2e_nodes_addit_info {
+typedef struct __attribute__ ((__packed__)) packet_e2e_nodes_addit_info {
   iotus_node_t *sourceNode;
   iotus_node_t *finaLNode;
 } packet_addresses_block_t;

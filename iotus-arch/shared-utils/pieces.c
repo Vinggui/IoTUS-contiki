@@ -152,12 +152,12 @@ pieces_destroy(struct memb *m, void *h)
 void
 pieces_destroy_additional_info(list_t list, iotus_additional_info_t *item)
 {
-  if(list==NULL || item==NULL) {
+  if(list == NULL || item == NULL) {
     SAFE_PRINTF_LOG_ERROR("Add info Destroy");
     return;
   }
   list_remove(list,item);
-  if(item->isCopied == TRUE) {
+  if(item->isBuffered == TRUE) {
     #if IOTUS_USING_MALLOC == 0
     mmem_free(&(item->data));
     #else
@@ -190,32 +190,29 @@ pieces_clean_additional_info_list(list_t list)
 
 /*---------------------------------------------------------------------*/
 /**
- * \brief                Allocate, set/copy and link the additional information required.
+ * \brief                Allocate, set and link the additional information required.
  *                       Hence, the information has to be given by its pointer and size only.
- * \param list           The linst where this info will be linked.
- * \param data           The value to be set/copied.
- * \param dataSize       The size of this value
- * \param copyIntoBuffer If the value needs to be copied of not.
- * \return               The pointer to this additional information.
+ * \param list           The list where this info will be linked.
+ * \param varSize       The size of this value
+ * \param createBuffer   If the value needs to be created of not.
+ * \return               The pointer to this additional information var.
  */
-iotus_additional_info_t *
-pieces_set_additional_info(list_t list, uint8_t type,
-                          uint8_t *data, uint16_t dataSize,
-                          Boolean copyIntoBuffer)
+void *
+pieces_modify_additional_info_var(list_t list, uint8_t type,
+                                  uint16_t varSize,
+                                  Boolean createBuffer)
 {
   if(NULL == list) {
     return NULL;
   }
 
-
   //Verify if this list already has this info...
   iotus_additional_info_t *addInfo = pieces_get_additional_info(list,type);
   if(NULL != addInfo) {
-    //Destroy it first
-    pieces_destroy_additional_info(list, addInfo);
+    return pieces_get_data_pointer(addInfo);
   } 
 
-  //recreate it...
+  //create it...
   #if IOTUS_USING_MALLOC == 0
   addInfo = memb_alloc(&iotus_additional_info_handlers_mem);
   if(NULL == addInfo) {
@@ -231,35 +228,35 @@ pieces_set_additional_info(list_t list, uint8_t type,
   #endif
   
 
-  if(TRUE == copyIntoBuffer) {
-    addInfo->isCopied = TRUE;
+  if(TRUE == createBuffer) {
+    addInfo->isBuffered = TRUE;
 
     #if IOTUS_USING_MALLOC == 0
-    if(mmem_alloc(&(addInfo->data), dataSize) == 0) {
+    if(mmem_alloc(&(addInfo->data), varSize) == 0) {
       SAFE_PRINTF_LOG_ERROR("Alloc mmem");
       memb_free(&iotus_additional_info_handlers_mem, addInfo);
-      return FALSE;
+      return NULL;
     }
-    memcpy(MMEM_PTR(&(addInfo->data)), data, dataSize);
+    //memcpy(MMEM_PTR(&(addInfo->data)), var, varSize);
     #else
-    uint8_t *dataPointer = (uint8_t *)malloc(dataSize);
-    if(dataPointer == NULL) {
+    void *varPointer = malloc(varSize);
+    if(varPointer == NULL) {
       SAFE_PRINTF_LOG_ERROR("Alloc malloc");
       free(addInfo);
-      return FALSE;
+      return NULL;
     }
-    memcpy(dataPointer, data, dataSize);
-    addInfo->data.ptr = (void *)dataPointer;
+    //memcpy(varPointer, var, varSize);
+    addInfo->data.ptr = varPointer;
     #endif
   } else {
-    addInfo->isCopied = FALSE;
-    addInfo->data.size = dataSize;
-    addInfo->data.ptr = (void *)data;
+    addInfo->isBuffered = FALSE;
+    addInfo->data.size = varSize;
+    addInfo->data.ptr = NULL;
   }
 
   addInfo->type = type;
   list_push(list, addInfo);
-  return addInfo;
+  return pieces_get_data_pointer(addInfo);
 }
 
 /*---------------------------------------------------------------------*/
