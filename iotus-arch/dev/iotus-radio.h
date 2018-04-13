@@ -201,10 +201,10 @@ enum {
 };
 
 /* Radio power modes */
-enum {
+typedef enum {
   RADIO_POWER_MODE_OFF,
   RADIO_POWER_MODE_ON
-};
+} radio_status;
 
 /**
  * The radio reception mode controls address filtering and automatic
@@ -256,6 +256,7 @@ enum {
  * The structure of a device driver for a radio in Contiki.
  */
 struct iotus_radio_driver_struct {
+  char *name;
   void (* start)(void);
   void (* post_start)(void);
   void (* run)(void);

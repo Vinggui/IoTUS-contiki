@@ -580,6 +580,7 @@ on(void)
 
   ENERGEST_ON(ENERGEST_TYPE_LISTEN);
   receive_on = 1;
+  iotus_parameters_radio_events.radioStatus = RADIO_POWER_MODE_ON;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -587,6 +588,7 @@ off(void)
 {
   /*  PRINTF("off\n");*/
   receive_on = 0;
+  iotus_parameters_radio_events.radioStatus = RADIO_POWER_MODE_OFF;
 
   /* Wait for transmission to end before turning radio off. */
   wait_for_transmission();
@@ -1428,6 +1430,7 @@ close(void)
 /*------------------------------------------------------*/
 const struct iotus_radio_driver_struct cc2420_radio_driver =
   {
+    "cc2420",
     cc2420_init,
     post_start,
     post_start,

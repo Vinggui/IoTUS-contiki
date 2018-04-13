@@ -177,7 +177,8 @@ void iotus_signal_handler_nodes(iotus_service_signal signal, void *data)
 
   }
   /* else if (IOTUS_RUN_SERVICE == signal){
-
+  //TODO: Delete nodes not heard after some time
+  //TODO: update sequence numbers
   } else if (IOTUS_END_SERVICE == signal){
 
   }*/

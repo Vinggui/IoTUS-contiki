@@ -57,6 +57,12 @@ typedef uint8_t Status;
 #define SUCCESS         1
 #define FAILURE         0
 
+struct framer {
+  int (* length)(void);
+  int (* create)(iotus_packet_t *packet);
+  int (* parse)(iotus_packet_t *packet);
+};
+
 struct iotus_transport_protocol_struct {
   void (* start)(void);
   void (* post_start)(void);

@@ -182,6 +182,7 @@ close(void)
 }
 
 const struct iotus_data_link_protocol_struct testMAC_protocol = {
+  "testMAC",
   start,
   post_start,
   run,

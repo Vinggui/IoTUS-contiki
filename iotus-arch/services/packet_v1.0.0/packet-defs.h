@@ -12,8 +12,11 @@
 //                    Packet parameters                     //
 //////////////////////////////////////////////////////////////
 #define PACKET_PARAMETERS_ALLOW_AGGREGATION         0b10000000
-#define PACKET_PARAMETERS_ALLOW_FRAGMENTATION       0b01000000
-#define PACKET_PARAMETERS_ALLOW_PIGGYBACK           0b00100000
+#define PACKET_PARAMETERS_ALLOW_PIGGYBACK           0b01000000
+#define PACKET_PARAMETERS_ALLOW_FRAGMENTATION       0b00100000
+#define PACKET_PARAMETERS_WAIT_FOR_ACK              0b00010000
+#define PACKET_PARAMETERS_PENDING                   0b00001000
+
 /*
  * New packet system requires that the radio add at least a single byte header.
  * That means that some packets can still cancel the use of the new header
@@ -25,8 +28,9 @@
 //              Packet iotus dynamic header                //
 /////////////////////////////////////////////////////////////
 #define PACKET_IOTUS_HDR_FIRST_BIT          0b00001000
-#define PACKET_IOTUS_HDR_FIRST_BIT_POS      4
+#define PACKET_IOTUS_HDR_FIRST_BIT_POS      5
 
+#define PACKET_IOTUS_HDR_REQUEST_ACK        0b00001000
 #define PACKET_IOTUS_HDR_NEIGHBOR_DISC      0b00000100
 #define PACKET_IOTUS_HDR_HAS_PIGGYBACK      0b00000010
 #define PACKET_IOTUS_HDR_IS_BROADCAST       0b00000001

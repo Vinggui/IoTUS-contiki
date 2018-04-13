@@ -53,7 +53,14 @@ typedef struct packet_piece {
  * in case they need to use some specific address not already expected by this architecture.
 */
 enum packet_types {
-  IOTUS_PACKET_TYPE_UNDEFINED = 0,
+  IOTUS_PACKET_TYPE_IEEE802154_BEACON = 0,
+  IOTUS_PACKET_TYPE_IEEE802154_DATA,
+  IOTUS_PACKET_TYPE_IEEE802154_ACK,
+  IOTUS_PACKET_TYPE_IEEE802154_COMMAND,
+  IOTUS_PACKET_TYPE_NEW_SYSTEM_BROADCAST,
+  IOTUS_PACKET_TYPE_NEW_SYSTEM_DATA,
+  IOTUS_PACKET_TYPE_NEW_SYSTEM_ACK,
+  IOTUS_PACKET_TYPE_NEW_SYSTEM_COMMAND,
 
   IOTUS_PACKET_TYPE___N
 };
@@ -72,7 +79,7 @@ enum packet_types {
  * Functions of this module
  */
 uint8_t
-packet_verify_parameter(iotus_packet_t *packet_piece, uint8_t param);
+packet_get_parameter(iotus_packet_t *packet_piece, uint8_t param);
 
 void
 packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param);
@@ -82,6 +89,15 @@ packet_get_final_destination(iotus_packet_t *packet_piece);
 
 iotus_node_t *
 packet_get_next_destination(iotus_packet_t *packetPiece);
+
+Status
+packet_set_next_destination(iotus_packet_t *packetPiece, iotus_node_t *node);
+
+Status
+packet_set_final_destination(iotus_packet_t *packetPiece, iotus_node_t *node);
+
+Boolean
+packet_holds_broadcast(iotus_packet_t *packetiece);
 
 Status
 packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel);

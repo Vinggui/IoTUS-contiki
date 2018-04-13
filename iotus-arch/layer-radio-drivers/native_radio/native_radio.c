@@ -116,6 +116,7 @@ static int
 on(void) {
   SAFE_PRINT("Radio is on!\n");
   receive_on = 1;
+  iotus_parameters_radio_events.radioStatus = RADIO_POWER_MODE_ON;
   return 1;
 }
 
@@ -125,6 +126,7 @@ static int
 off(void) {
   SAFE_PRINT("Radio is off!\n");
   receive_on = 0;
+  iotus_parameters_radio_events.radioStatus = RADIO_POWER_MODE_OFF;
   return 1;
 }
 
@@ -407,6 +409,7 @@ close(void)
 /*---------------------------------------------------------------------------*/
 
 const struct iotus_radio_driver_struct native_radio_radio_driver = {
+  "native radio";
   start,
   post_start,
   run,

@@ -51,6 +51,29 @@ packet_destroy(iotus_packet_t *piece) {
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
 
+/*---------------------------------------------------------------------*/
+/**
+ * Return the pointer to the variable of interest
+ */
+static Status
+get_a_additional_info_var(iotus_packet_t *packetPiece, uint8_t type, void *var, uint16_t size)
+{
+  iotus_additional_info_t *addInfoPiece =
+            pieces_get_additional_info(packetPiece->additionalInfoList, type);
+  if(NULL == addInfoPiece) {
+    addInfoPiece = pieces_set_additional_info(packetPiece->additionalInfoList,
+                                type,
+                                (uint8_t *)(&txBlock_var),
+                                sizeof(packet_tx_block_input_t),
+                                TRUE);
+    if(addInfoPiece == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Add info creation");
+      return FAILURE;
+    }
+  }
+  (void *)pieces_get_data_pointer(addInfoPiece);
+  return SUCCESS;
+}
 
 /*---------------------------------------------------------------------*/
 /*
@@ -60,15 +83,13 @@ packet_destroy(iotus_packet_t *piece) {
  * \return Boolean.
  */
 uint8_t
-packet_verify_parameter(iotus_packet_t *packetPiece, uint8_t param) {
+packet_get_parameter(iotus_packet_t *packetPiece, uint8_t param) {
   if(NULL == packetPiece) {
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return 0;
   }
 
-  if(packetPiece->params & param)
-    return TRUE;
-  return FALSE;
+  return packetPiece->params & param;
 }
 
 
@@ -124,6 +145,38 @@ packet_get_next_destination(iotus_packet_t *packetPiece)
 }
 
 /*---------------------------------------------------------------------*/
+Status
+packet_set_next_destination(iotus_packet_t *packetPiece, iotus_node_t *node)
+{
+  if(NULL == packetPiece || NULL == node) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return FAILURE;
+  }
+  packetPiece->nextDestinationNode = node;
+  return SUCCESS;
+}
+/*---------------------------------------------------------------------*/
+Status
+packet_set_final_destination(iotus_packet_t *packetPiece, iotus_node_t *node)
+{
+  if(NULL == packetPiece || NULL == node) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return FAILURE;
+  }
+  packetPiece->finalDestinationNode = node;
+  return SUCCESS;
+}
+/*---------------------------------------------------------------------*/
+Boolean
+packet_holds_broadcast(iotus_packet_t *packetiece)
+{
+  if(NULL == packetiece) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return FAILURE;
+  }
+  return packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST?TRUE:FALSE;
+}
+/*---------------------------------------------------------------------*/
 /**
  * \brief               Set a specific tx power for a packet transmission
  * @param packetPiece   Packet to set.
@@ -137,8 +190,9 @@ packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel)
                     IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
 
   packet_tx_block_input_t txBlock_var;
+  txBlock_var.txPower = power;
+  txBlock_var.channel = channel;
   if(NULL == txBlockInfo) {
-    txBlock_var.txPower = power;
     //This packet does not have this block yet
     txBlockInfo = pieces_set_additional_info(packetPiece->additionalInfoList,
                                 IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK,
@@ -149,15 +203,36 @@ packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel)
       SAFE_PRINTF_LOG_ERROR("Add info not set");
       return FAILURE;
     }
+  } else {
+    //Just set the value into the buffer
+    uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
+    memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
+    txBlock_var.txPower = power;
+    memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
   }
-  /*
-    Not necessary anymore...
-      //Just set the value into the buffer
-      uint8_t *addInfoDataPointer = pieces_get_data_pointer(txBlockInfo);
-      memcpy((uint8_t *)(&txBlock_var), addInfoDataPointer,sizeof(packet_tx_block_input_t));
-      txBlock_var.txPower = power;
-      memcpy(addInfoDataPointer, (uint8_t *)(&txBlock_var),sizeof(packet_tx_block_input_t));
-   */
+  return SUCCESS;
+}
+
+/*---------------------------------------------------------------------*/
+
+Status
+packet_set_sequence_number(iotus_packet_t *packetPiece, uint8_t sequence)
+{
+  iotus_additional_info_t *sequenceNum = pieces_get_additional_info(packetPiece->additionalInfoList,
+                    IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER);
+
+  if(NULL == sequenceNum) {
+    //This packet does not have this block yet
+    sequenceNum = pieces_set_additional_info(packetPiece->additionalInfoList,
+                                IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
+                                &sequence,
+                                1,
+                                TRUE);
+    if(sequenceNum == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Add info not set");
+      return FAILURE;
+    }
+  }
   return SUCCESS;
 }
 
@@ -171,6 +246,7 @@ packet_set_tx_block(iotus_packet_t *packetPiece, int8_t power, uint8_t channel)
  * \return              Status of this set.
  */
 Status
+
 packet_set_rx_block(iotus_packet_t *packetPiece, uint16_t netId, uint8_t linkQuality, uint8_t rssi)
 {
   iotus_additional_info_t *rxBlockInfo = pieces_get_additional_info(packetPiece->additionalInfoList,

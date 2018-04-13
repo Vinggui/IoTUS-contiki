@@ -19,6 +19,7 @@
 #include "iotus-core.h"
 #include "platform-conf.h"
 #include "timestamp.h"
+#include "iotus-radio.h"
 
 
 ////////////////////////////////////////////////////
@@ -47,6 +48,7 @@ typedef struct iotus_radio_events {
   uint8_t badRxPacketLong; //When packet len is bigger then allowed
   uint8_t badRxPacketShort; //When packet len is bigger then allowed
   uint8_t badRxChecksumFail; //When packet len is bigger then allowed
+  radio_status radioStatus;
 } iotus_parameters_radio_events_t;
 
 typedef struct iotus_packet_size_limits {
