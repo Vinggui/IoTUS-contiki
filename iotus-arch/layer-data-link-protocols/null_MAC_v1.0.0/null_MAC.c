@@ -64,7 +64,9 @@ close(void)
 {}
 
 const struct iotus_data_link_protocol_struct null_MAC_protocol = {
+  "nullMAC",
   start,
+  NULL,
   run,
   close
 };

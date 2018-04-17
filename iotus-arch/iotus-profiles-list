@@ -24,7 +24,7 @@ ENERGY_AWARE_ROUTING = \
 # Data link protocols
 ENERGY_AWARE_DATA_LINK = \
   null_MAC_v1.0.0 \
-  testMAC_v1.0.0 \
+  contikiMAC_v1.0.0 \
   edytee_MAC_v1.0.0
 
 

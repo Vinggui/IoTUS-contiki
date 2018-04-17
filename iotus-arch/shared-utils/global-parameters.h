@@ -52,16 +52,19 @@ typedef struct iotus_radio_events {
 } iotus_parameters_radio_events_t;
 
 typedef struct iotus_packet_size_limits {
-  uint16_t total_size;
-  uint8_t radio_headers;
-  uint8_t data_link_headers;
-  uint8_t routing_headers;
-  uint8_t transport_headers;
+  uint16_t totalSize;
+  uint8_t radioHeaders;
+  uint8_t datalinkHeaders;
+  uint8_t routingHeaders;
+  uint8_t transportHeaders;
 } iotus_packet_dimensions_t;
 
 
 extern iotus_parameters_radio_events_t iotus_parameters_radio_events;
 extern iotus_packet_dimensions_t iotus_packet_dimensions;
+
+extern iotus_address_type iotus_radio_selected_address_type;
+
 
 /////////////////////////////////////////////////////
 //               QoS parameters                    //

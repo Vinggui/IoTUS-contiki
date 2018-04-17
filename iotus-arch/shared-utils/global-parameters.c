@@ -35,6 +35,8 @@ iotus_packet_dimensions_t iotus_packet_dimensions = {0};
 
 iotus_parameters_radio_events_t iotus_parameters_radio_events;
 
+iotus_address_type iotus_radio_selected_address_type;
+
 ///////////////////////////////////////////////
 //           Time parameters                 //
 ///////////////////////////////////////////////

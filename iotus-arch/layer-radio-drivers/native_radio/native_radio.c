@@ -93,6 +93,7 @@ set_value(radio_param_t param, radio_value_t value)
     //Verify if this size is actually supported
     if(ADDRESSES_GET_TYPE_SIZE(value) == 2 || ADDRESSES_GET_TYPE_SIZE(value) == 8) {
       g_used_address_type = value;
+      iotus_radio_selected_address_type = value;
       
       //Search for this address in the system
       SAFE_PRINT("Using address - ");
@@ -100,7 +101,7 @@ set_value(radio_param_t param, radio_value_t value)
         if(i!=0) {
           SAFE_PRINT(":");
         }
-        SAFE_PRINTF_CLEAN("%02x",addresses_get_pointer(value)[i]);
+        SAFE_PRINTF_CLEAN("%02x",addresses_self_get_pointer(value)[i]);
       }
       SAFE_PRINT("\n");
     }
@@ -149,7 +150,7 @@ prepare(iotus_packet_t *packet)
                                     IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
       if(0 == packet_append_last_header(
                   ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                  addresses_get_pointer(g_used_address_type),
+                  addresses_self_get_pointer(g_used_address_type),
                   packet)) {
         SAFE_PRINTF_CLEAN("Failed to insert source address.\n");
         return -1;
@@ -292,7 +293,7 @@ read(void)
 
             SAFE_PRINTF_LOG_ERROR("Got source addr %u %u\n",address[1],address[0]);
             if(FALSE == addresses_compare(address,
-                          addresses_get_pointer(g_used_address_type),
+                          addresses_self_get_pointer(g_used_address_type),
                           ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
               //This message is not for us... Drop it?
               SAFE_PRINTF_LOG_ERROR("Dropping pckt!, wrong dest.");
@@ -369,7 +370,7 @@ static void
 start(void)
 {
   SAFE_PRINTF_CLEAN("\tNull Radio\n");
-  iotus_packet_dimensions.total_size = 120;
+  iotus_packet_dimensions.totalSize = 120;
 
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);

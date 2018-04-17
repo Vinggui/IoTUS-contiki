@@ -740,6 +740,23 @@ packet_parse(iotus_packet_t *packetPiece) {
 }
 
 /*---------------------------------------------------------------------*/
+Boolean
+packet_has_space(iotus_packet_t *packetPiece, uint16_t space)
+{
+  if(packetPiece == NULL) {
+    return FALSE;
+  }
+
+  uint16_t freeSpace;
+  freeSpace = iotus_packet_dimensions.totalSize
+              -packet_get_size(packetPiece)
+              -space;
+  if(freeSpace >= 0) {
+    return TRUE;
+  }
+  return FALSE;
+}
+/*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service
  */

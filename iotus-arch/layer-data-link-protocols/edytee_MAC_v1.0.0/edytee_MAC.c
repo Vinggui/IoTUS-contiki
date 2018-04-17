@@ -78,7 +78,9 @@ close(void)
 }
 
 const struct iotus_data_link_protocol_struct edytee_MAC_protocol = {
+  "edyteeMac",
   start,
+  NULL,
   run,
   close
 };

@@ -3,4 +3,5 @@
 IOTUS_RADIO_DRIVER_NAME = cc2420
 
 # If more folders need to be compiled, just add them to the following line, like
-THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/../../framers/radio-framer-802154
+THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/../../framers/radio-framer-802154 \
+$(THIS_MODULE_FOLDER)/../../framers/generic-frame802154

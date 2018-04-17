@@ -237,6 +237,7 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
       memb_free(&iotus_additional_info_handlers_mem, addInfo);
       return NULL;
     }
+    memset(MMEM_PTR(&(addInfo->data)),0,varSize);
     //memcpy(MMEM_PTR(&(addInfo->data)), var, varSize);
     #else
     void *varPointer = malloc(varSize);
@@ -245,6 +246,7 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
       free(addInfo);
       return NULL;
     }
+    memset(varPointer,0,varSize);
     //memcpy(varPointer, var, varSize);
     addInfo->data.ptr = varPointer;
     #endif

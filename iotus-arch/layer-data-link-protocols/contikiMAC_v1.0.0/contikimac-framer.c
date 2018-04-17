@@ -13,8 +13,11 @@
  *      Author: vinicius
  */
 
-#include "contikimac-framer.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "contikimac-framer.h"
+#include "iotus-radio.h"
 
 #define CONTIKIMAC_ID 0x00
 
@@ -31,20 +34,13 @@
 #define SHORTEST_PACKET_SIZE 43
 #endif /* CONTIKIMAC_FRAMER_CONF_SHORTEST_PACKET_SIZE */
 
-#ifdef CONTIKIMAC_FRAMER_CONF_DECORATED_FRAMER
-#define DECORATED_FRAMER CONTIKIMAC_FRAMER_CONF_DECORATED_FRAMER
-#else /* CONTIKIMAC_FRAMER_CONF_DECORATED_FRAMER */
-#define DECORATED_FRAMER framer_802154
-#endif /* CONTIKIMAC_FRAMER_CONF_DECORATED_FRAMER */
-
-extern const struct framer DECORATED_FRAMER;
-
+#define DECORATED_FRAMER    (*(active_radio_driver->radio_framer))
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "ctkMAC-Frmr"
 #include "safe-printer.h"
+
 #define PRINTF(...)
-static void pad(void);
 
 /* 2-byte header for recovering padded packets.
    Wireshark will not understand such packets at present. */
@@ -60,51 +56,58 @@ hdr_length(void)
   return DECORATED_FRAMER.length() + sizeof(struct hdr);
 }
 /*---------------------------------------------------------------------------*/
-static int
-create(void)
+static void
+pad(iotus_packet_t *packet)
 {
-  struct hdr *chdr;
+  int transmit_len;
+  //uint8_t *ptr;
+  uint8_t zeroes_count;
+  
+  transmit_len = packet_get_size(packet) + hdr_length();
+  if(transmit_len < SHORTEST_PACKET_SIZE) {
+    /* Padding required */
+    zeroes_count = SHORTEST_PACKET_SIZE - transmit_len;
+
+    // ptr = packetbuf_dataptr();
+    // memset(ptr + packetbuf_datalen(), 0, zeroes_count);
+    // packetbuf_set_datalen(packetbuf_datalen() + zeroes_count);
+    uint8_t zeroArray[zeroes_count];
+    memset(zeroArray, 0, zeroes_count);
+    if(zeroes_count == packet_append_last_header(zeroes_count, zeroArray, packet)) {
+      SAFE_PRINTF_LOG_ERROR("Zeros not appended");
+    }
+  }
+}
+/*---------------------------------------------------------------------------*/
+static int
+create(iotus_packet_t *packet)
+{
+  struct hdr chdr;
   int hdr_len;
   
-  if(packetbuf_hdralloc(sizeof(struct hdr)) == 0) {
+  if(FALSE == packet_has_space(packet,sizeof(struct hdr))) {
     PRINTF("contikimac-framer: too large header\n");
     return FRAMER_FAILED;
   }
-  chdr = packetbuf_hdrptr();
-  chdr->id = CONTIKIMAC_ID;
-  chdr->len = packetbuf_datalen();
-  pad();
+
+  chdr.id = CONTIKIMAC_ID;
+  chdr.len = packet_get_size(packet);
+  packet_push_bit_header(16, (uint8_t *)&chdr, packet);
+  pad(packet);
   
-  hdr_len = DECORATED_FRAMER.create();
+  hdr_len = DECORATED_FRAMER.create(packet);
   if(hdr_len < 0) {
     PRINTF("contikimac-framer: decorated framer failed\n");
     return FRAMER_FAILED;
   }
   
-  packetbuf_compact();
+  //packetbuf_compact();
   
   return hdr_len + sizeof(struct hdr);
 }
 /*---------------------------------------------------------------------------*/
-static void
-pad(void)
-{
-  int transmit_len;
-  uint8_t *ptr;
-  uint8_t zeroes_count;
-  
-  transmit_len = packetbuf_totlen() + hdr_length();
-  if(transmit_len < SHORTEST_PACKET_SIZE) {
-    /* Padding required */
-    zeroes_count = SHORTEST_PACKET_SIZE - transmit_len;
-    ptr = packetbuf_dataptr();
-    memset(ptr + packetbuf_datalen(), 0, zeroes_count);
-    packetbuf_set_datalen(packetbuf_datalen() + zeroes_count);
-  }
-}
-/*---------------------------------------------------------------------------*/
 static int
-parse(void)
+parse(iotus_packet_t *packet)
 {
   return 0;
 }

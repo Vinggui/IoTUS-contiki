@@ -38,6 +38,7 @@ typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
   iotus_node_t *nextDestinationNode;
   uint8_t iotusHeader;
+  uint8_t type;
   uint16_t firstHeaderBitSize;
   uint16_t lastHeaderSize;
   LIST_STRUCT(additionalInfoList);
@@ -57,10 +58,6 @@ enum packet_types {
   IOTUS_PACKET_TYPE_IEEE802154_DATA,
   IOTUS_PACKET_TYPE_IEEE802154_ACK,
   IOTUS_PACKET_TYPE_IEEE802154_COMMAND,
-  IOTUS_PACKET_TYPE_NEW_SYSTEM_BROADCAST,
-  IOTUS_PACKET_TYPE_NEW_SYSTEM_DATA,
-  IOTUS_PACKET_TYPE_NEW_SYSTEM_ACK,
-  IOTUS_PACKET_TYPE_NEW_SYSTEM_COMMAND,
 
   IOTUS_PACKET_TYPE___N
 };
@@ -111,8 +108,8 @@ packet_set_tx_power(iotus_packet_t *packetPiece, int8_t power);
 int8_t
 packet_get_tx_power(iotus_packet_t *packetPiece);
 
-int16_t
-packet_get_sequence_number(iotus_packet_t *packetPiece);
+Status
+packet_set_sequence_number(iotus_packet_t *packetPiece, uint8_t sequence);
 
 int16_t
 packet_get_sequence_number(iotus_packet_t *packetPiece);
@@ -156,6 +153,9 @@ packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num);
 
 void
 packet_parse(iotus_packet_t *packetPiece);
+
+Boolean
+packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
 
 /* This function provides the core access to basic operations into this service */
 void

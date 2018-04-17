@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "addresses.h"
 #include "iotus-core.h"
 #include "lib/mmem.h"
 #include "platform-conf.h"
@@ -66,7 +65,7 @@ Status
 addresses_set_value(iotus_address_type type, const uint8_t *value);
 
 uint8_t *
-addresses_get_pointer(iotus_address_type type);
+addresses_self_get_pointer(iotus_address_type type);
 #endif /* IOTUS_ARCH_SHARED_UTILS_ADDRESSES_H_ */
 
 /* The following stuff ends the \defgroup block at the beginning of

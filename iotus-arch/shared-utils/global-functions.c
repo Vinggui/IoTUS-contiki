@@ -44,20 +44,20 @@ uint16_t
 get_safe_pdu_for_layer(uint8_t layer)
 {
   uint16_t available_pdu;
-  available_pdu = iotus_packet_dimensions.total_size
-                  - iotus_packet_dimensions.radio_headers;
+  available_pdu = iotus_packet_dimensions.totalSize
+                  - iotus_packet_dimensions.radioHeaders;
   if(layer == 2) {
     return available_pdu;
   }
-  available_pdu -= iotus_packet_dimensions.data_link_headers;
+  available_pdu -= iotus_packet_dimensions.datalinkHeaders;
   if(layer == 3) {
     return available_pdu;
   }
-  available_pdu -= iotus_packet_dimensions.routing_headers;
+  available_pdu -= iotus_packet_dimensions.routingHeaders;
   if(layer == 4) {
     return available_pdu;
   }
-  available_pdu -= iotus_packet_dimensions.transport_headers;
+  available_pdu -= iotus_packet_dimensions.transportHeaders;
   return available_pdu;
 }
 

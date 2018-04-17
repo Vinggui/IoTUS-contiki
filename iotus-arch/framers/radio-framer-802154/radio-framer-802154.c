@@ -12,10 +12,13 @@
  *  Created on: Apr 11, 2018
  *      Author: vinicius
  */
-#include "lib/random.h"
 #include <string.h>
-
-#define DEBUG 0
+#include "lib/random.h"
+#include "frame802154.h"
+#include "global-parameters.h"
+#include "packet.h"
+#include "packet-defs.h"
+#include "nodes.h"
 
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
@@ -91,8 +94,8 @@ create_frame(iotus_packet_t *packet)
 #endif /* LLSEC802154_USES_AUX_HEADER */
 
   /* Increment and set the data sequence number. */
- if(packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO)) {
-    params.seq = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
+  if(packet_get_sequence_number(packet)>0) {
+    params.seq = packet_get_sequence_number(packet);
 
   } else {
     /* Ensure that the sequence number 0 is not used as it would bypass the above check. */
@@ -100,7 +103,7 @@ create_frame(iotus_packet_t *packet)
       mac_dsn++;
     }
     params.seq = mac_dsn++;
-    packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, params.seq);
+    packet_set_sequence_number(packet, params.seq);
   }
 
   /* Complete the addressing fields. */
@@ -108,24 +111,32 @@ create_frame(iotus_packet_t *packet)
      \todo For phase 1 the addresses are all long. We'll need a mechanism
      in the rime attributes to tell the mac to use long or short for phase 2.
    */
-  if(LINKADDR_SIZE == 2) {
+  if(iotus_radio_selected_address_type == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
     /* Use short address mode if linkaddr size is short. */
     params.fcf.src_addr_mode = FRAME802154_SHORTADDRMODE;
   } else {
     params.fcf.src_addr_mode = FRAME802154_LONGADDRMODE;
   }
-  params.dest_pid = frame802154_get_pan_id();
 
-  if(packetbuf_holds_broadcast()) {
+  uint8_t *tempPanID = nodes_get_address(IOTUS_NODES_ADD_INFO_TYPE_ADDR_PANID,
+                                         packet->nextDestinationNode);
+  if(NULL == tempPanID) {
+    tempPanID = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID);
+  }
+  params.dest_pid = *((uint16_t *)tempPanID);
+
+  if(packet_holds_broadcast(packet)) {
     /* Broadcast requires short address mode. */
     params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
     params.dest_addr[0] = 0xFF;
     params.dest_addr[1] = 0xFF;
   } else {
-    linkaddr_copy((linkaddr_t *)&params.dest_addr,
-                  packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+    memcpy(&params.dest_addr,
+            nodes_get_address(iotus_radio_selected_address_type,
+                              packet->nextDestinationNode),
+            ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
     /* Use short address mode if linkaddr size is small */
-    if(LINKADDR_SIZE == 2) {
+    if(iotus_radio_selected_address_type == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
       params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
     } else {
       params.fcf.dest_addr_mode = FRAME802154_LONGADDRMODE;
@@ -133,27 +144,30 @@ create_frame(iotus_packet_t *packet)
   }
 
   /* Set the source PAN ID to the global variable. */
-  params.src_pid = frame802154_get_pan_id();
+  params.src_pid = *((uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID));
 
   /*
    * Set up the source address using only the long address mode for
    * phase 1.
    */
-  linkaddr_copy((linkaddr_t *)&params.src_addr,
-                packetbuf_addr(PACKETBUF_ADDR_SENDER));
+  memcpy(&params.dest_addr,
+          addresses_self_get_pointer(iotus_radio_selected_address_type),
+          ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
 
-  params.payload = packetbuf_dataptr();
-  params.payload_len = packetbuf_datalen();
+  params.payload = pieces_get_data_pointer(packet);
+  params.payload_len = packet_get_size(packet);
   hdr_len = frame802154_hdrlen(&params);
-  if(!do_create) {
-    /* Only calculate header length */
-    return hdr_len;
-  } else if(packetbuf_hdralloc(hdr_len)) {
-    frame802154_create(&params, packetbuf_hdrptr());
+  if(TRUE == packet_has_space(packet, hdr_len)) {
+    uint8_t header[hdr_len];
+    frame802154_create(&params, header);
 
+    if(hdr_len*8 != packet_push_bit_header(hdr_len*8, header, packet)) {
+      SAFE_PRINTF_LOG_ERROR("Diff hdr input");
+      return FRAMER_FAILED;
+    }
     PRINTF("15.4-OUT: %2X", params.fcf.frame_type);
     PRINTADDR(params.dest_addr);
-    PRINTF("%d %u (%u)\n", hdr_len, packetbuf_datalen(), packetbuf_totlen());
+    PRINTF("%d (%u)\n", hdr_len, packet_get_size(packet));
 
     return hdr_len;
   } else {
@@ -165,19 +179,19 @@ create_frame(iotus_packet_t *packet)
 static int
 hdr_length(void)
 {
-  return 10;
+  return 20;
 }
 
 /*---------------------------------------------------------------------------*/
 static int
-parse(void)
+parse(iotus_packet_t *packet)
 {
   return 0;
 }
 /*---------------------------------------------------------------------------*/
 const struct framer radio_framer_802154 = {
   hdr_length,
-  create,
+  create_frame,
   parse
 };
 /*---------------------------------------------------------------------------*/

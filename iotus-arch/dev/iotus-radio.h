@@ -252,6 +252,7 @@ enum {
 
 #define RADIO_ADDR_OPTIONS_MATCH(type,value) ((1<<(ADDRESSES_GET_TYPE_SIZE(type)-1))&value)
 
+#define FRAMER_FAILED -1
 
 struct framer {
   int (* length)(void);
@@ -263,7 +264,7 @@ struct framer {
  * The structure of a device driver for a radio in Contiki.
  */
 struct iotus_radio_driver_struct {
-  char *name;
+  const char *name;
   void (* start)(void);
   void (* post_start)(void);
   void (* run)(void);
@@ -316,6 +317,11 @@ struct iotus_radio_driver_struct {
    */
   radio_result_t (* set_object)(radio_param_t param, const void *src,
                                 size_t size);
+
+  /**
+   * The framer submodule of preference for the radio input and parse
+   */
+  const struct framer *radio_framer;
 };
 
 #endif /* IOTUS_RADIO_H_ */

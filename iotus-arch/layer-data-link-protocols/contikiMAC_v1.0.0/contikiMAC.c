@@ -38,7 +38,7 @@
  *         Niclas Finne <nfi@sics.se>
  *         Joakim Eriksson <joakime@sics.se>
  */
-
+#include "addresses.h"
 #include "contiki-conf.h"
 #include "contikiMAC.h"
 #include "contikimac-framer.h"
@@ -51,6 +51,7 @@
 #include "iotus-core.h"
 #include "lib/random.h"
 #include "nodes.h"
+#include "packet-defs.h"
 #include "packet.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
@@ -254,6 +255,8 @@ static volatile uint8_t contikimac_keep_radio_on = 0;
 
 static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
+
+static uint8_t is_receiver_awake = 0;
 
 
 #if CONTIKIMAC_CONF_COMPOWER
@@ -547,7 +550,7 @@ broadcast_rate_drop(void)
 //send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 //	    struct rdc_buf_list *buf_list,
 //            int is_receiver_awake)
-static int
+static int8_t
 send_packet(iotus_packet_t *packet)
 {
   rtimer_clock_t t0;
@@ -559,11 +562,9 @@ send_packet(iotus_packet_t *packet)
   uint8_t is_broadcast = 0;
   uint8_t is_known_receiver = 0;
   uint8_t collisions;
-  int transmit_len;
   int ret;
   uint8_t contikimac_was_on;
 #if !RDC_CONF_HARDWARE_ACK
-  int len;
   uint8_t seqno;
 #endif
 
@@ -573,7 +574,7 @@ send_packet(iotus_packet_t *packet)
     return MAC_TX_ERR_FATAL;
   }
 
-  if(packetbuf_totlen() == 0) {
+  if(packet_get_size(packet) == 0) {
     PRINTF("contikimac: send_packet data len 0\n");
     return MAC_TX_ERR_FATAL;
   }
@@ -584,7 +585,7 @@ send_packet(iotus_packet_t *packet)
   //No action is necessary here, since this procedure is verified at the packet assymbly.
 #endif
   //if(packetbuf_holds_broadcast()) {
-  if(TRUEE == packet_holds_broadcast(packet)) {
+  if(TRUE == packet_holds_broadcast(packet)) {
     is_broadcast = 1;
     PRINTDEBUG("contikimac: send broadcast\n");
 
@@ -608,7 +609,7 @@ send_packet(iotus_packet_t *packet)
                recvAddr[7]);
     }
 #else /* NETSTACK_CONF_WITH_IPV6 */
-    recvAddr = nodes_get_address(IOTUS_ADDRESSES_TYPE_SHORT,
+    recvAddr = nodes_get_address(iotus_radio_selected_address_type,
                                  packet_get_next_destination(packet));
     if(NULL != recvAddr) {
       PRINTDEBUG("contikimac: send unicast to %u.%u\n",
@@ -626,13 +627,12 @@ send_packet(iotus_packet_t *packet)
     }
   } updated to \/\/\/\/\/     */
   packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
-  if(contikimac_framer.create() < 0) {
+  if(contikimac_framer.create(packet) < 0) {
     PRINTF("contikimac: framer failed\n");
     return MAC_TX_ERR_FATAL;
   }
 
-  transmit_len = packetbuf_totlen();
-  active_radio_driver->prepare(packetbuf_hdrptr(), transmit_len);
+  active_radio_driver->prepare(packet);
 
 #if WITH_PHASE_OPTIMIZATION
   if(!is_broadcast && !is_receiver_awake) {
@@ -723,7 +723,7 @@ send_packet(iotus_packet_t *packet)
        or rx cycle */
      on();
   }
-  seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
+  seqno = packet_get_sequence_number(packet);
 #endif
 
   watchdog_periodic();
@@ -736,13 +736,11 @@ send_packet(iotus_packet_t *packet)
 
     if(!is_broadcast && (is_receiver_awake || is_known_receiver) &&
        !RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + MAX_PHASE_STROBE_TIME)) {
-      PRINTF("miss to %d\n", packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0]);
+      PRINTF("miss to %d\n", nodes_get_address(
+                                iotus_radio_selected_address_type,
+                                packet->nextDestinationNode));
       break;
     }
-
-#if !RDC_CONF_HARDWARE_ACK
-    len = 0;
-#endif
 
     {
       rtimer_clock_t wt;
@@ -750,9 +748,9 @@ send_packet(iotus_packet_t *packet)
       rtimer_clock_t txtime = RTIMER_NOW();
 #endif
 #if RDC_CONF_HARDWARE_ACK
-      int ret = active_radio_driver->transmit(transmit_len);
+      int ret = active_radio_driver->transmit(packet);
 #else
-      active_radio_driver->transmit(transmit_len);
+      active_radio_driver->transmit(packet);
 #endif
 
 #if RDC_CONF_HARDWARE_ACK
@@ -781,12 +779,15 @@ send_packet(iotus_packet_t *packet)
       if(!is_broadcast && (active_radio_driver->receiving_packet() ||
                            active_radio_driver->pending_packet() ||
                            active_radio_driver->channel_clear() == 0)) {
-        uint8_t ackbuf[ACK_LEN];
         wt = RTIMER_NOW();
         while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + AFTER_ACK_DETECTED_WAIT_TIME)) { }
 
-        len = active_radio_driver->read(ackbuf, ACK_LEN);
-        if(len == ACK_LEN && seqno == ackbuf[ACK_LEN - 1]) {
+        iotus_packet_t *ack = active_radio_driver->read();
+        if(NULL == ack) {
+          PRINTF("No ack received\n");
+        }
+        if(packet_get_size(ack) == ACK_LEN &&
+           seqno == pieces_get_data_pointer(ack)[ACK_LEN - 1]) {
           got_strobe_ack = 1;
 #if WITH_PHASE_OPTIMIZATION
           encounter_time = txtime;
@@ -804,7 +805,7 @@ send_packet(iotus_packet_t *packet)
   off();
 
   PRINTF("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
-         packetbuf_totlen(),
+         packet_get_size(packet),
          got_strobe_ack ? "ack" : "no ack",
          collisions ? "collision" : "no collision");
 
@@ -840,7 +841,9 @@ send_packet(iotus_packet_t *packet)
 #if WITH_PHASE_OPTIMIZATION
   if(is_known_receiver && got_strobe_ack) {
     PRINTF("no miss %d wake-ups %d\n",
-	   packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0],
+	         nodes_get_address(
+                iotus_radio_selected_address_type,
+                packet->nextDestinationNode),
            strobes);
   }
 
@@ -866,7 +869,7 @@ recv_burst_off(void *ptr)
 }
 /*---------------------------------------------------------------------------*/
 static void
-input_packet(void)
+input_packet(iotus_packet_t *packet)
 {
 }
 /*---------------------------------------------------------------------------*/

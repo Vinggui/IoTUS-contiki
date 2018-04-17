@@ -46,7 +46,7 @@ struct iotus_data_link_protocol_struct {
   void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
-  void (* send)(iotus_packet_t *packet);
+  int8_t (* send)(iotus_packet_t *packet);
   void (* sent_cb)(iotus_packet_t *packetk);
   void (* receive)(iotus_packet_t *packet);
 };

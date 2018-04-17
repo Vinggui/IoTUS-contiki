@@ -87,7 +87,7 @@ addresses_set_value(iotus_address_type type, const uint8_t *value)
  * 
  */
 uint8_t *
-addresses_get_pointer(iotus_address_type type)
+addresses_self_get_pointer(iotus_address_type type)
 {
   if(0 == type) {
     return NULL;

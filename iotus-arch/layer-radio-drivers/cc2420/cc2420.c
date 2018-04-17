@@ -53,6 +53,7 @@
 #include "packet-defs.h"
 #include "packet-default-additional-info.h"
 #include "pieces.h"
+#include "radio-framer-802154.h"
 #include "timestamp.h"
 
 #define WITH_SEND_CCA 1
@@ -347,18 +348,19 @@ set_value(radio_param_t param, radio_value_t value)
   case RADIO_PARAM_ADDRESS_USE_TYPE:
     //Verify if this size is actually supported
     if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT || value == IOTUS_ADDRESSES_TYPE_ADDR_LONG) {
-      uint16_t *panId = (uint16_t *)addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
+      uint16_t *panId = (uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID);
       
+
       //Search for this address in the system
-      uint16_t *shortAddr = (uint16_t *)addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+      uint16_t *shortAddr = (uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
 
       if(panId == 0 || shortAddr == 0) {
         PRINTF("No address to set!\n");
         return RADIO_RESULT_INVALID_VALUE;
       }
 
-      //Give it a try to check the long adress size too...
-      uint8_t *longAddr = addresses_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
+      //Give it a try to check the long address size too...
+      uint8_t *longAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
 
       cc2420_set_pan_addr(*panId,*shortAddr,longAddr);
 
@@ -369,16 +371,18 @@ set_value(radio_param_t param, radio_value_t value)
         g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
         PRINTF("Using Long address");
       }
+      //report to the global system
+      iotus_radio_selected_address_type = g_used_address_type;
 
       //Update header size...
       if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                   IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-        iotus_packet_dimensions.radio_headers = CHECKSUM_LEN
+        iotus_packet_dimensions.radioHeaders = CHECKSUM_LEN
                     + ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
       }
       if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-        iotus_packet_dimensions.radio_headers +=
+        iotus_packet_dimensions.radioHeaders +=
                       ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
       }
       return RADIO_RESULT_OK;
@@ -806,7 +810,7 @@ cc2420_prepare(iotus_packet_t *packet)
                                     IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
       if(0 == packet_append_last_header(
                   ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                  addresses_get_pointer(g_used_address_type),
+                  addresses_self_get_pointer(g_used_address_type),
                   packet)) {
         PRINTF("Failed to insert source address.\n");
         return -1;
@@ -1061,7 +1065,7 @@ cc2420_read(void)
 
             PRINTF("Got source addr %u %u\n",address[1],address[0]);
             if(FALSE == addresses_compare(address,
-                          addresses_get_pointer(g_used_address_type),
+                          addresses_self_get_pointer(g_used_address_type),
                           ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
               //This message is not for us... Drop it?
               PRINTF("Dropping pckt!, wrong dest.");
@@ -1108,9 +1112,8 @@ cc2420_read(void)
         iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
         iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
         //Add the other information in this packet
-        if(FAILURE == packet_set_rx_block(
+        if(FAILURE == packet_set_rx_linkQuality_RSSI(
                         packet,
-                        0,
                         cc2420_last_correlation,
                         cc2420_last_rssi)) {
           PRINTF("Failed add rx block info.");
@@ -1338,7 +1341,7 @@ cc2420_init(void)
   //       IOTUS new features           //
   ////////////////////////////////////////
   PRINTF("\tCC2440 driver\n");
-  iotus_packet_dimensions.total_size = CC2420_MAX_PACKET_LEN;
+  iotus_packet_dimensions.totalSize = CC2420_MAX_PACKET_LEN;
 
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_PANID,2);
   ADDRESSES_SET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,2);
@@ -1451,5 +1454,6 @@ const struct iotus_radio_driver_struct cc2420_radio_driver =
     get_value,
     set_value,
     get_object,
-    set_object
+    set_object,
+    &radio_framer_802154
   };
