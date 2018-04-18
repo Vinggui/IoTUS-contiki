@@ -40,6 +40,7 @@
 #include "contiki.h"
 #include "dev/leds.h"
 #include <stdio.h> /* For printf() */
+#include "iotus-netstack.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
@@ -56,9 +57,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     //leds_off(LEDS_ALL);
 
 
-    //static struct etimer timer;
+    static struct etimer timer;
     // set the etimer module to generate an event in one second.
-    //etimer_set(&timer, CLOCK_CONF_SECOND*4);
+    etimer_set(&timer, CLOCK_CONF_SECOND*2);
     printf("Hello, world\n");
 
     /*linkaddr_t addr;
@@ -70,12 +71,23 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     for(;;) {
         PROCESS_WAIT_EVENT();
 
-        printf("Hi22\n");
+        printf("App sending\n");
         //leds_toggle(LEDS_ALL);
         //if(linkaddr_node_addr.u8[0] == 1) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
-        //etimer_reset(&timer);
+        
+        iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
+            (const uint8_t *)"BTeste-msg", TRUE,
+            NODES_BROADCAST, NULL);
+
+        if(NULL == packet) {
+          continue;
+        }
+
+
+        active_transport_protocol->send(packet);
+        etimer_reset(&timer);
 
     }
 

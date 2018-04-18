@@ -59,7 +59,6 @@
 #include "net/ip/tcp-socket.h"
 
 #include "net/rime/rime.h"
-
 #include "net/netstack.h"
 
 #endif /* CONTIKI_NET_H_ */

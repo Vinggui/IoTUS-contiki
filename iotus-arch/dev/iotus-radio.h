@@ -255,7 +255,7 @@ enum {
 #define FRAMER_FAILED -1
 
 struct framer {
-  int (* length)(void);
+  int (* length)(iotus_packet_t *packet);
   int (* create)(iotus_packet_t *packet);
   int (* parse)(iotus_packet_t *packet);
 };

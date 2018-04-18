@@ -64,9 +64,8 @@
  */
 
 #include "sys/cc.h"
-#include "net/mac/frame802154.h"
-#include "net/llsec/llsec802154.h"
-#include "net/linkaddr.h"
+#include "iotus-frame802154.h"
+//#include "net/llsec/llsec802154.h"
 #include <string.h>
 
 /**  \brief The 16-bit identifier of the PAN on which the device is
@@ -254,7 +253,7 @@ frame802154_extract_linkaddr(frame802154_t *frame,
     }
   } else {
     /* Unicast address */
-    if(src_addr_len != LINKADDR_SIZE) {
+    if(src_addr_len != 2) {
       /* Destination address has a size we can not handle */
       return 0;
     }
@@ -273,7 +272,7 @@ frame802154_extract_linkaddr(frame802154_t *frame,
     }
   } else {
     /* Unicast address */
-    if(dest_addr_len != LINKADDR_SIZE) {
+    if(dest_addr_len != 2) {
       /* Destination address has a size we can not handle */
       return 0;
     }
@@ -498,5 +497,5 @@ frame802154_parse_fcf(uint8_t *data, frame802154_fcf_t *pfcf)
  */
 int
 frame802154_parse(uint8_t *data, int len, frame802154_t *pf)
-{return 1}
+{return 1;}
 /** \}   */

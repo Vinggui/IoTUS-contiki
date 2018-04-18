@@ -62,11 +62,10 @@
  */
 
 /* Includes */
-#ifndef FRAME_802154_H
-#define FRAME_802154_H
+#ifndef IOTUS_FRAME_802154_H
+#define IOTUS_FRAME_802154_H
 
 #include "contiki-conf.h"
-#include "net/linkaddr.h"
 
 #ifdef IEEE802154_CONF_PANID
 #define IEEE802154_PANID           IEEE802154_CONF_PANID
@@ -227,6 +226,6 @@ int frame802154_is_broadcast_addr(uint8_t mode, uint8_t *addr);
 //int frame802154_extract_linkaddr(frame802154_t *frame, linkaddr_t *source_address, linkaddr_t *dest_address);
 
 /** @} */
-#endif /* FRAME_802154_H */
+#endif /* IOTUS_FRAME_802154_H */
 /** @} */
 /** @} */

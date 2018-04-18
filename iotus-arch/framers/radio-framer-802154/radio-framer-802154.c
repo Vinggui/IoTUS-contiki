@@ -14,7 +14,7 @@
  */
 #include <string.h>
 #include "lib/random.h"
-#include "frame802154.h"
+#include "iotus-frame802154.h"
 #include "global-parameters.h"
 #include "packet.h"
 #include "packet-defs.h"
@@ -37,7 +37,7 @@ static uint8_t initialized = 0;
 
 /*---------------------------------------------------------------------------*/
 static int
-create_frame(iotus_packet_t *packet)
+create_frame(iotus_packet_t *packet, Boolean doCreate)
 {
   frame802154_t params;
   int hdr_len;
@@ -94,7 +94,10 @@ create_frame(iotus_packet_t *packet)
 #endif /* LLSEC802154_USES_AUX_HEADER */
 
   /* Increment and set the data sequence number. */
-  if(packet_get_sequence_number(packet)>0) {
+  if(FALSE == doCreate) {
+    /* Only length calculation - no sequence number is needed and
+       should not be consumed. */
+  } else if(packet_get_sequence_number(packet)>0) {
     params.seq = packet_get_sequence_number(packet);
 
   } else {
@@ -157,11 +160,23 @@ create_frame(iotus_packet_t *packet)
   params.payload = pieces_get_data_pointer(packet);
   params.payload_len = packet_get_size(packet);
   hdr_len = frame802154_hdrlen(&params);
+  if(FALSE == doCreate) {
+    /* Only calculate header length */
+    return hdr_len;
+  }
   if(TRUE == packet_has_space(packet, hdr_len)) {
     uint8_t header[hdr_len];
     frame802154_create(&params, header);
 
-    if(hdr_len*8 != packet_push_bit_header(hdr_len*8, header, packet)) {
+    printf("data len %u\n",hdr_len );
+    printf(" data header: ");
+    for(int k=0;k<hdr_len;k++) {
+      printf("%02x ",header[k]);
+    }
+    printf("\nfim\n");
+
+    uint8_t packetNewSize = packet_get_size(packet)+hdr_len;
+    if(packetNewSize != packet_push_bit_header(hdr_len*8, header, packet)) {
       SAFE_PRINTF_LOG_ERROR("Diff hdr input");
       return FRAMER_FAILED;
     }
@@ -177,9 +192,15 @@ create_frame(iotus_packet_t *packet)
 }
 /*---------------------------------------------------------------------------*/
 static int
-hdr_length(void)
+hdr_length(iotus_packet_t *packet)
 {
-  return 20;
+  return create_frame(packet, FALSE);
+}
+
+static int
+create(iotus_packet_t *packet)
+{
+  return create_frame(packet, TRUE);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -191,7 +212,7 @@ parse(iotus_packet_t *packet)
 /*---------------------------------------------------------------------------*/
 const struct framer radio_framer_802154 = {
   hdr_length,
-  create_frame,
+  create,
   parse
 };
 /*---------------------------------------------------------------------------*/

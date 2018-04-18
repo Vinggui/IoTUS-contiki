@@ -493,15 +493,23 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
     memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize+newSizeInBYTES);
   }
 
+  /**
+   * Optimization: If we can insert full bytes, then do it instead.
+   */
+  
+
   //Insert the new bits information
   uint16_t byteToPushToPkt = (newSizeInBYTES + oldSizeInBYTES) - 1 - ((packetPiece->firstHeaderBitSize)/8);
   uint8_t bitToPush = ((packetPiece->firstHeaderBitSize)%8);
-  // this 1 + is due to the sequence in which this value is decreased.
-  uint16_t byteToReadFromInput = 1 + (bitSequenceSize/8);
-  
+  uint16_t byteToReadFromInput = (bitSequenceSize/8);
+  if(bitSequenceSize%8){
+    // this +1 is because this value is decreased right after.
+    byteToReadFromInput++;
+  }
+
   for(i=0; i < bitSequenceSize; i++) {
     //Verify and change the byte to be push into...
-    if(bitToPush > 8) {
+    if(bitToPush >= 8) {
       bitToPush = 0;
       byteToPushToPkt--;
     }
@@ -520,7 +528,6 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
     bitToPush++;
   }
   packetPiece->firstHeaderBitSize += bitSequenceSize;//counted in bits
-
   return packet_get_size(packetPiece);
 }
 

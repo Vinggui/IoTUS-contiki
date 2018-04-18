@@ -14,15 +14,9 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include "iotus-core.h"
-#include "iotus-radio.h"
-#include "iotus-data-link.h"
-#include "global-functions.h"
-#include "global-parameters.h"
-#include "packet.h"
-#include "packet-defs.h"
-#include "packet-default-additional-info.h"
+#include "iotus-netstack.h"
 #include "platform-conf.h"
+#include "radio-framer-802154.h"
 #include <string.h>
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
@@ -136,51 +130,48 @@ static int
 prepare(iotus_packet_t *packet)
 {
   uint8_t total_len;
-  
-  SAFE_PRINTF_CLEAN("radio: sending %d bytes\n", packet->data.size);
-
   iotus_parameters_radio_events.transmission++;
 
   /* Wait for any previous transmission to finish. */
   
-  if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
-    g_expect_new_iotus_packet_hdr = TRUE;
-    /* verify if any layer is inserting the address... */
-    if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                    IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-      if(0 == packet_append_last_header(
-                  ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                  addresses_self_get_pointer(g_used_address_type),
-                  packet)) {
-        SAFE_PRINTF_CLEAN("Failed to insert source address.\n");
-        return -1;
-      }
-      //SAFE_PRINTF_CLEAN("Prev addr inserted\n");
-    }
-    //In cases where broadcast is sent, only the source addr is necessary,
-    //because the bit of broadcast in the iotus dynamic header is already set
-    if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-      //If this is not a broadcast, then we can try to insert send to a specific node.
-      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                      IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-        if(0 == packet_append_last_header(
-                    ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                    nodes_get_address(g_used_address_type,packet->nextDestinationNode),
-                    packet)) {
-          SAFE_PRINTF_CLEAN("Failed to insert destination address.");
-          return -1;
-        }
-        //SAFE_PRINTF_CLEAN("Next addr inserted\n");
-      }
-    }
+  // if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
+  //   g_expect_new_iotus_packet_hdr = TRUE;
+  //   /* verify if any layer is inserting the address... */
+  //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+  //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+  //     if(0 == packet_append_last_header(
+  //                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+  //                 addresses_self_get_pointer(g_used_address_type),
+  //                 packet)) {
+  //       SAFE_PRINTF_CLEAN("Failed to insert source address.\n");
+  //       return -1;
+  //     }
+  //     //SAFE_PRINTF_CLEAN("Prev addr inserted\n");
+  //   }
+  //   //In cases where broadcast is sent, only the source addr is necessary,
+  //   //because the bit of broadcast in the iotus dynamic header is already set
+  //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+  //     //If this is not a broadcast, then we can try to insert send to a specific node.
+  //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+  //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+  //       if(0 == packet_append_last_header(
+  //                   ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+  //                   nodes_get_address(g_used_address_type,packet->nextDestinationNode),
+  //                   packet)) {
+  //         SAFE_PRINTF_CLEAN("Failed to insert destination address.");
+  //         return -1;
+  //       }
+  //       //SAFE_PRINTF_CLEAN("Next addr inserted\n");
+  //     }
+  //   }
 
-    if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
-                                  &(packet->iotusHeader),
-                                  packet)) {
-      SAFE_PRINTF_CLEAN("Failed insert iotus dyn hdr.");
-      return -1;
-    }
-  }
+  //   if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
+  //                                 &(packet->iotusHeader),
+  //                                 packet)) {
+  //     SAFE_PRINTF_CLEAN("Failed insert iotus dyn hdr.");
+  //     return -1;
+  //   }
+  // }
 
   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                 IOTUS_CHORE_PKT_CHECKSUM)) {
@@ -198,7 +189,8 @@ prepare(iotus_packet_t *packet)
   emu_msg[0]= total_len;
   memcpy(emu_msg+1, pieces_get_data_pointer(packet), packet->data.size);
 
-  return 0;
+  SAFE_PRINTF_CLEAN("radio: prepares %d bytes\n", total_len);
+  return total_len;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -221,9 +213,17 @@ transmit(iotus_packet_t *packet)
   }
 
 
-  SAFE_PRINTF_CLEAN("Null radio sending %u bytes:\n<",packet->data.size);
+  SAFE_PRINTF_CLEAN("Null radio sending %u bytes:\n<",emu_msg[0]);
   SAFE_PRINT_BUF((char *)pieces_get_data_pointer(packet),packet->data.size);
   SAFE_PRINT(">\n");
+
+
+  printf("data len %u\n",packet_get_size(packet) );
+  printf(" data: ");
+  for(int k=0;k<packet_get_size(packet);k++) {
+    printf("%02x ",pieces_get_data_pointer(packet)[k]);
+  }
+  printf("\nfim\n");
 
   return RADIO_RESULT_OK;
 }
@@ -361,7 +361,7 @@ send(iotus_packet_t *packet)
   transmit(packet);
 
   //test
-  read();
+  //read();
   return 1;
 }
 
@@ -407,6 +407,23 @@ close(void)
 {
 }
 
+static int
+cca(void)
+{
+  return 1;
+}
+
+static int
+receiving(void)
+{
+  return 0;
+}
+
+static int
+pending_packet(void)
+{
+  return 0;
+}
 /*---------------------------------------------------------------------------*/
 
 const struct iotus_radio_driver_struct native_radio_radio_driver = {
@@ -419,15 +436,16 @@ const struct iotus_radio_driver_struct native_radio_radio_driver = {
   transmit,
   send,
   read,
-  NULL,//cc2420_cca,
-  NULL,//cc2420_receiving_packet,
-  NULL,//pending_packet,
-  on,//cc2420_on,
-  off,//cc2420_off,
+  cca,
+  receiving,
+  pending_packet,
+  on,
+  off,
   get_value,
   set_value,
   NULL,//get_object,
   NULL,//set_object
+  &radio_framer_802154
 };
 
 /* The following stuff ends the \defgroup block at the beginning of

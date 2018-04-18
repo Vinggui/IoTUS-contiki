@@ -366,10 +366,10 @@ set_value(radio_param_t param, radio_value_t value)
 
       if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
         g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
-        PRINTF("Using Short address");
+        PRINTF("Using Short address\n");
       } else {
         g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
-        PRINTF("Using Long address");
+        PRINTF("Using Long address\n");
       }
       //report to the global system
       iotus_radio_selected_address_type = g_used_address_type;
@@ -803,47 +803,45 @@ cc2420_prepare(iotus_packet_t *packet)
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
   
-  if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
-    g_expect_new_iotus_packet_hdr = TRUE;
-    /* verify if any layer is inserting the address... */
-    if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                    IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-      if(0 == packet_append_last_header(
-                  ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                  addresses_self_get_pointer(g_used_address_type),
-                  packet)) {
-        PRINTF("Failed to insert source address.\n");
-        return -1;
-      }
-      //PRINTF("Prev addr inserted\n");
-    }
-    //In cases where broadcast is sent, only the source addr is necessary,
-    //because the bit of broadcast in the iotus dynamic header is already set
-    if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-      //If this is not a broadcast, then we can try to insert send to a specific node.
-      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                      IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-        if(0 == packet_append_last_header(
-                    ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                    nodes_get_address(g_used_address_type,packet->nextDestinationNode),
-                    packet)) {
-          PRINTF("Failed to insert destination address.");
-          return -1;
-        }
-        //PRINTF("Next addr inserted\n");
-      }
-    }
+  // if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
+  //   g_expect_new_iotus_packet_hdr = TRUE;
+  //   /* verify if any layer is inserting the address... */
+  //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+  //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+  //     if(0 == packet_append_last_header(
+  //                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+  //                 addresses_self_get_pointer(g_used_address_type),
+  //                 packet)) {
+  //       PRINTF("Failed to insert source address.\n");
+  //       return -1;
+  //     }
+  //     //PRINTF("Prev addr inserted\n");
+  //   }
+  //   //In cases where broadcast is sent, only the source addr is necessary,
+  //   //because the bit of broadcast in the iotus dynamic header is already set
+  //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+  //     //If this is not a broadcast, then we can try to insert send to a specific node.
+  //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+  //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+  //       if(0 == packet_append_last_header(
+  //                   ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+  //                   nodes_get_address(g_used_address_type,packet->nextDestinationNode),
+  //                   packet)) {
+  //         PRINTF("Failed to insert destination address.");
+  //         return -1;
+  //       }
+  //       //PRINTF("Next addr inserted\n");
+  //     }
+  //   }
 
 
-    if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
-                                  &(packet->iotusHeader),
-                                  packet)) {
-      PRINTF("Failed insert iotus dyn hdr.");
-      return -1;
-    }
-  }
-
-  PRINTF("msg: %x %x %s",pieces_get_data_pointer(packet)[0], pieces_get_data_pointer(packet)[1],pieces_get_data_pointer(packet)+1);
+  //   if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
+  //                                 &(packet->iotusHeader),
+  //                                 packet)) {
+  //     PRINTF("Failed insert iotus dyn hdr.");
+  //     return -1;
+  //   }
+  // }
 
   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                 IOTUS_CHORE_PKT_CHECKSUM)) {
@@ -1041,66 +1039,66 @@ cc2420_read(void)
       cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
 
 
-      //Check the address and filtering options
-      if(g_expect_new_iotus_packet_hdr == TRUE) {
-        packet_parse(packet);
+      // //Check the address and filtering options
+      // if(g_expect_new_iotus_packet_hdr == TRUE) {
+      //   packet_parse(packet);
 
-        if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-          /**
-           * In cases where broadcast is sent, only the source addr is received
-           * If this is not a broadcast, then we can try to receive to a specific node.
-           */
+      //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+      //     /**
+      //      * In cases where broadcast is sent, only the source addr is received
+      //      * If this is not a broadcast, then we can try to receive to a specific node.
+      //      */
 
-          if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                          IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-            uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-            if(FAILURE == packet_unwrap_appended_byte(
-                              packet,
-                              address,
-                              ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-              PRINTF("Failed couldn't unwrap.");
-              packet_destroy(packet);
-              return NULL;
-            }
+      //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+      //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+      //       uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+      //       if(FAILURE == packet_unwrap_appended_byte(
+      //                         packet,
+      //                         address,
+      //                         ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //         PRINTF("Failed couldn't unwrap.");
+      //         packet_destroy(packet);
+      //         return NULL;
+      //       }
 
-            PRINTF("Got source addr %u %u\n",address[1],address[0]);
-            if(FALSE == addresses_compare(address,
-                          addresses_self_get_pointer(g_used_address_type),
-                          ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-              //This message is not for us... Drop it?
-              PRINTF("Dropping pckt!, wrong dest.");
-              packet_destroy(packet);
-              return NULL;
-            }
-            //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
-            //EXTRAIR INFORMACOES PARA O PACOTE
-          }
-        }
+      //       PRINTF("Got source addr %u %u\n",address[1],address[0]);
+      //       if(FALSE == addresses_compare(address,
+      //                     addresses_self_get_pointer(g_used_address_type),
+      //                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //         //This message is not for us... Drop it?
+      //         PRINTF("Dropping pckt!, wrong dest.");
+      //         packet_destroy(packet);
+      //         return NULL;
+      //       }
+      //       //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
+      //       //EXTRAIR INFORMACOES PARA O PACOTE
+      //     }
+      //   }
 
-        if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                        IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-          uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-          if(FAILURE == packet_unwrap_appended_byte(
-                            packet,
-                            address,
-                            ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-            PRINTF("Failed to get prev address.");
-            packet_destroy(packet);
-            return NULL;
-          }
-          uint8_t *addrPointer = pieces_modify_additional_info_var(
-                                      packet->additionalInfoList,
-                                      IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
-                                      ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                                      TRUE);
-          if(NULL == addrPointer) {
-            PRINTF("Failed to create additional info");
-          } else {
-            memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
-          }
+      //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+      //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+      //     uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+      //     if(FAILURE == packet_unwrap_appended_byte(
+      //                       packet,
+      //                       address,
+      //                       ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //       PRINTF("Failed to get prev address.");
+      //       packet_destroy(packet);
+      //       return NULL;
+      //     }
+      //     uint8_t *addrPointer = pieces_modify_additional_info_var(
+      //                                 packet->additionalInfoList,
+      //                                 IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+      //                                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+      //                                 TRUE);
+      //     if(NULL == addrPointer) {
+      //       PRINTF("Failed to create additional info");
+      //     } else {
+      //       memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
+      //     }
           
-        }
-      }
+      //   }
+      // }
 
       if(!poll_mode) {
 
@@ -1440,7 +1438,7 @@ const struct iotus_radio_driver_struct cc2420_radio_driver =
     "cc2420",
     cc2420_init,
     post_start,
-    post_start,
+    NULL,
     close,
     cc2420_prepare,
     cc2420_transmit,

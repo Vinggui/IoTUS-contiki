@@ -51,9 +51,9 @@ struct hdr {
 
 /*---------------------------------------------------------------------------*/
 static int
-hdr_length(void)
+hdr_length(iotus_packet_t *packet)
 {
-  return DECORATED_FRAMER.length() + sizeof(struct hdr);
+  return DECORATED_FRAMER.length(packet) + sizeof(struct hdr);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -63,7 +63,7 @@ pad(iotus_packet_t *packet)
   //uint8_t *ptr;
   uint8_t zeroes_count;
   
-  transmit_len = packet_get_size(packet) + hdr_length();
+  transmit_len = packet_get_size(packet) + hdr_length(packet);
   if(transmit_len < SHORTEST_PACKET_SIZE) {
     /* Padding required */
     zeroes_count = SHORTEST_PACKET_SIZE - transmit_len;
@@ -73,6 +73,7 @@ pad(iotus_packet_t *packet)
     // packetbuf_set_datalen(packetbuf_datalen() + zeroes_count);
     uint8_t zeroArray[zeroes_count];
     memset(zeroArray, 0, zeroes_count);
+    SAFE_PRINTF_LOG_INFO("trans %u %u of %u",packet_get_size(packet),transmit_len,zeroes_count);
     if(zeroes_count == packet_append_last_header(zeroes_count, zeroArray, packet)) {
       SAFE_PRINTF_LOG_ERROR("Zeros not appended");
     }

@@ -27,21 +27,21 @@
 
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   //Define the Enumaration types for dynamic mode
-  #if IOTUS_CONF_USING_TRANSPORT == 1
+  //#if IOTUS_CONF_USING_TRANSPORT == 1
     typedef enum iotus_transport_protocols IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS iotus_transport_protocols;
-  #else
-    typedef enum iotus_transport_protocols {IOTUS_NO_TRANSPORT_LAYER} iotus_transport_protocols;
-  #endif
-  #if IOTUS_CONF_USING_ROUTING == 1
+  //#else
+    //typedef enum iotus_transport_protocols {IOTUS_NO_TRANSPORT_LAYER} iotus_transport_protocols;
+  //#endif
+  //#if IOTUS_CONF_USING_ROUTING == 1
     typedef enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS iotus_routing_protocols;
-  #else
-    typedef enum iotus_routing_protocols {IOTUS_NO_ROUTING_LAYER} iotus_routing_protocols;
-  #endif
-  #if IOTUS_CONF_USING_DATA_LINK == 1
+  //#else
+    //typedef enum iotus_routing_protocols {IOTUS_NO_ROUTING_LAYER} iotus_routing_protocols;
+  //#endif
+  //#if IOTUS_CONF_USING_DATA_LINK == 1
     typedef enum iotus_data_link_protocols IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS iotus_data_link_protocols;
-  #else
-    typedef enum iotus_data_link_protocols {IOTUS_NO_DATA_LINK_LAYER} iotus_data_link_protocols;
-  #endif
+  //#else
+    //typedef enum iotus_data_link_protocols {IOTUS_NO_DATA_LINK_LAYER} iotus_data_link_protocols;
+  //#endif
 
     typedef enum iotus_radio_drivers IOTUS_RADIO_DRIVERS_ENUM_OPTIONS iotus_radio_drivers;
 #endif /* #ifdef IOTUS_COMPILE_MODE_DYNAMIC */
@@ -57,37 +57,19 @@ typedef uint8_t Status;
 #define SUCCESS         1
 #define FAILURE         0
 
-struct iotus_transport_protocol_struct {
-  void (* start)(void);
-  void (* post_start)(void);
-  void (* run)(void);
-  void (* close)(void);
-  //void (* send)(iotus_packet_t *packet);
-  //void (* sent_cb)(iotus_packet_t *packet);
-};
-
-struct iotus_routing_protocol_struct {
-  void (* start)(void);
-  void (* post_start)(void);
-  void (* run)(void);
-  void (* close)(void);
-  //void (* send)(iotus_packet_t *packet);
-  //void (* sent_cb)(iotus_packet_t *packet);
-};
-
 
 ///////////////////////////////////////////////////////////////////////
 //                                Externs                            //
 ///////////////////////////////////////////////////////////////////////
-#if IOTUS_CONF_USING_TRANSPORT == 1
+//#if IOTUS_CONF_USING_TRANSPORT == 1
   extern struct iotus_transport_protocol_struct const *active_transport_protocol;
-#endif
-#if IOTUS_CONF_USING_ROUTING == 1
+//#endif
+//#if IOTUS_CONF_USING_ROUTING == 1
   extern struct iotus_routing_protocol_struct const *active_routing_protocol;
-#endif
-#if IOTUS_CONF_USING_DATA_LINK == 1
+//#endif
+//#if IOTUS_CONF_USING_DATA_LINK == 1
   extern struct iotus_data_link_protocol_struct const *active_data_link_protocol;
-#endif
+//#endif
 extern struct iotus_radio_driver_struct const *active_radio_driver;
 
 //////////////////////////////////////////////////////////////////////////

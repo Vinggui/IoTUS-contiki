@@ -13,13 +13,10 @@ NULL_DATA_LINK = null_MAC_v1.0.0
 
 ####################### ENERGY AWARE Profile #######################
 # Transport protocols
-ENERGY_AWARE_TRANSPORT = \
-  null_transport_v1.0.0
+ENERGY_AWARE_TRANSPORT = 
 
 # Routing protocols
-ENERGY_AWARE_ROUTING = \
-  null_routing_v1.0.0 \
-  edytee_routing_v1.0.0
+ENERGY_AWARE_ROUTING = edytee_routing_v1.0.0
 
 # Data link protocols
 ENERGY_AWARE_DATA_LINK = \
@@ -50,6 +47,17 @@ HIGH_MOBILITY_ROUTING =
 # Data link protocols
 HIGH_MOBILITY_DATA_LINK =
 
+
+
+####################### Testing Profile #######################
+# Transport protocols
+TEST_TRANSPORT = null_transport_v1.0.0
+
+# Routing protocols
+TEST_ROUTING = null_routing_v1.0.0
+
+# Data link protocols
+TEST_DATA_LINK = contikiMAC_v1.0.0
 
 ####################### ALL Profile #######################
 # Transport protocols

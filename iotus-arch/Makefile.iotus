@@ -57,7 +57,7 @@ recursirve_add_dependencies = $(if $(1),\
 #                      Ignore some default file from contiki                     #
 ##################################################################################
 # Ignore... Core/dev/radio.h
-CFLAGS += -DRADIO_H_=1
+CFLAGS += -DRADIO_H_=1 -DFRAME_802154_H=1
 # Ignore sources
 IGNORE_SOURCE_FILE_LIST += nullradio.c
 
@@ -94,18 +94,24 @@ ifdef IOTUS_CONF_COMPILE_MODE
         ifndef TRANSPORT_PROTOCOLS_LIST
           $(error In IoTUS dynamic mode, IOTUS_CONF_DYNAMIC_MODE_PROFILES or the list of TRANSPORT_PROTOCOLS_LIST protocols must be defined)
         endif
+      else
+        TRANSPORT_PROTOCOLS_LIST=null_transport_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_ROUTING),1)
         ifndef ROUTING_PROTOCOLS_LIST
           $(error In IoTUS dynamic mode, IOTUS_CONF_DYNAMIC_MODE_PROFILES or the list of ROUTING_PROTOCOLS_LIST protocols must be defined)
         endif
+      else
+        ROUTING_PROTOCOLS_LIST=null_routing_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
         ifndef DATA_LINK_PROTOCOLS_LIST
           $(error In IoTUS dynamic mode, IOTUS_CONF_DYNAMIC_MODE_PROFILES or the list of DATA_LINK_PROTOCOLS_LIST protocols must be defined)
         endif
+      else
+        DATA_LINK_PROTOCOLS_LIST=null_MAC_v1.0.0
       endif
     endif
 
@@ -251,18 +257,18 @@ ifdef IOTUS_CONF_COMPILE_MODE
         ) \
       )
 
-    ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
+    #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
     # Execute this for Transport
     $(call add_protocols_makefile,TRANSPORT)
-    endif
-    ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+    #endif
+    #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
     # Execute this for Routing
     $(call add_protocols_makefile,ROUTING)
-    endif
-    ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
+    #endif
+    #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
     $(call add_protocols_makefile,DATA_LINK)
-    endif
+    #endif
     #######################################################################################
 
     $(info Transport protocols used are: $(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))
@@ -297,18 +303,18 @@ ifdef IOTUS_CONF_COMPILE_MODE
       $(eval CFLAGS += -DIOTUS_LAYER_$(1)_SERVICE_ARRAY=$(temp_var_adding_brackets)) \
 
 
-    ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
+    #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
     # Execute this for Transport
     $(call setup_protocol_defines_into_iotus_core,TRANSPORT)
-    endif
-    ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+    #endif
+    #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
     # Execute this for Routing
     $(call setup_protocol_defines_into_iotus_core,ROUTING)
-    endif
-    ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
+    #endif
+    #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
     $(call setup_protocol_defines_into_iotus_core,DATA_LINK)
-    endif
+    #endif
 
     ######################################################################################
     # Setup the defines for enum and arrays for the radio layer
@@ -332,18 +338,24 @@ ifdef IOTUS_CONF_COMPILE_MODE
         ifndef IOTUS_CONF_STATIC_TRANSPORT_LAYER
           $(error In IoTUS static mode, IOTUS_CONF_STATIC_TRANSPORT_LAYER protocol must be defined)
         endif
+      else
+        IOTUS_CONF_STATIC_TRANSPORT_LAYER=null_transport_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_ROUTING),1)
         ifndef IOTUS_CONF_STATIC_ROUTING_LAYER
           $(error In IoTUS static mode, IOTUS_CONF_STATIC_ROUTING_LAYER protocol must be defined)
         endif
+      else
+        IOTUS_CONF_STATIC_ROUTING_LAYER=null_routing_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
         ifndef IOTUS_CONF_STATIC_DATA_LINK_LAYER
           $(error In IoTUS static mode, IOTUS_CONF_STATIC_DATA_LINK_LAYER protocol must be defined)
         endif
+      else
+        IOTUS_CONF_STATIC_DATA_LINK_LAYER=null_MAC_v1.0.0
       endif
       CFLAGS+= -DIOTUS_COMPILE_MODE_STATIC
 
@@ -374,18 +386,18 @@ ifdef IOTUS_CONF_COMPILE_MODE
           $(eval IOTUS_SERVICE_DEPENDENCIES_LIST_FINAL += $(IOTUS_SERVICE_DEPENDENCIES_LIST)) \
         )
 
-      ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
+      #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
       # Execute this for Transport
       $(call add_protocols_dependencies,TRANSPORT)
-      endif
-      ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
       # Execute this for Routing
       $(call add_protocols_dependencies,ROUTING)
-      endif
-      ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       # Execute this for Data link
       $(call add_protocols_dependencies,DATA_LINK)
-      endif
+      #endif
       ############################################################################
 
       # Clean duplicates in service list
@@ -438,18 +450,18 @@ ifdef IOTUS_CONF_COMPILE_MODE
           $(eval IOTUS_STATIC_PROTOCOL_$(1) := $(IOTUS_PROTOCOL_NAME)_protocol) \
         )
 
-      ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
+      #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
       # Execute this for Transport
       $(call add_protocols_makefile,TRANSPORT)
-      endif
-      ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
       # Execute this for Routing
       $(call add_protocols_makefile,ROUTING)
-      endif
-      ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       # Execute this for Data link
       $(call add_protocols_makefile,DATA_LINK)
-      endif
+      #endif
       #######################################################################################
 
       $(info Transport protocol used is: $(IOTUS_STATIC_PROTOCOL_TRANSPORT))
@@ -474,15 +486,15 @@ ifdef IOTUS_CONF_COMPILE_MODE
       $(file >$(IOTUS_FOLDER)/$(IOTUS_DYNAMIC_HEADER_FILE),$(COMPLETE_PROTOCOL_SERVICE_LIST))
 
       ######################################################################################
-      ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
+      #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_TRANSPORT=$(IOTUS_STATIC_PROTOCOL_TRANSPORT)
-      endif
-      ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_ROUTING=$(IOTUS_STATIC_PROTOCOL_ROUTING)
-      endif
-      ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
+      #endif
+      #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_DATA_LINK=$(IOTUS_STATIC_PROTOCOL_DATA_LINK)
-      endif
+      #endif
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_RADIO_DRIVER=$(IOTUS_STATIC_PROTOCOL_RADIO_DRIVER)
       ######################################################################################
 
