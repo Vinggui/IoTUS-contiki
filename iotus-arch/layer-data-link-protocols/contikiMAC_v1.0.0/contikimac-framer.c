@@ -40,8 +40,6 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "ctkMAC-Frmr"
 #include "safe-printer.h"
 
-#define PRINTF(...)
-
 /* 2-byte header for recovering padded packets.
    Wireshark will not understand such packets at present. */
 struct hdr {
@@ -73,7 +71,6 @@ pad(iotus_packet_t *packet)
     // packetbuf_set_datalen(packetbuf_datalen() + zeroes_count);
     uint8_t zeroArray[zeroes_count];
     memset(zeroArray, 0, zeroes_count);
-    SAFE_PRINTF_LOG_INFO("trans %u %u of %u",packet_get_size(packet),transmit_len,zeroes_count);
     if(zeroes_count == packet_append_last_header(zeroes_count, zeroArray, packet)) {
       SAFE_PRINTF_LOG_ERROR("Zeros not appended");
     }
@@ -87,7 +84,7 @@ create(iotus_packet_t *packet)
   int hdr_len;
   
   if(FALSE == packet_has_space(packet,sizeof(struct hdr))) {
-    PRINTF("contikimac-framer: too large header\n");
+    SAFE_PRINTF_LOG_ERROR("too large hdr");
     return FRAMER_FAILED;
   }
 
@@ -98,7 +95,7 @@ create(iotus_packet_t *packet)
   
   hdr_len = DECORATED_FRAMER.create(packet);
   if(hdr_len < 0) {
-    PRINTF("contikimac-framer: decorated framer failed\n");
+    SAFE_PRINTF_LOG_ERROR("decorated framer");
     return FRAMER_FAILED;
   }
   
@@ -110,7 +107,31 @@ create(iotus_packet_t *packet)
 static int
 parse(iotus_packet_t *packet)
 {
-  return 0;
+  int hdr_len;
+  struct hdr *chdr;
+  
+  hdr_len = DECORATED_FRAMER.parse(packet);
+  if(hdr_len < 0) {
+    return FRAMER_FAILED;
+  }
+  
+  chdr = (struct hdr *)packet_get_payload_data(packet);
+  if(chdr->id != CONTIKIMAC_ID) {
+    SAFE_PRINTF_LOG_ERROR("CONTIKIMAC_ID missing");
+    return FRAMER_FAILED;
+  }
+  
+  // if(!packetbuf_hdrreduce(sizeof(struct hdr))) {
+  //   SAFE_PRINTF_LOG_ERROR("packetbuf_hdrreduce");
+  //   return FRAMER_FAILED;
+  // }
+  
+  //Removed the pad...
+  packet->lastHeaderSize += packet_get_payload_size(packet)
+                                          - chdr->len;
+  SAFE_PRINTF_CLEAN("merda %u\n",packet_get_payload_size(packet));
+  
+  return hdr_len + sizeof(struct hdr);
 }
 /*---------------------------------------------------------------------------*/
 const struct framer contikimac_framer = {

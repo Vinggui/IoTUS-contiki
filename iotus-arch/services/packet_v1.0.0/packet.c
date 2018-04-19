@@ -237,9 +237,8 @@ packet_get_tx_power(iotus_packet_t *packetPiece)
                                           packetPiece->additionalInfoList,
                                           IOTUS_PACKET_INFO_TYPE_RADIO_TX_BLCK);
   if(NULL == addInfo) {
-    //Found this address type...
-    SAFE_PRINTF_LOG_ERROR("Add info not found");
-    return 0xFF;
+    //Tx power of 120 is not expected
+    return 120;
   }
 
   packet_tx_block_input_t *txBlockInfo = (packet_tx_block_input_t *)pieces_get_data_pointer(addInfo);
@@ -274,8 +273,6 @@ packet_get_sequence_number(iotus_packet_t *packetPiece)
                                           packetPiece->additionalInfoList,
                                           IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER);
   if(NULL == addInfo) {
-    //Found this address type...
-    SAFE_PRINTF_LOG_ERROR("Add info not found");
     return -1;
   }
 
@@ -485,18 +482,13 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
         SAFE_PRINTF_LOG_ERROR("Recovery Failed!");
         return 0;
       }
-      memcpy(pieces_get_data_pointer(packetPiece),newBuff+newSizeInBYTES,packetOldTotalSize);
+      memcpy(pieces_get_data_pointer(packetPiece), newBuff + newSizeInBYTES, packetOldTotalSize);
       return 0;
     }
     packetPiece->data.size += newSizeInBYTES;
 #endif
-    memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize+newSizeInBYTES);
+    memcpy(pieces_get_data_pointer(packetPiece), newBuff, packetOldTotalSize + newSizeInBYTES);
   }
-
-  /**
-   * Optimization: If we can insert full bytes, then do it instead.
-   */
-  
 
   //Insert the new bits information
   uint16_t byteToPushToPkt = (newSizeInBYTES + oldSizeInBYTES) - 1 - ((packetPiece->firstHeaderBitSize)/8);
@@ -505,6 +497,15 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
   if(bitSequenceSize%8){
     // this +1 is because this value is decreased right after.
     byteToReadFromInput++;
+  }
+
+  /**
+   * Optimization: If we can insert full bytes, then do it instead.
+   */
+  if(bitToPush == 0) {
+    memcpy(pieces_get_data_pointer(packetPiece), bitSeq, byteToReadFromInput);
+    SAFE_PRINTF_LOG_INFO("Push bit optmzd");
+    return packet_get_size(packetPiece);
   }
 
   for(i=0; i < bitSequenceSize; i++) {
@@ -708,6 +709,30 @@ packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num)
     packetPiece->firstHeaderBitSize += num;
   }
   return result;
+}
+
+/*---------------------------------------------------------------------*/
+uint16_t
+packet_get_payload_size(iotus_packet_t *packetPiece)
+{
+  uint16_t hdrSize;
+  hdrSize = packetPiece->firstHeaderBitSize/8;
+  if(packetPiece->firstHeaderBitSize%8 != 0) {
+    hdrSize++;
+  }
+  return packet_get_size(packetPiece) - hdrSize - packetPiece->lastHeaderSize;
+}
+
+/*---------------------------------------------------------------------*/
+uint8_t *
+packet_get_payload_data(iotus_packet_t *packetPiece)
+{
+  uint16_t hdrSize;
+  hdrSize = packetPiece->firstHeaderBitSize/8;
+  if(packetPiece->firstHeaderBitSize%8 != 0) {
+    hdrSize++;
+  }
+  return (pieces_get_data_pointer(packetPiece) + hdrSize);
 }
 
 /*---------------------------------------------------------------------*/

@@ -29,9 +29,16 @@
 
 typedef struct nodes {
   struct nodes *next;
+  uint8_t params;
   timestamp_t timestamp;//Supposed to be the last time heard
   LIST_STRUCT(additionalInfoList);
 } iotus_node_t;
+
+
+//////////////////////////////////////////
+//            Params details            //
+//////////////////////////////////////////
+#define IOTUS_NODES_PARAM_      0b00000000
 
 
 /////////////////////////////////////////
@@ -70,6 +77,7 @@ enum nodes_additional_Info_types {
 ///////////////////////////////////////
 extern uint8_t nodes_broadcast_pointer;
 #define NODES_BROADCAST   ((iotus_node_t *)&nodes_broadcast_pointer)
+#define NODES_SELF        ((iotus_node_t *)&nodes_self_pointer)
 
 
 /*--------------------------------------------------------------------------*/

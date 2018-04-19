@@ -23,7 +23,8 @@ enum packet_additionalInfoList_types {
   IOTUS_PACKET_INFO_TYPE_RESERVED = 0,
 
   IOTUS_PACKET_INFO_TYPE_P2P_ADDRESSES,
-  IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+  IOTUS_PACKET_INFO_TYPE_SOURCE_ADDRESS,
+  IOTUS_PACKET_INFO_TYPE_DEST_ADDRESS,
   IOTUS_PACKET_INFO_TYPE_SEQUENCE_NUMBER,
   IOTUS_PACKET_INFO_TYPE_RETX_ATTEMPTS_DID,
 
@@ -64,8 +65,8 @@ typedef struct __attribute__ ((__packed__)) packet_tx_additional_info {
  * Used to inform end to end communications
  */
 typedef struct __attribute__ ((__packed__)) packet_e2e_nodes_addit_info {
-  iotus_node_t *sourceNode;
-  iotus_node_t *finaLNode;
+  uint8_t *sourceNode;
+  uint8_t *finaLNode;
 } packet_addresses_block_t;
 
 #endif /* IOTUS_ARCH_SERVICES_PACKET_DEFAULT_ADDITIONAL_INFO_H_*/

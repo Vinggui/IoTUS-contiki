@@ -64,9 +64,8 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
-
-#define PRINTF(...)
-#define PRINTDEBUG(...)
+#define PRINTF(...)         SAFE_PRINTF_LOG_ERROR(__VA_ARGS__)
+#define PRINTDEBUG(...)     SAFE_PRINTF_LOG_ERROR(__VA_ARGS__)
 
 
 /* TX/RX cycles are synchronized with neighbor wake periods */
@@ -736,7 +735,7 @@ send_packet(iotus_packet_t *packet)
 
     if(!is_broadcast && (is_receiver_awake || is_known_receiver) &&
        !RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + MAX_PHASE_STROBE_TIME)) {
-      PRINTF("miss to %d\n", nodes_get_address(
+      SAFE_PRINTF_LOG_WARNING("miss to %d\n", nodes_get_address(
                                 iotus_radio_selected_address_type,
                                 packet->nextDestinationNode));
       break;
@@ -766,7 +765,7 @@ send_packet(iotus_packet_t *packet)
         }
       } else if (ret == RADIO_TX_NOACK) {
       } else if (ret == RADIO_TX_COLLISION) {
-          PRINTF("contikimac: collisions while sending\n");
+          SAFE_PRINTF_LOG_ERROR("contikimac: collisions while sending\n");
           collisions++;
       }
       wt = RTIMER_NOW();
@@ -784,7 +783,7 @@ send_packet(iotus_packet_t *packet)
 
         iotus_packet_t *ack = active_radio_driver->read();
         if(NULL == ack) {
-          PRINTF("No ack received\n");
+          SAFE_PRINTF_LOG_ERROR("No ack received\n");
         }
         if(packet_get_size(ack) == ACK_LEN &&
            seqno == pieces_get_data_pointer(ack)[ACK_LEN - 1]) {
@@ -794,7 +793,7 @@ send_packet(iotus_packet_t *packet)
 #endif
           break;
         } else {
-          PRINTF("contikimac: collisions while sending\n");
+          SAFE_PRINTF_LOG_ERROR("contikimac: collisions while sending\n");
           collisions++;
         }
       }
@@ -804,7 +803,7 @@ send_packet(iotus_packet_t *packet)
 
   off();
 
-  PRINTF("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
+  SAFE_PRINTF_LOG_INFO("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
          packet_get_size(packet),
          got_strobe_ack ? "ack" : "no ack",
          collisions ? "collision" : "no collision");
@@ -871,6 +870,34 @@ recv_burst_off(void *ptr)
 static void
 input_packet(iotus_packet_t *packet)
 {
+  //static struct ctimer ct;
+  int duplicate = 0;
+
+#if CONTIKIMAC_SEND_SW_ACK
+  int original_datalen;
+  uint8_t *original_dataptr;
+
+  original_datalen = packet_get_size(packet);//packetbuf_datalen();
+  original_dataptr = pieces_get_data_pointer(packet);
+#endif
+
+  if(!we_are_receiving_burst) {
+    off();
+  }
+
+  if(packet_get_size(packet) == ACK_LEN) {
+    /* Ignore ack packets */
+    SAFE_PRINT("ContikiMAC: ignored ack\n");
+    return;
+  }
+
+  /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start % CYCLE_TIME);*/
+
+  if(contikimac_framer.parse(packet) >= 0) {
+    SAFE_PRINTF_CLEAN("TESTE\n");
+  } else {
+    SAFE_PRINTF_LOG_ERROR("Parse (%u)\n", packet_get_size(packet));
+  }
 }
 /*---------------------------------------------------------------------------*/
 static void

@@ -65,6 +65,7 @@
 
 #include "sys/cc.h"
 #include "iotus-frame802154.h"
+#include "iotus-netstack.h"
 //#include "net/llsec/llsec802154.h"
 #include <string.h>
 
@@ -497,5 +498,148 @@ frame802154_parse_fcf(uint8_t *data, frame802154_fcf_t *pfcf)
  */
 int
 frame802154_parse(uint8_t *data, int len, frame802154_t *pf)
-{return 1;}
+{
+  uint8_t *p;
+  frame802154_fcf_t fcf;
+  int c;
+  int has_src_panid;
+  int has_dest_panid;
+#if LLSEC802154_USES_EXPLICIT_KEYS
+  uint8_t key_id_mode;
+#endif /* LLSEC802154_USES_EXPLICIT_KEYS */
+
+  if(len < 2) {
+    return 0;
+  }
+
+  p = data;
+
+  /* decode the FCF */
+  frame802154_parse_fcf(p, &fcf);
+  memcpy(&pf->fcf, &fcf, sizeof(frame802154_fcf_t));
+  p += 2;                             /* Skip first two bytes */
+
+  if(fcf.sequence_number_suppression == 0) {
+    pf->seq = p[0];
+    p++;
+  }
+
+  frame802154_has_panid(&fcf, &has_src_panid, &has_dest_panid);
+
+  /* Destination address, if any */
+  if(fcf.dest_addr_mode) {
+    if(has_dest_panid) {
+      /* Destination PAN */
+      pf->dest_pid = p[0] + (p[1] << 8);
+      p += 2;
+    } else {
+      pf->dest_pid = 0;
+    }
+
+    /* Destination address */
+/*     l = addr_len(fcf.dest_addr_mode); */
+/*     for(c = 0; c < l; c++) { */
+/*       pf->dest_addr.u8[c] = p[l - c - 1]; */
+/*     } */
+/*     p += l; */
+    if(fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) {
+      memset((uint8_t *)&(pf->dest_addr),
+          0,
+          ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+      pf->dest_addr[0] = p[1];
+      pf->dest_addr[1] = p[0];
+      p += 2;
+    } else if(fcf.dest_addr_mode == FRAME802154_LONGADDRMODE) {
+      for(c = 0; c < 8; c++) {
+        pf->dest_addr[c] = p[7 - c];
+      }
+      p += 8;
+    }
+  } else {
+    memset((uint8_t *)&(pf->dest_addr),
+      0,
+      ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+    pf->dest_pid = 0;
+  }
+
+  /* Source address, if any */
+  if(fcf.src_addr_mode) {
+    /* Source PAN */
+    if(has_src_panid) {
+      pf->src_pid = p[0] + (p[1] << 8);
+      p += 2;
+      if(!has_dest_panid) {
+        pf->dest_pid = pf->src_pid;
+      }
+    } else {
+      pf->src_pid = pf->dest_pid;
+    }
+
+    /* Source address */
+/*     l = addr_len(fcf.src_addr_mode); */
+/*     for(c = 0; c < l; c++) { */
+/*       pf->src_addr.u8[c] = p[l - c - 1]; */
+/*     } */
+/*     p += l; */
+    if(fcf.src_addr_mode == FRAME802154_SHORTADDRMODE) {
+      memset((uint8_t *)&(pf->src_addr),
+          0,
+          ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+      pf->src_addr[0] = p[1];
+      pf->src_addr[1] = p[0];
+      p += 2;
+    } else if(fcf.src_addr_mode == FRAME802154_LONGADDRMODE) {
+      for(c = 0; c < 8; c++) {
+        pf->src_addr[c] = p[7 - c];
+      }
+      p += 8;
+    }
+  } else {
+    memset((uint8_t *)&(pf->src_addr),
+          0,
+          ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+    pf->src_pid = 0;
+  }
+
+#if LLSEC802154_USES_AUX_HEADER
+  if(fcf.security_enabled) {
+    pf->aux_hdr.security_control.security_level = p[0] & 7;
+#if LLSEC802154_USES_EXPLICIT_KEYS
+    pf->aux_hdr.security_control.key_id_mode = (p[0] >> 3) & 3;
+#endif /* LLSEC802154_USES_EXPLICIT_KEYS */
+    pf->aux_hdr.security_control.frame_counter_suppression = p[0] >> 5;
+    pf->aux_hdr.security_control.frame_counter_size = p[0] >> 6;
+    p += 1;
+
+    if(pf->aux_hdr.security_control.frame_counter_suppression == 0) {
+      memcpy(pf->aux_hdr.frame_counter.u8, p, 4);
+      p += 4;
+      if(pf->aux_hdr.security_control.frame_counter_size == 1) {
+        p ++;
+      }
+    }
+
+#if LLSEC802154_USES_EXPLICIT_KEYS
+    key_id_mode = pf->aux_hdr.security_control.key_id_mode;
+    if(key_id_mode) {
+      c = (key_id_mode - 1) * 4;
+      memcpy(pf->aux_hdr.key_source.u8, p, c);
+      p += c;
+      pf->aux_hdr.key_index = p[0];
+      p += 1;
+    }
+#endif /* LLSEC802154_USES_EXPLICIT_KEYS */
+  }
+#endif /* LLSEC802154_USES_AUX_HEADER */
+
+  /* header length */
+  c = p - data;
+  /* payload length */
+  pf->payload_len = (len - c);
+  /* payload */
+  pf->payload = p;
+
+  /* return header length if successful */
+  return c > len ? 0 : c;
+}
 /** \}   */

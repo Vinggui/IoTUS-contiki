@@ -982,13 +982,12 @@ PROCESS_THREAD(cc2420_process, ev, data)
 
   while(1) {
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
-
-    PRINTF("cc2420_process: calling receiver callback\n");
     //PRINTF("SETar timestamp");
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
     iotus_packet_t *packet;
     packet = cc2420_read();
     //packetbuf_set_datalen(len);
+    PRINTF("cc2420_process: calling receiver callback\n");
     active_data_link_protocol->receive(packet);
   }
 

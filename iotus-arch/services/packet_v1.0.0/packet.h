@@ -70,7 +70,11 @@ enum packet_types {
 #define IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN)
 #define IOTUS_PACKET_TYPE_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN)
 
-
+/////////////////////////////////////////////////////
+//                     MACROS                      //
+/////////////////////////////////////////////////////
+#define packet_set_type(packet, typeValue)      packet->type=typeValue
+#define packet_get_type(packet)                 packet->type
 
 /*
  * Functions of this module
@@ -150,6 +154,12 @@ packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t 
 
 uint32_t
 packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num);
+
+uint16_t
+packet_get_payload_size(iotus_packet_t *packetPiece);
+
+uint8_t *
+packet_get_payload_data(iotus_packet_t *packetPiece);
 
 void
 packet_parse(iotus_packet_t *packetPiece);

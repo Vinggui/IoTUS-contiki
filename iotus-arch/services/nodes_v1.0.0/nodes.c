@@ -36,6 +36,7 @@ MEMB(iotus_nodes_mem, iotus_node_t, IOTUS_NODES_LIST_SIZE);
 LIST(gNodesList);
 
 uint8_t nodes_broadcast_pointer;
+uint8_t nodes_self_pointer;
 
 /*---------------------------------------------------------------------*/
 /*
@@ -76,6 +77,19 @@ nodes_get_node_by_address(iotus_address_type addressType, uint8_t *address)
 {
   if(NULL == address || addressType == IOTUS_ADDRESSES_TYPE_ADDR_PANID) {
     return NULL;
+  }
+
+  //verify if this address is ours...
+  uint8_t *selfAddress = addresses_self_get_pointer(addressType);
+  if(selfAddress != NULL) {
+    if(TRUE == addresses_compare(
+                  selfAddress,
+                  address,
+                  ADDRESSES_GET_TYPE_SIZE(addressType))
+                  ) {
+      //It`s our
+      return NODES_SELF;
+    }
   }
 
   //Verify if this node already exists

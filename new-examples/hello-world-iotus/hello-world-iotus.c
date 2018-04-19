@@ -77,18 +77,18 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
-        iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
-            (const uint8_t *)"BTeste-msg", TRUE,
-            NODES_BROADCAST, NULL);
+        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 2) {
 
-        if(NULL == packet) {
-          continue;
+            iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
+                (const uint8_t *)"BTeste-msg", TRUE,
+                NODES_BROADCAST, NULL);
+
+            if(NULL == packet) {
+              continue;
+            }
+            active_transport_protocol->send(packet);
         }
-
-
-        active_transport_protocol->send(packet);
-        etimer_reset(&timer);
-
+        
     }
 
 

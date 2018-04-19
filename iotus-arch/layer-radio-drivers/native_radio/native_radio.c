@@ -34,7 +34,9 @@ static Boolean g_expect_new_iotus_packet_hdr;
 static uint8_t receive_on;
 static int channel;
 
+#define NATIVE_RADIO_AUTO_RECEIVE 1
 uint8_t emu_msg[200];
+uint8_t packet_indication;
 
 /*---------------------------------------------------------------------------*/
 static radio_result_t
@@ -198,7 +200,6 @@ static int
 transmit(iotus_packet_t *packet)
 {
   int8_t tempTxPower = packet_get_tx_power(packet);
-  SAFE_PRINTF_CLEAN("Power set to %d",tempTxPower);
   if(receive_on) {
     SAFE_PRINTF_LOG_INFO("Radio is still on");
   } else {
@@ -225,6 +226,9 @@ transmit(iotus_packet_t *packet)
   }
   printf("\nfim\n");
 
+  #if NATIVE_RADIO_AUTO_RECEIVE == 1
+    packet_indication = 1;
+  #endif
   return RADIO_RESULT_OK;
 }
 
@@ -270,64 +274,62 @@ read(void)
 
 
       //Check the address and filtering options
-      if(g_expect_new_iotus_packet_hdr == TRUE) {
-        packet_parse(packet);
+      // if(g_expect_new_iotus_packet_hdr == TRUE) {
+      //   packet_parse(packet);
 
-        if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-          /**
-           * In cases where broadcast is sent, only the source addr is received
-           * If this is not a broadcast, then we can try to receive to a specific node.
-           */
+      //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+      //     /**
+      //      * In cases where broadcast is sent, only the source addr is received
+      //      * If this is not a broadcast, then we can try to receive to a specific node.
+      //      */
 
-          if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                          IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-            uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-            if(FAILURE == packet_unwrap_appended_byte(
-                              packet,
-                              address,
-                              ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-              SAFE_PRINTF_LOG_ERROR("Failed couldn't unwrap.");
-              packet_destroy(packet);
-              return NULL;
-            }
+      //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+      //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+      //       uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+      //       if(FAILURE == packet_unwrap_appended_byte(
+      //                         packet,
+      //                         address,
+      //                         ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //         SAFE_PRINTF_LOG_ERROR("Failed couldn't unwrap.");
+      //         packet_destroy(packet);
+      //         return NULL;
+      //       }
 
-            SAFE_PRINTF_LOG_ERROR("Got source addr %u %u\n",address[1],address[0]);
-            if(FALSE == addresses_compare(address,
-                          addresses_self_get_pointer(g_used_address_type),
-                          ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-              //This message is not for us... Drop it?
-              SAFE_PRINTF_LOG_ERROR("Dropping pckt!, wrong dest.");
-              packet_destroy(packet);
-              return NULL;
-            }
-            //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
-            //EXTRAIR INFORMACOES PARA O PACOTE
-          }
-        }
+      //       SAFE_PRINTF_LOG_ERROR("Got source addr %u %u\n",address[1],address[0]);
+      //       if(FALSE == addresses_compare(address,
+      //                     addresses_self_get_pointer(g_used_address_type),
+      //                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //         //This message is not for us... Drop it?
+      //         SAFE_PRINTF_LOG_ERROR("Dropping pckt!, wrong dest.");
+      //         packet_destroy(packet);
+      //         return NULL;
+      //       }
+      //       //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
+      //       //EXTRAIR INFORMACOES PARA O PACOTE
+      //     }
+      //   }
 
-        if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                        IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-          uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-          if(FAILURE == packet_unwrap_appended_byte(
-                            packet,
-                            address,
-                            ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-            SAFE_PRINTF_LOG_ERROR("Failed to get prev address.");
-            packet_destroy(packet);
-            return NULL;
-          }
-          uint8_t *addrPointer = pieces_modify_additional_info_var(packet->additionalInfoList,
-                                     IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
-                                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-                                     TRUE);
-          if(NULL == addrPointer) {
-            SAFE_PRINTF_LOG_ERROR("Failed to create additional info");
-          }
-          memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
-        }
-      }
-
-      uint8_t header = packet_unwrap_pushed_bit(packet,3);
+      //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+      //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+      //     uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+      //     if(FAILURE == packet_unwrap_appended_byte(
+      //                       packet,
+      //                       address,
+      //                       ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+      //       SAFE_PRINTF_LOG_ERROR("Failed to get prev address.");
+      //       packet_destroy(packet);
+      //       return NULL;
+      //     }
+      //     uint8_t *addrPointer = pieces_modify_additional_info_var(packet->additionalInfoList,
+      //                                IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+      //                                ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+      //                                TRUE);
+      //     if(NULL == addrPointer) {
+      //       SAFE_PRINTF_LOG_ERROR("Failed to create additional info");
+      //     }
+      //     memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
+      //   }
+      // }
 
       iotus_parameters_radio_events.lastRSSI = footer[0];
       iotus_parameters_radio_events.lastLinkQuality = footer[1];
@@ -360,8 +362,6 @@ send(iotus_packet_t *packet)
   prepare(packet);
   transmit(packet);
 
-  //test
-  //read();
   return 1;
 }
 
@@ -380,6 +380,7 @@ start(void)
   iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_PKT_CHECKSUM);
   g_software_addr_filtering = 0;
   g_expect_new_iotus_packet_hdr = TRUE;
+  packet_indication = 0;
 }
 
 
@@ -398,6 +399,14 @@ post_start(void)
 static void
 run(void)
 {
+  if(packet_indication) {
+    packet_indication = 0;
+    iotus_packet_t *packet = read();
+    if(packet == NULL) {
+      SAFE_PRINTF_LOG_ERROR("Packet read is null");
+    }
+    active_data_link_protocol->receive(packet);
+  }
 }
 
 /*---------------------------------------------------------------------------*/

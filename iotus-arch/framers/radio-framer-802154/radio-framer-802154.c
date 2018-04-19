@@ -129,15 +129,22 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   params.dest_pid = *((uint16_t *)tempPanID);
 
   if(packet_holds_broadcast(packet)) {
+    aquiui too
     /* Broadcast requires short address mode. */
     params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
     params.dest_addr[0] = 0xFF;
     params.dest_addr[1] = 0xFF;
   } else {
+    uint8_t iotusAddressType;
+    if(params.fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) {
+      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+    } else {
+      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+    }
     memcpy(&params.dest_addr,
-            nodes_get_address(iotus_radio_selected_address_type,
-                              packet->nextDestinationNode),
-            ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+            nodes_get_address(iotusAddressType,
+                                packet->nextDestinationNode),
+            ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
     /* Use short address mode if linkaddr size is small */
     if(iotus_radio_selected_address_type == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
       params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
@@ -153,9 +160,9 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
    * Set up the source address using only the long address mode for
    * phase 1.
    */
-  memcpy(&params.dest_addr,
-          addresses_self_get_pointer(iotus_radio_selected_address_type),
-          ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
+  memcpy(&params.src_addr,
+          addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG),
+          ADDRESSES_GET_TYPE_SIZE(IOTUS_ADDRESSES_TYPE_ADDR_LONG));
 
   params.payload = pieces_get_data_pointer(packet);
   params.payload_len = packet_get_size(packet);
@@ -167,13 +174,6 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   if(TRUE == packet_has_space(packet, hdr_len)) {
     uint8_t header[hdr_len];
     frame802154_create(&params, header);
-
-    printf("data len %u\n",hdr_len );
-    printf(" data header: ");
-    for(int k=0;k<hdr_len;k++) {
-      printf("%02x ",header[k]);
-    }
-    printf("\nfim\n");
 
     uint8_t packetNewSize = packet_get_size(packet)+hdr_len;
     if(packetNewSize != packet_push_bit_header(hdr_len*8, header, packet)) {
@@ -207,7 +207,104 @@ create(iotus_packet_t *packet)
 static int
 parse(iotus_packet_t *packet)
 {
-  return 0;
+  frame802154_t frame;
+  int hdr_len;
+  iotus_node_t *tempNode;
+  uint8_t iotusAddressType;
+
+  hdr_len = frame802154_parse(pieces_get_data_pointer(packet),
+                   packet_get_size(packet), &frame);
+
+  if(hdr_len) {
+    //packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, frame.fcf.frame_type);
+    packet_set_type(packet, frame.fcf.frame_type);
+
+    if(frame.fcf.dest_addr_mode) {
+      if(frame.dest_pid != frame802154_get_pan_id() &&
+         frame.dest_pid != FRAME802154_BROADCASTPANDID) {
+        /* Packet to another PAN */
+        SAFE_PRINTF_LOG_WARNING("15.4: for another pan %u\n", frame.dest_pid);
+        return FRAMER_FAILED;
+      }
+      if(!frame802154_is_broadcast_addr(frame.fcf.dest_addr_mode, frame.dest_addr)) {
+        //packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, (linkaddr_t *)&frame.dest_addr);
+        if(frame.fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) {
+          iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+        } else {
+          iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+        }
+
+        tempNode = nodes_get_node_by_address(iotusAddressType,
+                                    (uint8_t *)&frame.dest_addr);
+        if(tempNode == NULL) {
+          /**
+           * target not registered... Save the address for some cases
+           */
+          uint8_t *addrPointer = pieces_modify_additional_info_var(
+                                      packet->additionalInfoList,
+                                      IOTUS_PACKET_INFO_TYPE_DEST_ADDRESS,
+                                      ADDRESSES_GET_TYPE_SIZE(iotusAddressType),
+                                      TRUE);
+          if(NULL == addrPointer) {
+            SAFE_PRINTF_LOG_WARNING("Save dest addr");
+          } else {
+            memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
+          }
+        } else {
+          packet_set_next_destination(packet, tempNode);
+        }
+      }
+    }
+    //packetbuf_set_addr(PACKETBUF_ADDR_SENDER, (linkaddr_t *)&frame.src_addr);
+    if(frame.fcf.src_addr_mode == FRAME802154_SHORTADDRMODE) {
+      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+    } else {
+      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+    }
+
+    tempNode = nodes_get_node_by_address(iotusAddressType,
+                                (uint8_t *)&frame.dest_addr);
+    if(tempNode == NULL) {
+      /**
+       * target not registered... Save this node
+       */
+      auehawuiehawuiehaiehuaweuiu
+    }
+
+
+    packetbuf_set_attr(PACKETBUF_ATTR_PENDING, frame.fcf.frame_pending);
+    if(frame.fcf.sequence_number_suppression == 0) {
+      packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, frame.seq);
+    } else {
+      packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, 0xffff);
+    }
+#if NETSTACK_CONF_WITH_RIME
+    packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, frame.seq);
+#endif
+
+#if LLSEC802154_USES_AUX_HEADER
+    if(frame.fcf.security_enabled) {
+      packetbuf_set_attr(PACKETBUF_ATTR_SECURITY_LEVEL, frame.aux_hdr.security_control.security_level);
+#if LLSEC802154_USES_FRAME_COUNTER
+      packetbuf_set_attr(PACKETBUF_ATTR_FRAME_COUNTER_BYTES_0_1, frame.aux_hdr.frame_counter.u16[0]);
+      packetbuf_set_attr(PACKETBUF_ATTR_FRAME_COUNTER_BYTES_2_3, frame.aux_hdr.frame_counter.u16[1]);
+#endif /* LLSEC802154_USES_FRAME_COUNTER */
+#if LLSEC802154_USES_EXPLICIT_KEYS
+      packetbuf_set_attr(PACKETBUF_ATTR_KEY_ID_MODE, frame.aux_hdr.security_control.key_id_mode);
+      packetbuf_set_attr(PACKETBUF_ATTR_KEY_INDEX, frame.aux_hdr.key_index);
+      packetbuf_set_attr(PACKETBUF_ATTR_KEY_SOURCE_BYTES_0_1, frame.aux_hdr.key_source.u16[0]);
+#endif /* LLSEC802154_USES_EXPLICIT_KEYS */
+    }
+#endif /* LLSEC802154_USES_AUX_HEADER */
+
+    PRINTF("15.4-IN: %2X", frame.fcf.frame_type);
+    PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+    PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+    PRINTF("%d %u (%u)\n", hdr_len, packetbuf_datalen(), packetbuf_totlen());
+
+    return hdr_len;
+  }
+  return FRAMER_FAILED;
 }
 /*---------------------------------------------------------------------------*/
 const struct framer radio_framer_802154 = {
