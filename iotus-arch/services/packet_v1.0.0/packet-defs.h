@@ -15,7 +15,7 @@
 #define PACKET_PARAMETERS_ALLOW_PIGGYBACK           0b01000000
 #define PACKET_PARAMETERS_ALLOW_FRAGMENTATION       0b00100000
 #define PACKET_PARAMETERS_WAIT_FOR_ACK              0b00010000
-#define PACKET_PARAMETERS_PENDING                   0b00001000
+#define PACKET_PARAMETERS_PACKET_PENDING            0b00001000
 /*
  * New packet system requires that the radio add at least a single byte header.
  * That means that some packets can still cancel the use of the new header

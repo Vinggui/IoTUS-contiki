@@ -383,6 +383,7 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
   newMsg->firstHeaderBitSize = 0;
   newMsg->lastHeaderSize = 0;
   newMsg->nextDestinationNode = NULL;
+  newMsg->prevSourceNode = NULL;
   newMsg->params = 0;
   newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
   newMsg->priority = priority;

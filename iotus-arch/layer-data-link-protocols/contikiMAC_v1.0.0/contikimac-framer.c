@@ -129,7 +129,8 @@ parse(iotus_packet_t *packet)
   //Removed the pad...
   packet->lastHeaderSize += packet_get_payload_size(packet)
                                           - chdr->len;
-  SAFE_PRINTF_CLEAN("merda %u\n",packet_get_payload_size(packet));
+
+  packet->firstHeaderBitSize += 8*sizeof(struct hdr);
   
   return hdr_len + sizeof(struct hdr);
 }

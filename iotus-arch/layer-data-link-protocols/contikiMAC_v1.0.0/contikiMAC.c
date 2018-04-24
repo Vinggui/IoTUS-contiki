@@ -894,7 +894,7 @@ input_packet(iotus_packet_t *packet)
   /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start % CYCLE_TIME);*/
 
   if(contikimac_framer.parse(packet) >= 0) {
-    SAFE_PRINTF_CLEAN("TESTE\n");
+    SAFE_PRINTF_CLEAN("Payload %s\n",packet_get_payload_data(packet));
   } else {
     SAFE_PRINTF_LOG_ERROR("Parse (%u)\n", packet_get_size(packet));
   }

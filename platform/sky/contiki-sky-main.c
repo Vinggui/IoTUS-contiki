@@ -50,6 +50,7 @@
 #else
 #include "iotus-core.h"
 #include "addresses.h"
+#include "iotus-frame802154.h"
 #endif/*CONTIKI_COMM_NEW_STACK*/
 
 #include "sys/node-id.h"
@@ -223,8 +224,11 @@ main(int argc, char **argv)
   iotus_node_id_hardcoded[0]= node_id & 0xff;
   iotus_node_id_hardcoded[1]= (node_id>>8) & 0xff;
 
-  iotus_pan_id_hardcoded[0]= IOTUS_PANID & 0xff;
-  iotus_pan_id_hardcoded[1]= (IOTUS_PANID>>8) & 0xff;
+  iotus_pan_id_hardcoded[0]= IEEE802154_PANID & 0xff;
+  iotus_pan_id_hardcoded[1]= (IEEE802154_PANID>>8) & 0xff;
+  
+  iotus_node_long_id_hardcoded[0]= node_id & 0xff;
+  iotus_node_long_id_hardcoded[1]= (node_id>>8) & 0xff;
   #if IOTUS_USING_MALLOC == 0
     mmem_init();
   #endif

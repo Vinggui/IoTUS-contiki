@@ -56,7 +56,7 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
 
   /* Build the FCF. */
   params.fcf.frame_type = packet->type;
-  params.fcf.frame_pending = packet_get_parameter(packet,PACKET_PARAMETERS_PENDING);
+  params.fcf.frame_pending = packet_get_parameter(packet,PACKET_PARAMETERS_PACKET_PENDING);
   if(packet_holds_broadcast(packet)) {
     params.fcf.ack_required = 0;
     /* Suppress seqno on broadcast if supported (frame v2 or more) */
@@ -128,8 +128,7 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   }
   params.dest_pid = *((uint16_t *)tempPanID);
 
-  if(packet_holds_broadcast(packet)) {
-    aquiui too
+  if(TRUE == packet_holds_broadcast(packet)) {
     /* Broadcast requires short address mode. */
     params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
     params.dest_addr[0] = 0xFF;
@@ -211,6 +210,7 @@ parse(iotus_packet_t *packet)
   int hdr_len;
   iotus_node_t *tempNode;
   uint8_t iotusAddressType;
+  uint8_t *addrPointer;
 
   hdr_len = frame802154_parse(pieces_get_data_pointer(packet),
                    packet_get_size(packet), &frame);
@@ -223,7 +223,7 @@ parse(iotus_packet_t *packet)
       if(frame.dest_pid != frame802154_get_pan_id() &&
          frame.dest_pid != FRAME802154_BROADCASTPANDID) {
         /* Packet to another PAN */
-        SAFE_PRINTF_LOG_WARNING("15.4: for another pan %u\n", frame.dest_pid);
+        SAFE_PRINTF_LOG_WARNING("15.4: for another pan %02x\n", frame.dest_pid);
         return FRAMER_FAILED;
       }
       if(!frame802154_is_broadcast_addr(frame.fcf.dest_addr_mode, frame.dest_addr)) {
@@ -240,15 +240,15 @@ parse(iotus_packet_t *packet)
           /**
            * target not registered... Save the address for some cases
            */
-          uint8_t *addrPointer = pieces_modify_additional_info_var(
+          addrPointer = pieces_modify_additional_info_var(
                                       packet->additionalInfoList,
                                       IOTUS_PACKET_INFO_TYPE_DEST_ADDRESS,
                                       ADDRESSES_GET_TYPE_SIZE(iotusAddressType),
                                       TRUE);
           if(NULL == addrPointer) {
-            SAFE_PRINTF_LOG_WARNING("Save dest addr");
+            SAFE_PRINTF_LOG_WARNING("Dest addr ignored");
           } else {
-            memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
+            memcpy(addrPointer, (uint8_t *)&frame.dest_addr, ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
           }
         } else {
           packet_set_next_destination(packet, tempNode);
@@ -266,20 +266,44 @@ parse(iotus_packet_t *packet)
                                 (uint8_t *)&frame.dest_addr);
     if(tempNode == NULL) {
       /**
-       * target not registered... Save this node
+       * Sender not registered... Save this node
        */
-      auehawuiehawuiehaiehuaweuiu
+      tempNode = nodes_update_by_address(iotusAddressType, (uint8_t *)&frame.dest_addr);
+      if(NULL == tempNode) {
+        SAFE_PRINTF_LOG_ERROR("Node not saved");
+        /**
+         * Try to save the address instead
+         */
+        addrPointer = pieces_modify_additional_info_var(
+                                    packet->additionalInfoList,
+                                    IOTUS_PACKET_INFO_TYPE_SOURCE_ADDRESS,
+                                    ADDRESSES_GET_TYPE_SIZE(iotusAddressType),
+                                    TRUE);
+        if(NULL == addrPointer) {
+          SAFE_PRINTF_LOG_WARNING("Source addr ignored");
+        } else {
+          memcpy(addrPointer, (uint8_t *)&frame.src_addr, ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
+        }
+      } else {
+        packet->prevSourceNode = tempNode;
+      }
     }
 
 
-    packetbuf_set_attr(PACKETBUF_ATTR_PENDING, frame.fcf.frame_pending);
+    //packetbuf_set_attr(PACKETBUF_ATTR_PENDING, frame.fcf.frame_pending);
+    if(frame.fcf.frame_pending) {
+      packet_set_parameter(packet, PACKET_PARAMETERS_PACKET_PENDING);
+    }
+
     if(frame.fcf.sequence_number_suppression == 0) {
-      packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, frame.seq);
+      //packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, frame.seq);
+      packet_set_sequence_number(packet, frame.seq);
     } else {
-      packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, 0xffff);
+      //packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, 0xffff);
+      packet_set_sequence_number(packet, 0xff);
     }
 #if NETSTACK_CONF_WITH_RIME
-    packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, frame.seq);
+    //packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, frame.seq);
 #endif
 
 #if LLSEC802154_USES_AUX_HEADER
@@ -297,10 +321,13 @@ parse(iotus_packet_t *packet)
     }
 #endif /* LLSEC802154_USES_AUX_HEADER */
 
+    /* Update the packet header information */
+    packet->firstHeaderBitSize += 8*hdr_len;
+
     PRINTF("15.4-IN: %2X", frame.fcf.frame_type);
-    PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-    PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
-    PRINTF("%d %u (%u)\n", hdr_len, packetbuf_datalen(), packetbuf_totlen());
+    //PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+    //PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+    PRINTF("%d %u (%u)\n", hdr_len, packet_get_payload_size(packet), packet_get_size(packet));
 
     return hdr_len;
   }
