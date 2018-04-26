@@ -22,11 +22,30 @@
 #include "safe-printer.h"
 
 static void
+input_packet(iotus_packet_t *packet)
+{
+  SAFE_PRINTF_CLEAN("Got packet: ");
+  int i;
+  for (i = 0; i < packet_get_payload_size(packet); ++i)
+  {
+    SAFE_PRINTF_CLEAN("%02x ", packet_get_payload_data(packet)[i]);
+  }
+  SAFE_PRINTF_CLEAN("\n");
+}
+
+static void
 send(iotus_packet_t *packet)
 {
   SAFE_PRINTF_LOG_INFO("Null route");
   packet->nextDestinationNode = packet->finalDestinationNode;
   active_data_link_protocol->send(packet);
+}
+
+
+static void
+send_cb(iotus_packet_t *packet)
+{
+  SAFE_PRINTF_LOG_INFO("Frame sent");
 }
 
 static void
@@ -50,7 +69,9 @@ struct iotus_routing_protocol_struct null_routing_protocol = {
   NULL,
   run,
   close,
-  send
+  send,
+  send_cb,
+  input_packet
 };
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

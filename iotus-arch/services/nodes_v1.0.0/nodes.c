@@ -48,7 +48,9 @@ uint8_t nodes_self_pointer;
  */
 uint8_t *
 nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
-  if(node == NULL) {
+  if(node == NULL ||
+    addressType == 0) {
+    SAFE_PRINTF_LOG_ERROR("null node");
     return NULL;
   }
   if(node == NODES_BROADCAST) {
@@ -75,7 +77,9 @@ nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
 iotus_node_t *
 nodes_get_node_by_address(iotus_address_type addressType, uint8_t *address)
 {
-  if(NULL == address || addressType == IOTUS_ADDRESSES_TYPE_ADDR_PANID) {
+  if(NULL == address ||
+     addressType == IOTUS_ADDRESSES_TYPE_ADDR_PANID ||
+     addressType == 0) {
     return NULL;
   }
 
@@ -142,6 +146,7 @@ create_node(void) {
     return NULL;
   }
 
+  newChunk->params = 0;
   LIST_STRUCT_INIT(newChunk, additionalInfoList);
 
   list_push(gNodesList, newChunk);
@@ -164,7 +169,7 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
     h = create_node();
 
     //Only new nodes need to update the address
-    
+    nodes_set_address(h, addressType, address);
   }
 
   timestamp_mark(&(h->timestamp),0);

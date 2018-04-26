@@ -76,6 +76,7 @@ enum nodes_additional_Info_types {
 //           Externs                 //
 ///////////////////////////////////////
 extern uint8_t nodes_broadcast_pointer;
+extern uint8_t nodes_self_pointer;
 #define NODES_BROADCAST   ((iotus_node_t *)&nodes_broadcast_pointer)
 #define NODES_SELF        ((iotus_node_t *)&nodes_self_pointer)
 

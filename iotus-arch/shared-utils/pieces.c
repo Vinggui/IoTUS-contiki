@@ -104,8 +104,8 @@ pieces_get_additional_info(list_t list, uint8_t type)
   if(NULL == list) {
     return NULL;
   }
-
   iotus_additional_info_t *addInfo;
+
   for(addInfo=list_head(list); addInfo != NULL; addInfo=list_item_next(addInfo)) {
     if(type == addInfo->type) {
       return addInfo;

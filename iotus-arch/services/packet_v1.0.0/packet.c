@@ -65,7 +65,7 @@ packet_get_parameter(iotus_packet_t *packetPiece, uint8_t param) {
     return 0;
   }
 
-  return packetPiece->params & param;
+  return packetPiece->params & param?1:0;
 }
 
 
@@ -150,7 +150,7 @@ packet_holds_broadcast(iotus_packet_t *packetPiece)
     SAFE_PRINTF_LOG_ERROR("Null pointer");
     return FAILURE;
   }
-  return packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST?TRUE:FALSE;
+  return packetPiece->nextDestinationNode == NODES_BROADCAST;
 }
 
 /*---------------------------------------------------------------------*/
@@ -385,9 +385,10 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
   newMsg->nextDestinationNode = NULL;
   newMsg->prevSourceNode = NULL;
   newMsg->params = 0;
-  newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
+  //newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
   newMsg->priority = priority;
   newMsg->callbackHandler = callbackFunction;
+  newMsg->type = IOTUS_PACKET_TYPE_IEEE802154_DATA;
   
   newMsg->finalDestinationNode = finalDestination;
 
@@ -396,10 +397,9 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
     packet_set_parameter(newMsg,PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM);
   }
   if(finalDestination == NODES_BROADCAST) {
-    SAFE_PRINT("It`s broadcast\n");
-    newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
+    SAFE_PRINT("Broadcast\n");
+    //newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
   }
-
   //Link the message into the list, sorting...
   pieces_insert_timeout_priority(gPacketMsgList, newMsg);
 
@@ -764,11 +764,11 @@ packet_parse(iotus_packet_t *packetPiece) {
     pieces_get_data_pointer(packetPiece)[0] &= ~(byteMapToReset);
 
     //Get the dynamic header now
-    packetPiece->iotusHeader = packet_unwrap_pushed_bit(packetPiece,PACKET_IOTUS_HDR_FIRST_BIT_POS-1);
+    //packetPiece->iotusHeader = packet_unwrap_pushed_bit(packetPiece,PACKET_IOTUS_HDR_FIRST_BIT_POS-1);
     
-    if(packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
-      packetPiece->nextDestinationNode = NODES_BROADCAST;
-    }
+    //if(packetPiece->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST) {
+    //  packetPiece->nextDestinationNode = NODES_BROADCAST;
+    //}
   }
 }
 

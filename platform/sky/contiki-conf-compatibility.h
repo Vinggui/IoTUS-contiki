@@ -3,7 +3,7 @@
 #define CONTIKI_CONF_COMPATIBILITY_H
 
 #ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     csma_driver
+#define NETSTACK_CONF_MAC     nullmac_driver
 #endif /* NETSTACK_CONF_MAC */
 
 #ifndef NETSTACK_CONF_RDC
@@ -18,9 +18,6 @@
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 #endif /* NETSTACK_CONF_FRAMER */
 
-#ifndef CC2420_CONF_AUTOACK
-#define CC2420_CONF_AUTOACK              1
-#endif /* CC2420_CONF_AUTOACK */
 
 /* The TSCH default slot length of 10ms is a bit too short for this platform,
  * use 15ms instead. */
@@ -53,7 +50,7 @@
 
 /* Network setup for non-IPv6 (rime). */
 
-#define NETSTACK_CONF_NETWORK rime_driver
+#define NETSTACK_CONF_NETWORK nullnet_driver
 
 #define COLLECT_CONF_ANNOUNCEMENTS       1
 #define CXMAC_CONF_ANNOUNCEMENTS         0

@@ -38,7 +38,7 @@ typedef struct packet_piece {
   COMMON_STRUCT_PIECES(struct packet_piece);
   iotus_node_t *nextDestinationNode;
   iotus_node_t *prevSourceNode;
-  uint8_t iotusHeader;
+  //uint8_t iotusHeader;
   uint8_t type;
   uint16_t firstHeaderBitSize;
   uint16_t lastHeaderSize;

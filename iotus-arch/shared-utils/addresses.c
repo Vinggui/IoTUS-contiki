@@ -39,11 +39,11 @@ addresses_compare(uint8_t *addr1, uint8_t *addr2, uint8_t addressesSize)
 {
   uint8_t i;
   for(i=0; i<addressesSize; i++) {
-    if(addr1 != addr2) {
-      return TRUE;
+    if(addr1[i] != addr2[i]) {
+      return FALSE;
     }
   }
-  return FALSE;
+  return TRUE;
 }
 /*---------------------------------------------------------------------*/
 /**

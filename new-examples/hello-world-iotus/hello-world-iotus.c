@@ -62,12 +62,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     etimer_set(&timer, CLOCK_CONF_SECOND*2);
     printf("Hello, world\n");
 
-    /*linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
-*/
     IOTUS_CORE_START(0,0,contikiMAC,0);
-
     for(;;) {
         PROCESS_WAIT_EVENT();
 
@@ -78,17 +73,24 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         //}
         
         if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 2) {
+            uint8_t dest[2];
+            dest[0] = 1;
+            dest[1] = 0;
+            iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
+            if(destNode != NULL) {
+                iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
+                    (const uint8_t *)"BTeste-msg", TRUE,
+                    destNode, NULL);
 
-            iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
-                (const uint8_t *)"BTeste-msg", TRUE,
-                NODES_BROADCAST, NULL);
-
-            if(NULL == packet) {
-              continue;
+                if(NULL == packet) {
+                  continue;
+                }
+                packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
+                active_transport_protocol->send(packet);
             }
-            active_transport_protocol->send(packet);
         }
-        
+
+        etimer_reset(&timer);
     }
 
 

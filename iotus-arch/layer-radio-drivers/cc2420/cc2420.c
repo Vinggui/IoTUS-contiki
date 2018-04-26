@@ -348,21 +348,24 @@ set_value(radio_param_t param, radio_value_t value)
   case RADIO_PARAM_ADDRESS_USE_TYPE:
     //Verify if this size is actually supported
     if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT || value == IOTUS_ADDRESSES_TYPE_ADDR_LONG) {
-      uint16_t *panId = (uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID);
+      uint16_t panId = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID)[0];
+      panId |= addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID)[1]<<8;
       
 
       //Search for this address in the system
-      uint16_t *shortAddr = (uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
+      uint16_t shortAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]<<8;
+      shortAddr |= addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[1];
 
       if(panId == 0 || shortAddr == 0) {
         PRINTF("No address to set!\n");
         return RADIO_RESULT_INVALID_VALUE;
       }
 
+
       //Give it a try to check the long address size too...
       uint8_t *longAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_LONG);
 
-      cc2420_set_pan_addr(*panId,*shortAddr,longAddr);
+      cc2420_set_pan_addr(panId,shortAddr,longAddr);
 
       if(value == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
         g_used_address_type = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
@@ -951,7 +954,6 @@ cc2420_set_pan_addr(unsigned pan,
                     const uint8_t *ieee_addr)
 {
   GET_LOCK();
-  
   write_ram((uint8_t *) &pan, CC2420RAM_PANID, 2, WRITE_RAM_IN_ORDER);
   write_ram((uint8_t *) &addr, CC2420RAM_SHORTADDR, 2, WRITE_RAM_IN_ORDER);
   
@@ -987,8 +989,11 @@ PROCESS_THREAD(cc2420_process, ev, data)
     iotus_packet_t *packet;
     packet = cc2420_read();
     //packetbuf_set_datalen(len);
-    PRINTF("cc2420_process: calling receiver callback\n");
-    active_data_link_protocol->receive(packet);
+    
+    if(packet != NULL) {
+      PRINTF("cc2420_process: calling receiver callback\n");
+      active_data_link_protocol->receive(packet);
+    }
   }
 
   PROCESS_END();
@@ -999,9 +1004,10 @@ cc2420_read(void)
 {
   uint8_t footer[FOOTER_LEN];
   uint8_t len;
+  iotus_packet_t *packet;
 
   if(!CC2420_FIFOP_IS_1) {
-    return 0;
+    return NULL;
   }
   
   GET_LOCK();
@@ -1015,134 +1021,133 @@ cc2420_read(void)
     iotus_parameters_radio_events.badRxPacketShort++;
   } else {
     /* reserve space for this packet */
-    iotus_packet_t *packet = packet_create_msg(
-                                len - FOOTER_LEN,
-                                IOTUS_PRIORITY_RADIO,
-                                0,
-                                NULL,
-                                FALSE,
-                                NULL,
-                                NULL);
+    packet = packet_create_msg(
+                        len - FOOTER_LEN,
+                        IOTUS_PRIORITY_RADIO,
+                        0,
+                        NULL,
+                        FALSE,
+                        NULL,
+                        NULL);
     if(packet == NULL) {
       PRINTF("No storage to receive pkt\n");
       //Drop packet or try later...
       flushrx();
-      return NULL;
-    }
+    } else {
 
-    getrxdata(pieces_get_data_pointer(packet), len - FOOTER_LEN);
-    getrxdata(footer, FOOTER_LEN);
+      getrxdata(pieces_get_data_pointer(packet), len - FOOTER_LEN);
+      getrxdata(footer, FOOTER_LEN);
 
-    if(footer[1] & FOOTER1_CRC_OK) {
-      cc2420_last_rssi = footer[0] + RSSI_OFFSET;
-      cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
+      if(footer[1] & FOOTER1_CRC_OK) {
+        cc2420_last_rssi = footer[0] + RSSI_OFFSET;
+        cc2420_last_correlation = footer[1] & FOOTER1_CORRELATION;
 
 
-      // //Check the address and filtering options
-      // if(g_expect_new_iotus_packet_hdr == TRUE) {
-      //   packet_parse(packet);
+        // //Check the address and filtering options
+        // if(g_expect_new_iotus_packet_hdr == TRUE) {
+        //   packet_parse(packet);
 
-      //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-      //     /**
-      //      * In cases where broadcast is sent, only the source addr is received
-      //      * If this is not a broadcast, then we can try to receive to a specific node.
-      //      */
+        //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
+        //     /**
+        //      * In cases where broadcast is sent, only the source addr is received
+        //      * If this is not a broadcast, then we can try to receive to a specific node.
+        //      */
 
-      //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-      //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-      //       uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-      //       if(FAILURE == packet_unwrap_appended_byte(
-      //                         packet,
-      //                         address,
-      //                         ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-      //         PRINTF("Failed couldn't unwrap.");
-      //         packet_destroy(packet);
-      //         return NULL;
-      //       }
+        //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+        //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
+        //       uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+        //       if(FAILURE == packet_unwrap_appended_byte(
+        //                         packet,
+        //                         address,
+        //                         ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+        //         PRINTF("Failed couldn't unwrap.");
+        //         packet_destroy(packet);
+        //         return NULL;
+        //       }
 
-      //       PRINTF("Got source addr %u %u\n",address[1],address[0]);
-      //       if(FALSE == addresses_compare(address,
-      //                     addresses_self_get_pointer(g_used_address_type),
-      //                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-      //         //This message is not for us... Drop it?
-      //         PRINTF("Dropping pckt!, wrong dest.");
-      //         packet_destroy(packet);
-      //         return NULL;
-      //       }
-      //       //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
-      //       //EXTRAIR INFORMACOES PARA O PACOTE
-      //     }
-      //   }
+        //       PRINTF("Got source addr %u %u\n",address[1],address[0]);
+        //       if(FALSE == addresses_compare(address,
+        //                     addresses_self_get_pointer(g_used_address_type),
+        //                     ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+        //         //This message is not for us... Drop it?
+        //         PRINTF("Dropping pckt!, wrong dest.");
+        //         packet_destroy(packet);
+        //         return NULL;
+        //       }
+        //       //iotus_node_t *node = nodes_update_by_address(g_used_address_type,address);
+        //       //EXTRAIR INFORMACOES PARA O PACOTE
+        //     }
+        //   }
 
-      //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-      //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-      //     uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
-      //     if(FAILURE == packet_unwrap_appended_byte(
-      //                       packet,
-      //                       address,
-      //                       ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
-      //       PRINTF("Failed to get prev address.");
-      //       packet_destroy(packet);
-      //       return NULL;
-      //     }
-      //     uint8_t *addrPointer = pieces_modify_additional_info_var(
-      //                                 packet->additionalInfoList,
-      //                                 IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
-      //                                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-      //                                 TRUE);
-      //     if(NULL == addrPointer) {
-      //       PRINTF("Failed to create additional info");
-      //     } else {
-      //       memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
-      //     }
-          
-      //   }
-      // }
+        //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
+        //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
+        //     uint8_t address[ADDRESSES_GET_TYPE_SIZE(g_used_address_type)];
+        //     if(FAILURE == packet_unwrap_appended_byte(
+        //                       packet,
+        //                       address,
+        //                       ADDRESSES_GET_TYPE_SIZE(g_used_address_type))) {
+        //       PRINTF("Failed to get prev address.");
+        //       packet_destroy(packet);
+        //       return NULL;
+        //     }
+        //     uint8_t *addrPointer = pieces_modify_additional_info_var(
+        //                                 packet->additionalInfoList,
+        //                                 IOTUS_PACKET_INFO_TYPE_PREV_SOURCE_ADDRESS,
+        //                                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
+        //                                 TRUE);
+        //     if(NULL == addrPointer) {
+        //       PRINTF("Failed to create additional info");
+        //     } else {
+        //       memcpy(addrPointer, address, ADDRESSES_GET_TYPE_SIZE(g_used_address_type));
+        //     }
+            
+        //   }
+        // }
+
+        if(!poll_mode) {
+
+          /* Not in poll mode: packetbuf should not be accessed in interrupt context.
+           * In poll mode, the last packet RSSI and link quality can be obtained through
+           * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
+          //packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
+          //packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
+          iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
+          iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
+          //Add the other information in this packet
+          if(FAILURE == packet_set_rx_linkQuality_RSSI(
+                          packet,
+                          cc2420_last_correlation,
+                          cc2420_last_rssi)) {
+            PRINTF("Failed add rx block info.");
+          }
+        }
+
+        iotus_parameters_radio_events.receptions++;
+      } else {
+        iotus_parameters_radio_events.badRxChecksumFail++;
+        len = FOOTER_LEN;
+        packet_destroy(packet);
+        packet = NULL;
+      }
 
       if(!poll_mode) {
-
-        /* Not in poll mode: packetbuf should not be accessed in interrupt context.
-         * In poll mode, the last packet RSSI and link quality can be obtained through
-         * RADIO_PARAM_LAST_RSSI and RADIO_PARAM_LAST_LINK_QUALITY */
-        //packetbuf_set_attr(PACKETBUF_ATTR_RSSI, cc2420_last_rssi);
-        //packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, cc2420_last_correlation);
-        iotus_parameters_radio_events.lastRSSI = cc2420_last_rssi;
-        iotus_parameters_radio_events.lastLinkQuality = cc2420_last_correlation;
-        //Add the other information in this packet
-        if(FAILURE == packet_set_rx_linkQuality_RSSI(
-                        packet,
-                        cc2420_last_correlation,
-                        cc2420_last_rssi)) {
-          PRINTF("Failed add rx block info.");
+        if(CC2420_FIFOP_IS_1) {
+          if(!CC2420_FIFO_IS_1) {
+            /* Clean up in case of FIFO overflow!  This happens for every
+             * full length frame and is signaled by FIFOP = 1 and FIFO =
+             * 0. */
+            flushrx();
+          } else {
+            /* Another packet has been received and needs attention. */
+            process_poll(&cc2420_process);
+          }
         }
       }
-
-      iotus_parameters_radio_events.receptions++;
-    } else {
-      iotus_parameters_radio_events.badRxChecksumFail++;
-      len = FOOTER_LEN;
-      packet_destroy(packet);
-      return NULL;
+      
+      RELEASE_LOCK();
+      return packet;
     }
-
-    if(!poll_mode) {
-      if(CC2420_FIFOP_IS_1) {
-        if(!CC2420_FIFO_IS_1) {
-          /* Clean up in case of FIFO overflow!  This happens for every
-           * full length frame and is signaled by FIFOP = 1 and FIFO =
-           * 0. */
-          flushrx();
-        } else {
-          /* Another packet has been received and needs attention. */
-          process_poll(&cc2420_process);
-        }
-      }
-    }
-    
-    RELEASE_LOCK();
-    return packet;
   }
-  
   flushrx();
   RELEASE_LOCK();
   return NULL;
@@ -1405,7 +1410,7 @@ cc2420_init(void)
 
   init_security();
 
-  cc2420_set_pan_addr(0xffff, 0x0000, NULL);
+  cc2420_set_pan_addr(0xFFFF, 0x0000, NULL);
   cc2420_set_channel(CC2420_CONF_CHANNEL);
   cc2420_set_cca_threshold(CC2420_CONF_CCA_THRESH);
 
@@ -1424,6 +1429,8 @@ post_start(void)
   if(-1 == iotus_get_layer_assigned_for(IOTUS_CHORE_SET_ADDR_FOR_RADIO)) {
     set_value(RADIO_PARAM_ADDRESS_USE_TYPE,IOTUS_ADDRESSES_TYPE_ADDR_SHORT);
   }
+
+  PRINTF("Using PID: %x\n",*(uint16_t *)addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID));
 }
 
 static void

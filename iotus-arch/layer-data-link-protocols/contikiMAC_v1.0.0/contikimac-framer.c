@@ -127,10 +127,10 @@ parse(iotus_packet_t *packet)
   // }
   
   //Removed the pad...
+  packet->firstHeaderBitSize += 8*sizeof(struct hdr);
   packet->lastHeaderSize += packet_get_payload_size(packet)
                                           - chdr->len;
 
-  packet->firstHeaderBitSize += 8*sizeof(struct hdr);
   
   return hdr_len + sizeof(struct hdr);
 }

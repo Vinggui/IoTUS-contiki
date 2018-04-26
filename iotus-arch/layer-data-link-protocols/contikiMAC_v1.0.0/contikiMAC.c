@@ -44,17 +44,12 @@
 #include "contikimac-framer.h"
 #include "dev/leds.h"
 #include "dev/watchdog.h"
-#include "global-functions.h"
-#include "global-parameters.h"
-#include "iotus-data-link.h"
-#include "iotus-radio.h"
-#include "iotus-core.h"
+#include "iotus-netstack.h"
+#include "iotus-frame802154.h"
 #include "lib/random.h"
-#include "nodes.h"
-#include "packet-defs.h"
-#include "packet.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
+#include "sys/ctimer.h"
 
 
 
@@ -240,7 +235,7 @@ static int we_are_receiving_burst = 0;
 #ifdef CONTIKIMAC_CONF_SEND_SW_ACK
 #define CONTIKIMAC_SEND_SW_ACK CONTIKIMAC_CONF_SEND_SW_ACK
 #else
-#define CONTIKIMAC_SEND_SW_ACK 1
+#define CONTIKIMAC_SEND_SW_ACK 0
 #endif
 
 #define ACK_LEN 3
@@ -611,7 +606,7 @@ send_packet(iotus_packet_t *packet)
     recvAddr = nodes_get_address(iotus_radio_selected_address_type,
                                  packet_get_next_destination(packet));
     if(NULL != recvAddr) {
-      PRINTDEBUG("contikimac: send unicast to %u.%u\n",
+      SAFE_PRINTF_LOG_INFO("contikimac: send unicast to %u.%u\n",
                  recvAddr[0],
                  recvAddr[1]);
     }
@@ -803,7 +798,7 @@ send_packet(iotus_packet_t *packet)
 
   off();
 
-  SAFE_PRINTF_LOG_INFO("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
+  SAFE_PRINTF_LOG_INFO("send (stbs=%u, len=%u, %s, %s), done\n", strobes,
          packet_get_size(packet),
          got_strobe_ack ? "ack" : "no ack",
          collisions ? "collision" : "no collision");
@@ -870,14 +865,14 @@ recv_burst_off(void *ptr)
 static void
 input_packet(iotus_packet_t *packet)
 {
-  //static struct ctimer ct;
+  static struct ctimer ct;
   int duplicate = 0;
 
 #if CONTIKIMAC_SEND_SW_ACK
   int original_datalen;
   uint8_t *original_dataptr;
 
-  original_datalen = packet_get_size(packet);//packetbuf_datalen();
+  original_datalen = packet_get_payload_size(packet);//packetbuf_datalen();
   original_dataptr = pieces_get_data_pointer(packet);
 #endif
 
@@ -885,7 +880,9 @@ input_packet(iotus_packet_t *packet)
     off();
   }
 
-  if(packet_get_size(packet) == ACK_LEN) {
+  printf("aeaeae %u %u %u\n", packet->data.size, packet->firstHeaderBitSize, packet->lastHeaderSize);
+printf("hjhjk %u %u\n", packet_get_payload_size(packet), packet_get_size(packet));
+  if(packet_get_payload_size(packet) == ACK_LEN) {
     /* Ignore ack packets */
     SAFE_PRINT("ContikiMAC: ignored ack\n");
     return;
@@ -894,26 +891,105 @@ input_packet(iotus_packet_t *packet)
   /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start % CYCLE_TIME);*/
 
   if(contikimac_framer.parse(packet) >= 0) {
-    SAFE_PRINTF_CLEAN("Payload %s\n",packet_get_payload_data(packet));
+    if(packet_get_payload_size(packet) > 0 &&
+       packet_get_size(packet) > 0 &&
+       (packet->nextDestinationNode == NODES_SELF ||
+        packet_holds_broadcast(packet))) {
+      /* This is a regular packet that is destined to us or to the
+         broadcast address. */
+
+      /* If FRAME_PENDING is set, we are receiving a packets in a burst */
+      we_are_receiving_burst = packet_get_parameter(packet, PACKET_PARAMETERS_PACKET_PENDING);
+      if(we_are_receiving_burst) {
+        on();
+        /* Set a timer to turn the radio off in case we do not receive
+     a next packet */
+        ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
+      } else {
+        off();
+        ctimer_stop(&ct);
+      }
+
+#if RDC_WITH_DUPLICATE_DETECTION
+      /* Check for duplicate packet. */
+      duplicate = mac_sequence_is_duplicate();
+      if(duplicate) {
+        /* Drop the packet. */
+        PRINTF("contikimac: Drop duplicate\n");
+      } else {
+        mac_sequence_register_seqno();
+      }
+#endif /* RDC_WITH_DUPLICATE_DETECTION */
+
+#if CONTIKIMAC_CONF_COMPOWER
+      /* Accumulate the power consumption for the packet reception. */
+      compower_accumulate(&current_packet);
+      /* Convert the accumulated power consumption for the received
+         packet to packet attributes so that the higher levels can
+         keep track of the amount of energy spent on receiving the
+         packet. */
+      compower_attrconv(&current_packet);
+
+      /* Clear the accumulated power consumption so that it is ready
+         for the next packet. */
+      compower_clear(&current_packet);
+#endif /* CONTIKIMAC_CONF_COMPOWER */
+
+      SAFE_PRINTF_LOG_INFO("contikimac: data (%u)\n", packet_get_payload_size(packet));
+
+#if CONTIKIMAC_SEND_SW_ACK
+      {
+        frame802154_t info154;
+        uint8_t iotusAddressType;
+        frame802154_parse(original_dataptr, original_datalen, &info154);
+        if(info154.fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) {
+          iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
+        } else {
+          iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+        }
+        if(info154.fcf.frame_type == FRAME802154_DATAFRAME &&
+            info154.fcf.ack_required != 0 &&
+            addresses_compare((uint8_t *)&info154.dest_addr,
+                              addresses_self_get_pointer(iotusAddressType),
+                              ADDRESSES_GET_TYPE_SIZE(iotusAddressType))) {
+            //linkaddr_cmp((linkaddr_t *)&info154.dest_addr,
+            //    &linkaddr_node_addr)) {
+          uint8_t ackdata[ACK_LEN] = {0, 0, 0};
+
+          we_are_sending = 1;
+          ackdata[0] = FRAME802154_ACKFRAME;
+          ackdata[1] = 0;
+          ackdata[2] = info154.seq;
+
+          iotus_packet_t *ackPkt = packet_create_msg(3, IOTUS_PRIORITY_DATA_LINK, 0,
+                ackdata, FALSE,
+                NODES_BROADCAST, NULL);
+
+          if(NULL != ackPkt) {
+            packet_set_type(ackPkt, IOTUS_PACKET_TYPE_IEEE802154_ACK);
+            active_radio_driver->send(ackPkt);
+            printf("Ack sent\n");
+
+            /* If packet has no callback function. Destroy it... */
+            packet_destroy(ackPkt);
+          } else {
+            printf("No ack sent\n");
+          }
+          we_are_sending = 0;
+        }
+      }
+#endif /* CONTIKIMAC_SEND_SW_ACK */
+
+      if(!duplicate) {
+        active_routing_protocol->receive(packet);
+      }
+      return;
+    } else {
+      PRINTDEBUG("contikimac: data not for us\n");
+    }
   } else {
     SAFE_PRINTF_LOG_ERROR("Parse (%u)\n", packet_get_size(packet));
   }
-}
-/*---------------------------------------------------------------------------*/
-static void
-init(void)
-{
-  radio_is_on = 0;
-  PT_INIT(&pt);
-
-  rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-
-  contikimac_is_on = 1;
-
-#if WITH_PHASE_OPTIMIZATION
-  phase_init();
-#endif /* WITH_PHASE_OPTIMIZATION */
-
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -941,17 +1017,41 @@ turn_off(int keep_radio_on)
   }
 }
 /*---------------------------------------------------------------------------*/
+static void
+init(void)
+{
+  radio_is_on = 0;
+  PT_INIT(&pt);
+
+  rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+
+  contikimac_is_on = 1;
+
+#if WITH_PHASE_OPTIMIZATION
+  phase_init();
+#endif /* WITH_PHASE_OPTIMIZATION */
+}
+/*---------------------------------------------------------------------------*/
 static unsigned short
 duty_cycle(void)
 {
   return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
 }
 /*---------------------------------------------------------------------------*/
+static void
+post_start(void)
+{
+}
+/*---------------------------------------------------------------------------*/
+static void
+run(void)
+{
+}
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",
   init,
-  NULL,
-  NULL,
+  NULL,//post_start,
+  NULL,//run,
   NULL,
   send_packet,
   NULL,

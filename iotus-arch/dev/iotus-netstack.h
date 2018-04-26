@@ -25,6 +25,7 @@
 #include "pieces.h"
 #include "global-parameters.h"
 #include "global-functions.h"
+#include "nodes.h"
 
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

@@ -238,51 +238,7 @@ int
 frame802154_extract_linkaddr(frame802154_t *frame,
                              uint8_t *source_address, uint8_t *dest_address)
 {
-  int src_addr_len;
-  int dest_addr_len;
-
-  if(frame == NULL) {
-    return 0;
-  }
-  /* Check and extract source address */
-  src_addr_len = frame->fcf.src_addr_mode ?
-    ((frame->fcf.src_addr_mode == FRAME802154_SHORTADDRMODE) ? 2 : 8) : 0;
-  if(src_addr_len == 0 || frame802154_is_broadcast_addr(frame->fcf.src_addr_mode, frame->src_addr)) {
-    /* Broadcast address */
-    if(source_address != NULL) {
-      //linkaddr_copy(source_address, &linkaddr_null);
-    }
-  } else {
-    /* Unicast address */
-    if(src_addr_len != 2) {
-      /* Destination address has a size we can not handle */
-      return 0;
-    }
-    if(source_address != NULL) {
-      //linkaddr_copy(source_address, (linkaddr_t *)frame->src_addr);
-    }
-  }
-
-  /* Check and extract destination address */
-  dest_addr_len = frame->fcf.dest_addr_mode ?
-    ((frame->fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) ? 2 : 8) : 0;
-  if(dest_addr_len == 0 || frame802154_is_broadcast_addr(frame->fcf.dest_addr_mode, frame->dest_addr)) {
-    /* Broadcast address */
-    if(dest_address != NULL) {
-      //linkaddr_copy(dest_address, &linkaddr_null);
-    }
-  } else {
-    /* Unicast address */
-    if(dest_addr_len != 2) {
-      /* Destination address has a size we can not handle */
-      return 0;
-    }
-    if(dest_address != NULL) {
-      //linkaddr_copy(dest_address, (linkaddr_t *)frame->dest_addr);
-    }
-  }
-
-  return 1;
+  return 0;
 }
 /*----------------------------------------------------------------------------*/
 static void

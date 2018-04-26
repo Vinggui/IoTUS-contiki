@@ -47,6 +47,13 @@
 #include "net/linkaddr.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"
+
+  #if NETSTACK_CONF_WITH_IPV6
+  #include "net/ipv6/uip-ds6.h"
+  #endif /* NETSTACK_CONF_WITH_IPV6 */
+
+#include "net/nullnet.h"
+
 #else
 #include "iotus-core.h"
 #include "addresses.h"
@@ -119,7 +126,35 @@ print_processes(struct process * const processes[])
 }
 #endif /* !PROCESS_CONF_NO_PROCESS_NAMES */
 /*--------------------------------------------------------------------------*/
+#ifndef CONTIKI_COMM_NEW_STACK
+static void
+set_rime_addr(void)
+{
+  linkaddr_t addr;
+  int i;
 
+  memset(&addr, 0, sizeof(linkaddr_t));
+#if NETSTACK_CONF_WITH_IPV6
+  memcpy(addr.u8, ds2411_id, sizeof(addr.u8));
+#else
+  if(node_id == 0) {
+    for(i = 0; i < sizeof(linkaddr_t); ++i) {
+      addr.u8[i] = ds2411_id[7 - i];
+    }
+  } else {
+    addr.u8[0] = node_id & 0xff;
+    addr.u8[1] = node_id >> 8;
+  }
+#endif
+  linkaddr_set_node_addr(&addr);
+  PRINTF("Rime started with address ");
+  for(i = 0; i < sizeof(addr.u8) - 1; i++) {
+    PRINTF("%d.", addr.u8[i]);
+  }
+  PRINTF("%d\n", addr.u8[i]);
+}
+#endif
+/*---------------------------------------------------------------------------*/
 #if WITH_TINYOS_AUTO_IDS
 uint16_t TOS_NODE_ID = 0x1234; /* non-zero */
 uint16_t TOS_LOCAL_ADDRESS = 0x1234; /* non-zero */
@@ -238,6 +273,8 @@ main(int argc, char **argv)
   NETSTACK_MAC.init();
   NETSTACK_LLSEC.init();
   NETSTACK_NETWORK.init();
+
+  PRINTF("NET driver is %s\n",NETSTACK_NETWORK.name);
 
   PRINTF("%s %s %s, channel check rate %lu Hz, radio channel %u\n",
          NETSTACK_LLSEC.name, NETSTACK_MAC.name, NETSTACK_RDC.name,

@@ -33,7 +33,8 @@ struct iotus_routing_protocol_struct {
   void (* run)(void);
   void (* close)(void);
   void (* send)(iotus_packet_t *packet);
-  //void (* sent_cb)(iotus_packet_t *packet);
+  void (* sent_cb)(iotus_packet_t *packet);
+  void (* receive)(iotus_packet_t *packet);
 };
 
 #endif /* IOTUS_DEV_ROUTING_H_ */

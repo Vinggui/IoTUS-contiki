@@ -39,48 +39,51 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
+#include "nullnet.h"
 #include <stdio.h> /* For printf() */
-
-#include "../../edytee-files/edytee.h"
 /*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Hello world process");
+PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
-void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
+/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
     printf("message sent\n");
-}
+}*/
 
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
 
-    leds_init();
-    leds_off(LEDS_ALL); 
+    //leds_init();
+    //leds_off(LEDS_ALL);
 
-
-    static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND*4);
-    printf("Hello, world\n");
 
     linkaddr_t addr;
-    addr.u8[0]=2;
-    addr.u8[1]=0;
+    
+    static struct etimer timer;
+    // set the etimer module to generate an event in one second.
+    etimer_set(&timer, CLOCK_CONF_SECOND*2);
+    printf("Hello, world\n");
 
     for(;;) {
         PROCESS_WAIT_EVENT();
 
-    printf("Hi\n");
-    leds_toggle(LEDS_ALL);
-    if(linkaddr_node_addr.u8[0] == 1) {
-        //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
+        
+        packetbuf_copyfrom("Hello", 5);
+        addr.u8[0] = 1;
+        addr.u8[1] = 0;
+        packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
+        packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+        if(!linkaddr_cmp(&addr, &linkaddr_node_addr)) {
+          nullnet_output();
+          printf("App sending\n");
+        }
+        
+
+        etimer_reset(&timer);
     }
-    etimer_reset(&timer);
-
-    }
 
 
-  
+
     PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

@@ -117,8 +117,10 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   if(iotus_radio_selected_address_type == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
     /* Use short address mode if linkaddr size is short. */
     params.fcf.src_addr_mode = FRAME802154_SHORTADDRMODE;
+    params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
   } else {
     params.fcf.src_addr_mode = FRAME802154_LONGADDRMODE;
+    params.fcf.dest_addr_mode = FRAME802154_LONGADDRMODE;
   }
 
   uint8_t *tempPanID = nodes_get_address(IOTUS_NODES_ADD_INFO_TYPE_ADDR_PANID,
@@ -126,7 +128,8 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   if(NULL == tempPanID) {
     tempPanID = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID);
   }
-  params.dest_pid = *((uint16_t *)tempPanID);
+
+  params.dest_pid = tempPanID[0] | tempPanID[1]<<8;
 
   if(TRUE == packet_holds_broadcast(packet)) {
     /* Broadcast requires short address mode. */
@@ -134,22 +137,16 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
     params.dest_addr[0] = 0xFF;
     params.dest_addr[1] = 0xFF;
   } else {
-    uint8_t iotusAddressType;
-    if(params.fcf.dest_addr_mode == FRAME802154_SHORTADDRMODE) {
-      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_SHORT;
-    } else {
-      iotusAddressType = IOTUS_ADDRESSES_TYPE_ADDR_LONG;
+    uint8_t *iotusDestAddr = nodes_get_address(iotus_radio_selected_address_type,
+                                packet->nextDestinationNode);
+    if(iotusDestAddr == NULL) {
+      SAFE_PRINTF_LOG_ERROR("No dest Addr");
+      return -1;
     }
+    
     memcpy(&params.dest_addr,
-            nodes_get_address(iotusAddressType,
-                                packet->nextDestinationNode),
-            ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
-    /* Use short address mode if linkaddr size is small */
-    if(iotus_radio_selected_address_type == IOTUS_ADDRESSES_TYPE_ADDR_SHORT) {
-      params.fcf.dest_addr_mode = FRAME802154_SHORTADDRMODE;
-    } else {
-      params.fcf.dest_addr_mode = FRAME802154_LONGADDRMODE;
-    }
+            iotusDestAddr,
+            ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
   }
 
   /* Set the source PAN ID to the global variable. */
@@ -253,6 +250,12 @@ parse(iotus_packet_t *packet)
         } else {
           packet_set_next_destination(packet, tempNode);
         }
+        if(frame.fcf.ack_required) {
+          packet_set_parameter(packet, PACKET_PARAMETERS_WAIT_FOR_ACK);
+        }
+      } else {
+        packet_set_next_destination(packet, NODES_BROADCAST);
+        packet_set_final_destination(packet, NODES_BROADCAST);
       }
     }
     //packetbuf_set_addr(PACKETBUF_ADDR_SENDER, (linkaddr_t *)&frame.src_addr);

@@ -229,6 +229,7 @@ transmit(iotus_packet_t *packet)
   #if NATIVE_RADIO_AUTO_RECEIVE == 1
     packet_indication = 1;
   #endif
+    
   return RADIO_RESULT_OK;
 }
 
@@ -401,6 +402,8 @@ run(void)
 {
   if(packet_indication) {
     packet_indication = 0;
+    emu_msg[6] = 4;
+    emu_msg[7] = 2;
     iotus_packet_t *packet = read();
     if(packet == NULL) {
       SAFE_PRINTF_LOG_ERROR("Packet read is null");
