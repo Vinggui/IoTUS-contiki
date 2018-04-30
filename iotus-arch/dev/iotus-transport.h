@@ -32,7 +32,7 @@ struct iotus_transport_protocol_struct {
   void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
-  void (* send)(iotus_packet_t *packet);
+  void (* sent_cb)(iotus_packet_t *packet);
   //void (* sent_cb)(iotus_packet_t *packet);
 };
 

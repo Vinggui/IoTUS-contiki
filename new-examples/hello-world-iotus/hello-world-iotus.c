@@ -40,15 +40,23 @@
 #include "contiki.h"
 #include "dev/leds.h"
 #include <stdio.h> /* For printf() */
-#include "iotus-netstack.h"
+#include "iotus-api.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
+static void
+app_packet_confirm(iotus_packet_t *packet)
+{
     printf("message sent\n");
-}*/
+}
+
+static void
+app_packet_handler(iotus_packet_t *packet)
+{
+    printf("message received\n");
+}
 
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
@@ -63,6 +71,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     printf("Hello, world\n");
 
     IOTUS_CORE_START(0,0,contikiMAC,0);
+    packet_set_interface_functions(app_packet_confirm,app_packet_handler);
     for(;;) {
         PROCESS_WAIT_EVENT();
 
@@ -78,19 +87,18 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             dest[1] = 0;
             iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(destNode != NULL) {
-                iotus_packet_t *packet = packet_create_msg(10, 5, 5000,
-                    (const uint8_t *)"BTeste-msg", TRUE,
-                    destNode, NULL);
-
-                if(NULL == packet) {
-                  continue;
-                }
-                packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
-                active_transport_protocol->send(packet);
+                iotus_initiate_msg(
+                        10,
+                        (const uint8_t *)"BTeste-msg",
+                        PACKET_PARAMETERS_WAIT_FOR_ACK,
+                        IOTUS_PRIORITY_APPLICATION,
+                        5000,
+                        destNode);
             }
         }
 
         etimer_reset(&timer);
+        iotus_allow_sleep(TRUE);
     }
 
 

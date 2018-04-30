@@ -1,6 +1,6 @@
 
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -22,10 +22,9 @@
 #include "safe-printer.h"
 
 static void
-send(iotus_packet_t *packet)
+send_cb(iotus_packet_t *packet)
 {
   SAFE_PRINTF_LOG_INFO("Null trans");
-  active_routing_protocol->send(packet);
 }
 
 static void
@@ -38,6 +37,7 @@ start(void)
 static void
 run(void)
 {
+  iotus_core_netstack_idle_for(IOTUS_PRIORITY_TRANSPORT, 0XFFFF);
 }
 
 static void
@@ -50,7 +50,7 @@ const struct iotus_transport_protocol_struct null_transport_protocol = {
   NULL,
   run,
   close,
-  send
+  send_cb
 };
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

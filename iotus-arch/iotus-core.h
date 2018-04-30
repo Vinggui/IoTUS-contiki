@@ -1,5 +1,5 @@
 /**
- * \defgroup dedcription...
+ * \defgroup description...
  *
  * This...
  *
@@ -12,18 +12,32 @@
  *  Created on: Oct 23, 2017
  *      Author: vinicius
  */
-
-
-
-/* The following stuff ends the \defgroup block at the beginning of
-   the file: */
-
-/** @} */
 #ifndef IOTUS_ARCH_IOTUS_CORE_H_
 #define IOTUS_ARCH_IOTUS_CORE_H_
 
-#include "radio.h"
 #include "platform-conf.h"
+
+typedef int8_t Boolean;
+#define TRUE            1
+#define FALSE           0
+
+typedef int8_t Status;
+#define SUCCESS         1
+#define FAILURE         0
+
+
+/* This PRIORITY can have only 4 value, since it uses only 2 bits in the system. */
+typedef enum IOTUS_LAYER_PRIORITY {
+  IOTUS_PRIORITY_RADIO = 0,
+  IOTUS_PRIORITY_DATA_LINK,
+  IOTUS_PRIORITY_ROUTING,
+  IOTUS_PRIORITY_TRANSPORT,
+  IOTUS_PRIORITY_APPLICATION,
+  IOTUS_PRIORITY_APPLICATION_SUB_1,
+  IOTUS_PRIORITY_APPLICATION_SUB_2,
+  IOTUS_PRIORITY_APPLICATION_SUB_3,
+  IOTUS_PRIORITY_APPLICATION_SUB_4
+} iotus_layer_priority;
 
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   //Define the Enumaration types for dynamic mode
@@ -48,15 +62,7 @@
 
 typedef enum iotus_service_signals {IOTUS_START_SERVICE, IOTUS_RUN_SERVICE, IOTUS_END_SERVICE} iotus_service_signal;
 
-
-typedef uint8_t Boolean;
-#define TRUE            1
-#define FALSE           0
-
-typedef uint8_t Status;
-#define SUCCESS         1
-#define FAILURE         0
-
+typedef void (* application_demanding_task)(void);
 
 ///////////////////////////////////////////////////////////////////////
 //                                Externs                            //
@@ -75,24 +81,8 @@ extern struct iotus_radio_driver_struct const *active_radio_driver;
 //////////////////////////////////////////////////////////////////////////
 //                                Prototypes                            //
 //////////////////////////////////////////////////////////////////////////
-/* Call this macro instead of the function iotus_core_start_system itself*/
-#ifdef IOTUS_COMPILE_MODE_DYNAMIC
-#define IOTUS_CORE_START(transport, routing, data_link, radio) iotus_core_start_system(transport, routing, data_link, radio)
-#else
-#define IOTUS_CORE_START(transport, routing, data_link, radio) iotus_core_start_system()
-#endif
-//Functions that must be available
 void
-iotus_core_start_system (
-  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  iotus_transport_protocols transport,
-  iotus_routing_protocols routing,
-  iotus_data_link_protocols data_link,
-  iotus_radio_drivers radio_driver
-  #else
-  void
-  #endif
-);
+iotus_core_netstack_idle_for(iotus_layer_priority layer, uint16_t maxDuration);
 
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */
 /* The following stuff ends the \defgroup block at the beginning of

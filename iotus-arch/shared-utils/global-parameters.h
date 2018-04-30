@@ -1,5 +1,5 @@
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -48,6 +48,7 @@ typedef struct iotus_radio_events {
   uint8_t badRxPacketLong; //When packet len is bigger then allowed
   uint8_t badRxPacketShort; //When packet len is bigger then allowed
   uint8_t badRxChecksumFail; //When packet len is bigger then allowed
+  uint8_t badRxNoMemery;
   radio_status radioStatus;
 } iotus_parameters_radio_events_t;
 
@@ -69,8 +70,12 @@ extern iotus_address_type iotus_radio_selected_address_type;
 /////////////////////////////////////////////////////
 //               QoS parameters                    //
 /////////////////////////////////////////////////////
+typedef struct iotus_QoS_definitions {
+  uint8_t applicationDuration;
+  packet_prioritization packetPrioritization;
+} iotus_QoS_definitions_t;
 
-extern packet_prioritization iotus_packet_prioritization;
+extern iotus_QoS_definitions_t iotus_QoS;
 
 
 ///////////////////////////////////////////////

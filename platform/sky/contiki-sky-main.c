@@ -43,21 +43,19 @@
 
 #ifndef CONTIKI_COMM_NEW_STACK
 //This bracket is not necessary for the new architecture
-#include "net/netstack.h"
-#include "net/linkaddr.h"
-#include "net/packetbuf.h"
-#include "net/queuebuf.h"
-
+  #include "net/netstack.h"
+  #include "net/linkaddr.h"
+  #include "net/packetbuf.h"
+  #include "net/queuebuf.h"
   #if NETSTACK_CONF_WITH_IPV6
-  #include "net/ipv6/uip-ds6.h"
+    #include "net/ipv6/uip-ds6.h"
   #endif /* NETSTACK_CONF_WITH_IPV6 */
-
 #include "net/nullnet.h"
 
 #else
-#include "iotus-core.h"
-#include "addresses.h"
-#include "iotus-frame802154.h"
+  #include "iotus-core.h"
+  #include "addresses.h"
+  #include "iotus-frame802154.h"
 #endif/*CONTIKI_COMM_NEW_STACK*/
 
 #include "sys/node-id.h"

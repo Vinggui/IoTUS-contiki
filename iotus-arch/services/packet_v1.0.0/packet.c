@@ -38,6 +38,9 @@
 MEMB(iotus_packet_struct_mem, iotus_packet_t, IOTUS_PACKET_LIST_SIZE);
 LIST(gPacketMsgList);
 
+static packet_sent_cb gApplicationConfirmationCB;
+static packet_handler gApplicationPacketHandler;
+
 /*---------------------------------------------------------------------*/
 /*
  * 
@@ -46,9 +49,26 @@ LIST(gPacketMsgList);
  */
 Boolean
 packet_destroy(iotus_packet_t *piece) {
+  if(NULL == piece) {
+    return FALSE;
+  }
   list_remove(gPacketMsgList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
   return pieces_destroy(&iotus_packet_struct_mem, piece);
+}
+
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief Define the functions to handle packet flow with application
+ * \param packet_
+ * \param param Parameter to be verified
+ * \return Boolean.
+ */
+void
+packet_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler) {
+  gApplicationConfirmationCB = confirmationFunc;
+  gApplicationPacketHandler = appHandler;
 }
 
 /*---------------------------------------------------------------------*/
@@ -362,9 +382,9 @@ packet_get_rx_block(iotus_packet_t *packetPiece)
  * \return Packet final size
  */
 iotus_packet_t *
-packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
-    uint16_t timeout, const uint8_t* payload, Boolean insertIotusHeader,
-    iotus_node_t *finalDestination, void *callbackFunction)
+packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
+    iotus_layer_priority priority, uint16_t timeout, Boolean insertIotusHeader,
+    iotus_node_t *finalDestination)
 {
 
   iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(
@@ -387,7 +407,6 @@ packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
   newMsg->params = 0;
   //newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
   newMsg->priority = priority;
-  newMsg->callbackHandler = callbackFunction;
   newMsg->type = IOTUS_PACKET_TYPE_IEEE802154_DATA;
   
   newMsg->finalDestinationNode = finalDestination;

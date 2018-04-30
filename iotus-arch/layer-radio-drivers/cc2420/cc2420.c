@@ -1023,16 +1023,15 @@ cc2420_read(void)
     /* reserve space for this packet */
     packet = packet_create_msg(
                         len - FOOTER_LEN,
+                        NULL,
                         IOTUS_PRIORITY_RADIO,
                         0,
-                        NULL,
                         FALSE,
-                        NULL,
                         NULL);
     if(packet == NULL) {
       PRINTF("No storage to receive pkt\n");
       //Drop packet or try later...
-      flushrx();
+      iotus_parameters_radio_events.badRxNoMemery++;
     } else {
 
       getrxdata(pieces_get_data_pointer(packet), len - FOOTER_LEN);

@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include "contiki.h"
 #include "iotus-netstack.h"
+#include "iotus-core.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
 */
@@ -87,8 +88,46 @@ static const iotus_core_signal_process_function iotus_core_signal_process_list[I
 static uint8_t iotus_services_installed[IOTUS_DEPENDENCIES_BUFFER_SIZE]={0};
 #endif
 
+Boolean allowSystemSleep;
+uint8_t sleepGreenFlag;
+uint16_t netstackFreeTime = 0;
+
+static application_demanding_task gApplicationDemandingTask;
+
 PROCESS(iotus_core_process, "Core IoTUS Process");
 
+
+/*---------------------------------------------------------------------------*/
+iotus_packet_t *
+iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+    iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination)
+{
+  iotus_packet_t *packet;
+
+  if(payloadSize == 0 || payload == NULL ||
+    priority < IOTUS_PRIORITY_APPLICATION ||
+    finalDestination == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Packet input");
+    return NULL;
+  }
+
+  packet = packet_create_msg(
+                payloadSize,
+                payload,
+                priority,
+                timeout,
+                TRUE,
+                finalDestination);
+
+  if(NULL == packet) {
+    return NULL;
+  }
+  packet_set_parameter(packet,params);
+  SAFE_PRINTF_LOG_INFO("Packet created");
+  return packet;
+}
+
+/*---------------------------------------------------------------------------*/
 static void
 send_signal_to_services(iotus_service_signal signal, void *data)
 {
@@ -109,7 +148,7 @@ send_signal_to_services(iotus_service_signal signal, void *data)
   }
 }
 
-
+/*---------------------------------------------------------------------------*/
 void
 iotus_core_start_system (
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
@@ -126,6 +165,11 @@ iotus_core_start_system (
 
   //Sum up the services to be Used
   int i;
+
+  allowSystemSleep = FALSE;
+  sleepGreenFlag = 0;
+  gApplicationDemandingTask = NULL;
+
 
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   for(i=0;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
@@ -216,8 +260,53 @@ iotus_core_start_system (
   process_start(&iotus_core_process, NULL);
 }
 
+/*---------------------------------------------------------------------------*/
+/**
+ * Function for the data link layer, informing how long this system can sleep
+ * \param max_duration The maximum duration in ms.
+ */
+void
+iotus_core_netstack_idle_for(iotus_layer_priority layer, uint16_t maxDuration)
+{
+  if(layer < 8) {
+    sleepGreenFlag |= (1<<layer);
+    maxDuration=maxDuration;
+  }
+}
 
+/*---------------------------------------------------------------------------*/
+/**
+ * Function for the application layer, informing if the system can go to sleep
+ * \param isAllowed Boolean variable to allow the system to go to sleep.
+ */
+void
+iotus_allow_sleep(Boolean isAllowed)
+{
+  allowSystemSleep = isAllowed;
+  if(isAllowed) {
+    iotus_core_netstack_idle_for(IOTUS_PRIORITY_APPLICATION, 0xFFFF);
+    SAFE_PRINTF_LOG_INFO("Sleeping for %u", 1000);
 
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * Function for the application layer, informing if the system can go to sleep
+ * \param time_needed The necessary time needed by this demanding task.
+ * \param task        The function to be called whenever possible.
+ */
+void
+iotus_set_demanding_task(uint16_t time_needed, application_demanding_task task)
+{
+  if(time_needed == 0xFFFF) {
+    SAFE_PRINTF_LOG_INFO("No time definition");
+  }
+  iotus_QoS.applicationDuration = time_needed;
+  gApplicationDemandingTask = task;
+}
+
+/*---------------------------------------------------------------------------*/
 /* Implementation of the IoTus core process */
 PROCESS_THREAD(iotus_core_process, ev, data)
 {
@@ -235,20 +324,42 @@ PROCESS_THREAD(iotus_core_process, ev, data)
 
   //Main loop here
   for(;;) {
-    //Time to run protocols
-    #if IOTUS_CONF_USING_TRANSPORT == 1
-    ACTIVE_TRANSPORT_PROTOCOL(run);
-    #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
-    #if IOTUS_CONF_USING_ROUTING == 1
-    ACTIVE_ROUTING_PROTOCOL(run);
-    #endif/*IOTUS_CONF_USING_ROUTING == 1*/
-    #if IOTUS_CONF_USING_DATA_LINK == 1
-    ACTIVE_DATA_LINK_PROTOCOL(run);
-    #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
-    ACTIVE_RADIO_DRIVER(run);
 
+    //Time to run protocols
+    ACTIVE_RADIO_DRIVER(run);
+    #if IOTUS_CONF_USING_DATA_LINK == 1
+      ACTIVE_DATA_LINK_PROTOCOL(run);
+    #else
+      sleepGreenFlag = (1<<IOTUS_PRIORITY_DATA_LINK);
+    #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
+    #if IOTUS_CONF_USING_ROUTING == 1
+      ACTIVE_ROUTING_PROTOCOL(run);
+    #else
+      sleepGreenFlag = (1<<IOTUS_PRIORITY_ROUTING);
+    #endif/*IOTUS_CONF_USING_ROUTING == 1*/
+    #if IOTUS_CONF_USING_TRANSPORT == 1
+      ACTIVE_TRANSPORT_PROTOCOL(run);
+    #else
+      sleepGreenFlag = (1<<IOTUS_PRIORITY_TRANSPORT);
+    #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
     // Run each services
     send_signal_to_services(IOTUS_RUN_SERVICE, NULL);
+    if(netstackFreeTime > iotus_QoS.applicationDuration) {
+      //Execute the demanding application task
+      
+    }
+    if(allowSystemSleep &&
+      sleepGreenFlag == 0b00011110) {//radio=0, data_link=1, routing=2, transport=3, app=4
+      /* 
+       * Time management is now necessary.
+       * The stack will take as long as it needs to operate
+       * and then give the rest of the time to the application layer.
+       */
+      //sleep();
+      sleepGreenFlag = 0;
+    }
+    //Reset the sleep flag
+
     PROCESS_PAUSE();
   }
   // any process must end with this, even if it is never reached.

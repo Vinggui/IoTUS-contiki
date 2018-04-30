@@ -193,7 +193,7 @@ pieces_clean_additional_info_list(list_t list)
  * \brief                Allocate, set and link the additional information required.
  *                       Hence, the information has to be given by its pointer and size only.
  * \param list           The list where this info will be linked.
- * \param varSize       The size of this value
+ * \param varSize        The size of this value
  * \param createBuffer   If the value needs to be created of not.
  * \return               The pointer to this additional information var.
  */
@@ -259,6 +259,27 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
   addInfo->type = type;
   list_push(list, addInfo);
   return pieces_get_data_pointer(addInfo);
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief                Get the pointer to the variable allocated into the additional information.
+ * \param list           The list where this info will be linked.
+ * \return               The pointer to this additional information var.
+ */
+void *
+pieces_get_additional_info_var(list_t list, uint8_t type)
+{
+  if(NULL == list) {
+    return NULL;
+  }
+
+  //Verify if this list already has this info...
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(list,type);
+  if(NULL != addInfo) {
+    return pieces_get_data_pointer(addInfo);
+  }
+  return NULL;
 }
 
 /*---------------------------------------------------------------------*/

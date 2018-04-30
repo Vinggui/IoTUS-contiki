@@ -1,6 +1,6 @@
 
 /**
- * \defgroup decription...
+ * \defgroup description...
  *
  * This...
  *
@@ -58,6 +58,7 @@ start(void)
 static void
 run(void)
 {
+  iotus_core_netstack_idle_for(IOTUS_PRIORITY_ROUTING, 0XFFFF);
 }
 
 static void
@@ -69,7 +70,6 @@ struct iotus_routing_protocol_struct null_routing_protocol = {
   NULL,
   run,
   close,
-  send,
   send_cb,
   input_packet
 };

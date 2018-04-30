@@ -94,6 +94,12 @@ nodes_set_address(iotus_node_t *node, iotus_address_type addressType, uint8_t *a
 iotus_node_t *
 nodes_update_by_address(iotus_address_type addressType, uint8_t *address);
 
+Status
+nodes_register_sequence_number(iotus_node_t *node, uint16_t sequence_number);
+
+uint16_t
+nodes_get_last_sequence_number(iotus_node_t *node);
+
 void
 nodes_destroy(iotus_node_t *node);
 

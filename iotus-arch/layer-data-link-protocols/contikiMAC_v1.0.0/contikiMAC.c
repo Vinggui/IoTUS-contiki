@@ -779,17 +779,23 @@ send_packet(iotus_packet_t *packet)
         iotus_packet_t *ack = active_radio_driver->read();
         if(NULL == ack) {
           SAFE_PRINTF_LOG_ERROR("No ack received\n");
-        }
-        if(packet_get_size(ack) == ACK_LEN &&
-           seqno == pieces_get_data_pointer(ack)[ACK_LEN - 1]) {
-          got_strobe_ack = 1;
-#if WITH_PHASE_OPTIMIZATION
-          encounter_time = txtime;
-#endif
-          break;
+          iotus_parameters_radio_events.collisions++;
         } else {
-          SAFE_PRINTF_LOG_ERROR("contikimac: collisions while sending\n");
-          collisions++;
+          uint8_t ackLength = packet_get_payload_size(ack);
+          uint8_t ackSeqno = pieces_get_data_pointer(ack)[ACK_LEN - 1];
+          packet_destroy(ack);
+          if(ackLength == ACK_LEN &&
+             seqno == ackSeqno) {
+            got_strobe_ack = 1;
+  #if WITH_PHASE_OPTIMIZATION
+            encounter_time = txtime;
+  #endif
+            break;
+          } else {
+            SAFE_PRINTF_LOG_ERROR("contikimac: collisions while sending\n");
+            collisions++;
+            iotus_parameters_radio_events.collisions++;
+          }
         }
       }
 #endif /* RDC_CONF_HARDWARE_ACK */
@@ -880,8 +886,6 @@ input_packet(iotus_packet_t *packet)
     off();
   }
 
-  printf("aeaeae %u %u %u\n", packet->data.size, packet->firstHeaderBitSize, packet->lastHeaderSize);
-printf("hjhjk %u %u\n", packet_get_payload_size(packet), packet_get_size(packet));
   if(packet_get_payload_size(packet) == ACK_LEN) {
     /* Ignore ack packets */
     SAFE_PRINT("ContikiMAC: ignored ack\n");
@@ -912,12 +916,14 @@ printf("hjhjk %u %u\n", packet_get_payload_size(packet), packet_get_size(packet)
 
 #if RDC_WITH_DUPLICATE_DETECTION
       /* Check for duplicate packet. */
-      duplicate = mac_sequence_is_duplicate();
-      if(duplicate) {
+      //duplicate = mac_sequence_is_duplicate();
+      if(packet_get_sequence_number(packet) == nodes_get_last_sequence_number(packet->prevSourceNode)) {
+        duplicate = 1;
         /* Drop the packet. */
         PRINTF("contikimac: Drop duplicate\n");
       } else {
-        mac_sequence_register_seqno();
+        //mac_sequence_register_seqno();
+        nodes_register_sequence_number(packet->prevSourceNode, packet_get_sequence_number(packet));
       }
 #endif /* RDC_WITH_DUPLICATE_DETECTION */
 
@@ -961,9 +967,12 @@ printf("hjhjk %u %u\n", packet_get_payload_size(packet), packet_get_size(packet)
           ackdata[1] = 0;
           ackdata[2] = info154.seq;
 
-          iotus_packet_t *ackPkt = packet_create_msg(3, IOTUS_PRIORITY_DATA_LINK, 0,
-                ackdata, FALSE,
-                NODES_BROADCAST, NULL);
+          iotus_packet_t *ackPkt = packet_create_msg(
+                                      3,
+                                      ackdata,
+                                      IOTUS_PRIORITY_DATA_LINK, 0,
+                                      FALSE,
+                                      NODES_BROADCAST);
 
           if(NULL != ackPkt) {
             packet_set_type(ackPkt, IOTUS_PACKET_TYPE_IEEE802154_ACK);
@@ -1050,8 +1059,8 @@ run(void)
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",
   init,
-  NULL,//post_start,
-  NULL,//run,
+  post_start,
+  run,
   NULL,
   send_packet,
   NULL,

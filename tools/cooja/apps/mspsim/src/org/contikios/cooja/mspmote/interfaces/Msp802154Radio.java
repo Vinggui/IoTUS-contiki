@@ -219,6 +219,7 @@ public class Msp802154Radio extends Radio implements CustomDataRadio {
     /* Delivering packet bytes with delays */
     byte[] packetData = CC2420RadioPacketConverter.fromCoojaToCC2420(packet);
     long deliveryTime = getMote().getSimulation().getSimulationTime();
+    logger.info("cheguei aqui");
     for (byte b: packetData) {
       if (isInterfered()) {
         b = (byte) 0xFF;
@@ -229,6 +230,7 @@ public class Msp802154Radio extends Radio implements CustomDataRadio {
         public void execute(long t) {
           super.execute(t);
           radio.receivedByte(byteToDeliver);
+          logger.info("cheguei merdaaa");
           mote.requestImmediateWakeup();
         }
       }, deliveryTime);

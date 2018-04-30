@@ -85,6 +85,9 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
                                   uint16_t varSize,
                                   Boolean createBuffer);
 
+void *
+pieces_get_additional_info_var(list_t list, uint8_t type);
+
 Boolean
 pieces_destroy(struct memb *m, void *h);
 

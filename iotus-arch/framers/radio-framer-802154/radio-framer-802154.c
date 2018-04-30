@@ -266,12 +266,12 @@ parse(iotus_packet_t *packet)
     }
 
     tempNode = nodes_get_node_by_address(iotusAddressType,
-                                (uint8_t *)&frame.dest_addr);
+                                (uint8_t *)&frame.src_addr);
     if(tempNode == NULL) {
       /**
        * Sender not registered... Save this node
        */
-      tempNode = nodes_update_by_address(iotusAddressType, (uint8_t *)&frame.dest_addr);
+      tempNode = nodes_update_by_address(iotusAddressType, (uint8_t *)&frame.src_addr);
       if(NULL == tempNode) {
         SAFE_PRINTF_LOG_ERROR("Node not saved");
         /**

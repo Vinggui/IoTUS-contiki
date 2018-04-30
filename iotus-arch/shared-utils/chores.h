@@ -17,16 +17,6 @@
 #define IOTUS_ARCH_SHARED_UTILS_DEFAULT_CHORES_H_
 
 #include "iotus-core.h"
-#include "platform-conf.h"
-
-/* This PRIORITY can have only 4 value, since it uses only 2 bits in the system. */
-typedef enum IOTUS_PACKET_PRIORITY {
-  IOTUS_PRIORITY_RADIO = 0,
-  IOTUS_PRIORITY_DATA_LINK,
-  IOTUS_PRIORITY_ROUTING,
-  IOTUS_PRIORITY_TRANSPORT
-} iotus_layer_priority;
-
 
 /*
  * List of default known headers functions present into header

@@ -71,15 +71,21 @@ enum packet_types {
 #define IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN)
 #define IOTUS_PACKET_TYPE_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN)
 
+typedef void (* packet_sent_cb)(iotus_packet_t *packet);
+typedef void (* packet_handler)(iotus_packet_t *packet);
+
 /////////////////////////////////////////////////////
 //                     MACROS                      //
 /////////////////////////////////////////////////////
 #define packet_set_type(packet, typeValue)      packet->type=typeValue
 #define packet_get_type(packet)                 packet->type
 
-/*
- * Functions of this module
- */
+//////////////////////////////////////////////////////////////////////////
+//                      Functions of this service                       //
+//////////////////////////////////////////////////////////////////////////
+void
+packet_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler);
+
 uint8_t
 packet_get_parameter(iotus_packet_t *packet_piece, uint8_t param);
 
@@ -129,9 +135,9 @@ packet_rcv_block_output_t *
 packet_get_rx_block(iotus_packet_t *packetPiece);
 
 iotus_packet_t *
-packet_create_msg(uint16_t payloadSize, iotus_layer_priority priority,
-    uint16_t timeout, const uint8_t* payload, Boolean insertIotusHeader,
-    iotus_node_t *finalDestination, void *callbackFunction);
+packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
+    iotus_layer_priority priority, uint16_t timeout, Boolean insertIotusHeader,
+    iotus_node_t *finalDestination);
 
 Boolean
 packet_destroy(iotus_packet_t *msgPiece);

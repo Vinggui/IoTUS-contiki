@@ -51,8 +51,10 @@
 
 
 #ifndef CC2420_CONF_AUTOACK
-#define CC2420_CONF_AUTOACK              1
+#define CC2420_CONF_AUTOACK                     1
 #endif /* CC2420_CONF_AUTOACK */
+
+#define RDC_WITH_DUPLICATE_DETECTION            1
 
 /*
  * Definitions below are dictated by the hardware and not really
