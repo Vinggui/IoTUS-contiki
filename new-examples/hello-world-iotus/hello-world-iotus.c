@@ -47,9 +47,9 @@ AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
 static void
-app_packet_confirm(iotus_packet_t *packet)
+app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
-    printf("message sent\n");
+    printf("message processed %u\n", returnAns);
 }
 
 static void
@@ -75,13 +75,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     for(;;) {
         PROCESS_WAIT_EVENT();
 
-        printf("App sending\n");
         //leds_toggle(LEDS_ALL);
         //if(linkaddr_node_addr.u8[0] == 1) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
         if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 2) {
+            printf("App sending\n");
             uint8_t dest[2];
             dest[0] = 1;
             dest[1] = 0;

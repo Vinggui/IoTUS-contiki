@@ -71,7 +71,7 @@ enum packet_types {
 #define IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN)
 #define IOTUS_PACKET_TYPE_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN)
 
-typedef void (* packet_sent_cb)(iotus_packet_t *packet);
+typedef void (* packet_sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
 typedef void (* packet_handler)(iotus_packet_t *packet);
 
 /////////////////////////////////////////////////////
@@ -173,6 +173,12 @@ packet_parse(iotus_packet_t *packetPiece);
 
 Boolean
 packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
+
+void
+packet_poll_by_priority(uint8_t num);
+
+void
+packet_poll_by_node(iotus_node_t *node, uint8_t num);
 
 /* This function provides the core access to basic operations into this service */
 void

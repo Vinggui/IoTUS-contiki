@@ -18,6 +18,7 @@
 #include <string.h>
 #include "global-parameters.h"
 #include "iotus-core.h"
+#include "iotus-netstack.h"
 #include "packet-defs.h"
 #include "lib/memb.h"
 #include "list.h"
@@ -808,6 +809,111 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space)
   }
   return FALSE;
 }
+
+/*---------------------------------------------------------------------*/
+static void
+process_sending_packet_on_layers(iotus_packet_t *packetSelected)
+{
+  //Call the building packet of each layer
+  iotus_netstack_return returnAns = TRANSPORT_TX_OK;
+  if(active_transport_protocol->build_to_send != NULL) {
+    returnAns = active_transport_protocol->build_to_send(packetSelected);
+  }
+  if(TRANSPORT_TX_OK == returnAns) {
+    returnAns = ROUTING_TX_OK;
+    if(active_routing_protocol->build_to_send != NULL) {
+      returnAns = active_routing_protocol->build_to_send(packetSelected);
+    }
+    if(ROUTING_TX_OK == returnAns) {
+      returnAns = active_data_link_protocol->send(packetSelected);
+    }
+  }
+
+  //Call the return functions of each layer
+  if(packetSelected->priority >= IOTUS_PRIORITY_ROUTING &&
+     returnAns < ROUTING_TX_OK) {
+    if(active_routing_protocol->sent_cb != NULL) {
+      active_routing_protocol->sent_cb(packetSelected, returnAns);
+    }
+  }
+  if(packetSelected->priority >= IOTUS_PRIORITY_TRANSPORT &&
+     returnAns < TRANSPORT_TX_OK) {
+    if(active_transport_protocol->sent_cb != NULL) {
+      active_transport_protocol->sent_cb(packetSelected, returnAns);
+    }
+  }
+  if(packetSelected->priority >= IOTUS_PRIORITY_APPLICATION) {
+    if(gApplicationConfirmationCB != NULL) {
+      gApplicationConfirmationCB(packetSelected, returnAns);
+    }
+  }
+
+  packet_destroy(packetSelected);
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief   Select one packet and initiate the stack signaling of packet to be sent.
+ * \param num   The number of packets to be polled and ready to transmit.
+ */
+void
+packet_poll_by_priority(uint8_t num)
+{
+  iotus_packet_t *packet, *packetSelected;
+  unsigned long minTimeout, packetTimeout;
+
+  minTimeout = -1;
+  //Get the packet with lowest priority and nearest timeout
+  packetSelected = list_head(gPacketMsgList);
+  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+    if(packet->priority != IOTUS_PRIORITY_RADIO &&
+       packet->priority <= packetSelected->priority) {
+      packetTimeout = timestamp_remainder(&packet->timeout);
+      if(packetTimeout < minTimeout) {
+        minTimeout = packetTimeout;
+        packetSelected = packet;
+      }
+    }
+  }
+
+  if(packetSelected != NULL) {
+    process_sending_packet_on_layers(packetSelected);
+  }
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief   Select one packet and initiate the stack signaling of packet to be sent.
+ * \param num   The number of packets to be polled and ready to transmit.
+ */
+void
+packet_poll_by_node(iotus_node_t *node, uint8_t num)
+{
+  iotus_packet_t *packet, *packetSelected;
+  unsigned long minTimeout, packetTimeout;
+
+  if(node == NULL) {
+    return;
+  }
+
+  minTimeout = -1; //make it the max value...
+  //Get the packet with lowest priority and nearest timeout
+  packetSelected = list_head(gPacketMsgList);
+  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+    if(packet_get_next_destination(packet) == node) {
+      packetTimeout = timestamp_remainder(&packet->timeout);
+      if(packetTimeout < minTimeout) {
+        minTimeout = packetTimeout;
+        packetSelected = packet;
+      }
+    }
+  }
+
+  if(packetSelected != NULL) {
+    process_sending_packet_on_layers(packetSelected);
+  }
+}
+
 /*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service

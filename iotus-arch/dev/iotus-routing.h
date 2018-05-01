@@ -22,7 +22,7 @@
 #ifndef IOTUS_DEV_ROUTING_H_
 #define IOTUS_DEV_ROUTING_H_
 
-
+#include "iotus-core.h"
 #include "packet.h"
 #include "platform-conf.h"
 
@@ -32,7 +32,8 @@ struct iotus_routing_protocol_struct {
   void (* post_start)(void);
   void (* run)(void);
   void (* close)(void);
-  void (* sent_cb)(iotus_packet_t *packet);
+  iotus_netstack_return (* build_to_send)(iotus_packet_t *packet);
+  void (* sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
   void (* receive)(iotus_packet_t *packet);
 };
 

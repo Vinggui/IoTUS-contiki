@@ -20,8 +20,10 @@
 #include "platform-conf.h"
 #include "ringbuf.h"
 
+#define IOTUS_DONT_PRINT          0
 #define IOTUS_PRINT_IMMEDIATELY   1
 #define IOTUS_PRINT_SAFE          2
+#define IOTUS_PRINT_SIMPLE        3
 
 #ifdef _WIN32
     #define PATH_SEP            ";"

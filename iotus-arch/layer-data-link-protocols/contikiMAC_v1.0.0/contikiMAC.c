@@ -47,6 +47,7 @@
 #include "iotus-netstack.h"
 #include "iotus-frame802154.h"
 #include "lib/random.h"
+#include "seqnum.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
 #include "sys/ctimer.h"
@@ -917,13 +918,13 @@ input_packet(iotus_packet_t *packet)
 #if RDC_WITH_DUPLICATE_DETECTION
       /* Check for duplicate packet. */
       //duplicate = mac_sequence_is_duplicate();
-      if(packet_get_sequence_number(packet) == nodes_get_last_sequence_number(packet->prevSourceNode)) {
+      if(packet_get_sequence_number(packet) == seqnum_get_last(packet->prevSourceNode)) {
         duplicate = 1;
         /* Drop the packet. */
         PRINTF("contikimac: Drop duplicate\n");
       } else {
         //mac_sequence_register_seqno();
-        nodes_register_sequence_number(packet->prevSourceNode, packet_get_sequence_number(packet));
+        seqnum_register(packet->prevSourceNode, packet_get_sequence_number(packet));
       }
 #endif /* RDC_WITH_DUPLICATE_DETECTION */
 
@@ -1055,6 +1056,8 @@ post_start(void)
 static void
 run(void)
 {
+  //Poll packets available
+  packet_poll_by_priority(1);
 }
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",

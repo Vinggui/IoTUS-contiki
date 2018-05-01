@@ -22,7 +22,7 @@
 #ifndef IOTUS_DEV_DATA_LINK_H_
 #define IOTUS_DEV_DATA_LINK_H_
 
-
+#include "iotus-core.h"
 #include "packet.h"
 #include "platform-conf.h"
 
@@ -49,31 +49,6 @@ struct iotus_data_link_protocol_struct {
   int8_t (* send)(iotus_packet_t *packet);
   void (* sent_cb)(iotus_packet_t *packetk);
   void (* receive)(iotus_packet_t *packet);
-};
-
-/* Generic MAC return values. */
-enum {
-  /**< The MAC layer transmission was OK. */
-  MAC_TX_OK,
-
-  /**< The MAC layer transmission could not be performed due to a
-     collision. */
-  MAC_TX_COLLISION,
-
-  /**< The MAC layer did not get an acknowledgement for the packet. */
-  MAC_TX_NOACK,
-
-  /**< The MAC layer deferred the transmission for a later time. */
-  MAC_TX_DEFERRED,
-
-  /**< The MAC layer transmission could not be performed because of an
-     error. The upper layer may try again later. */
-  MAC_TX_ERR,
-
-  /**< The MAC layer transmission could not be performed because of a
-     fatal error. The upper layer does not need to try again, as the
-     error will be fatal then as well. */
-  MAC_TX_ERR_FATAL,
 };
 
 #endif /* IOTUS_DEV_DATA_LINK_H_ */

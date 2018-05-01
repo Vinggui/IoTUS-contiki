@@ -33,19 +33,20 @@ input_packet(iotus_packet_t *packet)
   SAFE_PRINTF_CLEAN("\n");
 }
 
-static void
+static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
   SAFE_PRINTF_LOG_INFO("Null route");
   packet->nextDestinationNode = packet->finalDestinationNode;
-  active_data_link_protocol->send(packet);
+  //active_data_link_protocol->send(packet);
+  return ROUTING_TX_OK;
 }
 
 
 static void
-send_cb(iotus_packet_t *packet)
+send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
-  SAFE_PRINTF_LOG_INFO("Frame sent");
+  SAFE_PRINTF_LOG_INFO("Frame processed %u", returnAns);
 }
 
 static void
@@ -70,6 +71,7 @@ struct iotus_routing_protocol_struct null_routing_protocol = {
   NULL,
   run,
   close,
+  send,
   send_cb,
   input_packet
 };

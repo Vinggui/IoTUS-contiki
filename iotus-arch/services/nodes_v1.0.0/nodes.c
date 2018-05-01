@@ -178,51 +178,6 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
 }
 
 /*---------------------------------------------------------------------*/
-/**
- * Registers the sequence number of a received packet into the associated node
- * @param node The source node of the packet received.
- */
-Status
-nodes_register_sequence_number(iotus_node_t *node, uint16_t sequence_number)
-{
-  if(NULL == node) {
-    return FAILURE;
-  }
-  uint16_t *sqnPointer = pieces_modify_additional_info_var(
-                              node->additionalInfoList,
-                              IOTUS_NODES_ADD_INFO_TYPE_LAST_SEQ_NUM,
-                              2,
-                              TRUE);
-  if(NULL == sqnPointer) {
-    SAFE_PRINTF_LOG_ERROR("Set sqn fail");
-    return FAILURE;
-  }
-  *sqnPointer = sequence_number;
-  return SUCCESS;
-}
-
-/*---------------------------------------------------------------------*/
-/**
- * Returns the last sequence number received by a node.
- * @param node The source node of the packet received.
- */
-uint16_t
-nodes_get_last_sequence_number(iotus_node_t *node)
-{
-  if(NULL == node) {
-    return 0;
-  }
-  uint16_t *sqnPointer = pieces_get_additional_info_var(
-                              node->additionalInfoList,
-                              IOTUS_NODES_ADD_INFO_TYPE_LAST_SEQ_NUM);
-  if(NULL == sqnPointer) {
-    SAFE_PRINTF_LOG_ERROR("Set sqn fail");
-    return 0;
-  }
-  return *sqnPointer;
-}
-
-/*---------------------------------------------------------------------*/
 /*
  * \brief Destroy the node object.
  * \param node    The pointer of the node to be destroyed.
