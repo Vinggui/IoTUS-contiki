@@ -21,7 +21,7 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 
-static void
+static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
 {
   SAFE_PRINTF_CLEAN("Got packet: ");
@@ -31,6 +31,7 @@ input_packet(iotus_packet_t *packet)
     SAFE_PRINTF_CLEAN("%02x ", packet_get_payload_data(packet)[i]);
   }
   SAFE_PRINTF_CLEAN("\n");
+  return RX_SEND_UP_STACK;
 }
 
 static iotus_netstack_return

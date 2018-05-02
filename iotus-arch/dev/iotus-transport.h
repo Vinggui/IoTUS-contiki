@@ -34,6 +34,7 @@ struct iotus_transport_protocol_struct {
   void (* close)(void);
   iotus_netstack_return (* build_to_send)(iotus_packet_t *packet);
   void (* sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
+  iotus_netstack_return (* receive)(iotus_packet_t *packet);
 };
 
 #endif /* IOTUS_DEV_TRANSPORT_H_ */

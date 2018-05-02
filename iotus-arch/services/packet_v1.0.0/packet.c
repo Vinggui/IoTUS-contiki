@@ -915,6 +915,42 @@ packet_poll_by_node(iotus_node_t *node, uint8_t num)
 }
 
 /*---------------------------------------------------------------------*/
+/**
+ * \brief   Deliver the received packet up in the stack, at most to the application layer.
+ * \param packet   The packet to be processed up to the stack.
+ */
+void
+packet_deliver_upstack(iotus_packet_t *packet)
+{
+  if(packet == NULL ||
+     packet->priority != IOTUS_PRIORITY_RADIO) {
+    return;
+  }
+
+  iotus_netstack_return returnAns;
+  //Call the return functions of each layer
+  if(active_data_link_protocol->receive != NULL) {
+    returnAns = active_data_link_protocol->receive(packet);
+  }
+  if(returnAns == RX_SEND_UP_STACK) {
+    if(active_routing_protocol->receive != NULL) {
+      returnAns = active_routing_protocol->receive(packet);
+    }
+  }
+  if(returnAns == RX_SEND_UP_STACK) {
+    if(active_transport_protocol->receive != NULL) {
+      returnAns = active_transport_protocol->receive(packet);
+    }
+  }
+  if(returnAns == RX_SEND_UP_STACK) {
+    if(gApplicationPacketHandler != NULL) {
+      gApplicationPacketHandler(packet);
+    }
+  }
+
+  packet_destroy(packet);
+}
+/*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service
  */

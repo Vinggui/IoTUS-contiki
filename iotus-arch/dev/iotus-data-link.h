@@ -48,7 +48,7 @@ struct iotus_data_link_protocol_struct {
   void (* close)(void);
   int8_t (* send)(iotus_packet_t *packet);
   void (* sent_cb)(iotus_packet_t *packetk);
-  void (* receive)(iotus_packet_t *packet);
+  iotus_netstack_return (* receive)(iotus_packet_t *packet);
 };
 
 #endif /* IOTUS_DEV_DATA_LINK_H_ */

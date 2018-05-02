@@ -51,7 +51,8 @@ const struct iotus_transport_protocol_struct null_transport_protocol = {
   run,
   close,
   NULL,
-  send_cb
+  send_cb,
+  NULL
 };
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

@@ -869,7 +869,7 @@ recv_burst_off(void *ptr)
   we_are_receiving_burst = 0;
 }
 /*---------------------------------------------------------------------------*/
-static void
+static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
 {
   static struct ctimer ct;
@@ -890,7 +890,7 @@ input_packet(iotus_packet_t *packet)
   if(packet_get_payload_size(packet) == ACK_LEN) {
     /* Ignore ack packets */
     SAFE_PRINT("ContikiMAC: ignored ack\n");
-    return;
+    return RX_ERR_DROPPED;
   }
 
   /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start % CYCLE_TIME);*/
@@ -991,14 +991,16 @@ input_packet(iotus_packet_t *packet)
 #endif /* CONTIKIMAC_SEND_SW_ACK */
 
       if(!duplicate) {
-        active_routing_protocol->receive(packet);
+        return RX_SEND_UP_STACK;
       }
-      return;
+      return RX_PROCESSED;
     } else {
       PRINTDEBUG("contikimac: data not for us\n");
+      return RX_PROCESSED;
     }
   } else {
     SAFE_PRINTF_LOG_ERROR("Parse (%u)\n", packet_get_size(packet));
+    return RX_ERR_DROPPED;
   }
 }
 /*---------------------------------------------------------------------------*/

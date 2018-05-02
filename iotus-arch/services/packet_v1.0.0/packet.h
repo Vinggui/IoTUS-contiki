@@ -180,6 +180,9 @@ packet_poll_by_priority(uint8_t num);
 void
 packet_poll_by_node(iotus_node_t *node, uint8_t num);
 
+void
+packet_deliver_upstack(iotus_packet_t *packet);
+
 /* This function provides the core access to basic operations into this service */
 void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data);

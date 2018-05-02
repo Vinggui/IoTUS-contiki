@@ -64,6 +64,7 @@ typedef enum IOTUS_NETSTACK_RETURN {
      error will be fatal then as well. */
   MAC_TX_ERR_FATAL,
 
+  //#######################################
 
   /**< The Routing layer transmission was OK. */
   ROUTING_TX_OK,
@@ -77,6 +78,7 @@ typedef enum IOTUS_NETSTACK_RETURN {
      error will be fatal then as well. */
   ROUTING_TX_ERR_FATAL,
 
+  //#######################################
 
   /**< The transport layer transmission was OK. */
   TRANSPORT_TX_OK,
@@ -89,6 +91,12 @@ typedef enum IOTUS_NETSTACK_RETURN {
      fatal error. The upper layer does not need to try again, as the
      error will be fatal then as well. */
   TRANSPORT_TX_ERR_FATAL,
+
+  //#######################################
+
+  RX_SEND_UP_STACK,
+  RX_ERR_DROPPED,
+  RX_PROCESSED,
 } iotus_netstack_return;
 
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC

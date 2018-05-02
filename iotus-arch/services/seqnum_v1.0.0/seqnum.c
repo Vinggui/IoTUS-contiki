@@ -72,7 +72,6 @@ seqnum_get_last(iotus_node_t *node)
                               node->additionalInfoList,
                               IOTUS_NODES_ADD_INFO_TYPE_LAST_SEQ_NUM);
   if(NULL == sqnPointer) {
-    SAFE_PRINTF_LOG_ERROR("Set sqn fail");
     return 0;
   }
   return *sqnPointer;

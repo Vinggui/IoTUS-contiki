@@ -55,7 +55,7 @@ app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 static void
 app_packet_handler(iotus_packet_t *packet)
 {
-    printf("message received\n");
+    printf("message received: %s\n", packet_get_payload_data(packet));
 }
 
 PROCESS_THREAD(hello_world_process, ev, data) {
