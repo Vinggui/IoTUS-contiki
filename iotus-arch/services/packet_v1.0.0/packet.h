@@ -181,6 +181,9 @@ void
 packet_poll_by_node(iotus_node_t *node, uint8_t num);
 
 void
+packet_continue_deferred_packet(iotus_packet_t *packet);
+
+void
 packet_deliver_upstack(iotus_packet_t *packet);
 
 /* This function provides the core access to basic operations into this service */

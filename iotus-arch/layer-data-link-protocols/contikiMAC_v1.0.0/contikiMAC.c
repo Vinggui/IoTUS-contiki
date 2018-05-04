@@ -47,6 +47,7 @@
 #include "iotus-netstack.h"
 #include "iotus-frame802154.h"
 #include "lib/random.h"
+#include "phase_recorder.h"
 #include "seqnum.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
@@ -56,7 +57,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -68,7 +69,7 @@
 #ifdef CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
 #define WITH_PHASE_OPTIMIZATION      CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
 #else /* CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION */
-#define WITH_PHASE_OPTIMIZATION      0
+#define WITH_PHASE_OPTIMIZATION      1
 #endif /* CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION */
 /* More aggressive radio sleeping when channel is busy with other traffic */
 #ifndef WITH_FAST_SLEEP
@@ -251,8 +252,6 @@ static volatile uint8_t contikimac_keep_radio_on = 0;
 static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
-static uint8_t is_receiver_awake = 0;
-
 
 #if CONTIKIMAC_CONF_COMPOWER
 static struct compower_activity current_packet;
@@ -260,7 +259,7 @@ static struct compower_activity current_packet;
 
 #if WITH_PHASE_OPTIMIZATION
 
-#include "net/mac/phase.h"
+#include "phase_recorder.h"
 
 #endif /* WITH_PHASE_OPTIMIZATION */
 
@@ -563,6 +562,8 @@ send_packet(iotus_packet_t *packet)
   uint8_t seqno;
 #endif
 
+  uint8_t is_receiver_awake = 0;
+
   /* Exit if RDC and radio were explicitly turned off */
    if(!contikimac_is_on && !contikimac_keep_radio_on) {
     PRINTF("contikimac: radio is turned off\n");
@@ -621,21 +622,25 @@ send_packet(iotus_packet_t *packet)
       return MAC_TX_ERR_FATAL;
     }
   } updated to \/\/\/\/\/     */
-  packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
-  if(contikimac_framer.create(packet) < 0) {
-    PRINTF("contikimac: framer failed\n");
-    return MAC_TX_ERR_FATAL;
+  if(!packet_get_parameter(packet, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
+    packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
+    if(contikimac_framer.create(packet) < 0) {
+      PRINTF("contikimac: framer failed\n");
+      return MAC_TX_ERR_FATAL;
+    }
   }
 
   active_radio_driver->prepare(packet);
 
 #if WITH_PHASE_OPTIMIZATION
-  if(!is_broadcast && !is_receiver_awake) {
+  if(!is_broadcast && !is_receiver_awake &&
+     !packet_get_parameter(packet, PACKET_PARAMETERS_WAS_DEFFERED)) {
 
-    ret = phase_wait(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                     CYCLE_TIME, GUARD_TIME,
-                     mac_callback, mac_callback_ptr, buf_list);
+    ret = phase_recorder_wait(packet_get_next_destination(packet),
+                               CYCLE_TIME, GUARD_TIME, packet);
     if(ret == PHASE_DEFERRED) {
+      packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
+      packet_set_parameter(packet,PACKET_PARAMETERS_WAS_DEFFERED);
       return MAC_TX_DEFERRED;
     }
     if(ret != PHASE_UNKNOWN) {
@@ -733,7 +738,7 @@ send_packet(iotus_packet_t *packet)
        !RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + MAX_PHASE_STROBE_TIME)) {
       SAFE_PRINTF_LOG_WARNING("miss to %d\n", nodes_get_address(
                                 iotus_radio_selected_address_type,
-                                packet->nextDestinationNode));
+                                packet->nextDestinationNode)[0]);
       break;
     }
 
@@ -841,16 +846,16 @@ send_packet(iotus_packet_t *packet)
 
 #if WITH_PHASE_OPTIMIZATION
   if(is_known_receiver && got_strobe_ack) {
-    PRINTF("no miss %d wake-ups %d\n",
+    SAFE_PRINTF_LOG_INFO("no miss %d wake-ups %d\n",
 	         nodes_get_address(
                 iotus_radio_selected_address_type,
-                packet->nextDestinationNode),
+                packet->nextDestinationNode)[0],
            strobes);
   }
 
   if(!is_broadcast) {
     if(collisions == 0 && is_receiver_awake == 0) {
-      phase_update(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
+      phase_recorder_update(packet_get_next_destination(packet),
 		   encounter_time, ret);
     }
   }
@@ -1039,9 +1044,9 @@ init(void)
 
   contikimac_is_on = 1;
 
-#if WITH_PHASE_OPTIMIZATION
-  phase_init();
-#endif /* WITH_PHASE_OPTIMIZATION */
+// #if WITH_PHASE_OPTIMIZATION
+//   phase_init();
+// #endif /* WITH_PHASE_OPTIMIZATION */
 }
 /*---------------------------------------------------------------------------*/
 static unsigned short

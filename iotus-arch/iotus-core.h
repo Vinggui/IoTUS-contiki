@@ -96,7 +96,7 @@ typedef enum IOTUS_NETSTACK_RETURN {
 
   RX_SEND_UP_STACK,
   RX_ERR_DROPPED,
-  RX_PROCESSED,
+  RX_PROCESSED
 } iotus_netstack_return;
 
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC

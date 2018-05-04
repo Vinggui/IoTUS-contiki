@@ -21,7 +21,7 @@
 #include "clock.h"
 #include "timestamp.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */

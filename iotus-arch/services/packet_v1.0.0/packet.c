@@ -30,14 +30,15 @@
 #include "nodes.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
 
 // Initiate the lists of module
 MEMB(iotus_packet_struct_mem, iotus_packet_t, IOTUS_PACKET_LIST_SIZE);
-LIST(gPacketMsgList);
+LIST(gPacketBuildingList);
+LIST(gPacketReadyList);
 
 static packet_sent_cb gApplicationConfirmationCB;
 static packet_handler gApplicationPacketHandler;
@@ -53,7 +54,9 @@ packet_destroy(iotus_packet_t *piece) {
   if(NULL == piece) {
     return FALSE;
   }
-  list_remove(gPacketMsgList, piece);
+  //Try to remove in every list...
+  list_remove(gPacketReadyList, piece);
+  list_remove(gPacketBuildingList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
@@ -421,7 +424,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     //newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
   }
   //Link the message into the list, sorting...
-  pieces_insert_timeout_priority(gPacketMsgList, newMsg);
+  pieces_insert_timeout_priority(gPacketBuildingList, newMsg);
 
   return newMsg;
 }
@@ -812,23 +815,8 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space)
 
 /*---------------------------------------------------------------------*/
 static void
-process_sending_packet_on_layers(iotus_packet_t *packetSelected)
+return_packet_on_layers(iotus_packet_t *packetSelected, iotus_netstack_return returnAns)
 {
-  //Call the building packet of each layer
-  iotus_netstack_return returnAns = TRANSPORT_TX_OK;
-  if(active_transport_protocol->build_to_send != NULL) {
-    returnAns = active_transport_protocol->build_to_send(packetSelected);
-  }
-  if(TRANSPORT_TX_OK == returnAns) {
-    returnAns = ROUTING_TX_OK;
-    if(active_routing_protocol->build_to_send != NULL) {
-      returnAns = active_routing_protocol->build_to_send(packetSelected);
-    }
-    if(ROUTING_TX_OK == returnAns) {
-      returnAns = active_data_link_protocol->send(packetSelected);
-    }
-  }
-
   //Call the return functions of each layer
   if(packetSelected->priority >= IOTUS_PRIORITY_ROUTING &&
      returnAns < ROUTING_TX_OK) {
@@ -847,8 +835,35 @@ process_sending_packet_on_layers(iotus_packet_t *packetSelected)
       gApplicationConfirmationCB(packetSelected, returnAns);
     }
   }
+}
+/*---------------------------------------------------------------------*/
+static void
+process_sending_packet_on_layers(iotus_packet_t *packetSelected)
+{
+  //Call the building packet of each layer
+  iotus_netstack_return returnAns = TRANSPORT_TX_OK;
+  if(active_transport_protocol->build_to_send != NULL) {
+    returnAns = active_transport_protocol->build_to_send(packetSelected);
+  }
+  if(TRANSPORT_TX_OK == returnAns) {
+    returnAns = ROUTING_TX_OK;
+    if(active_routing_protocol->build_to_send != NULL) {
+      returnAns = active_routing_protocol->build_to_send(packetSelected);
+    }
+    if(ROUTING_TX_OK == returnAns) {
+      returnAns = active_data_link_protocol->send(packetSelected);
+    }
+  }
 
-  packet_destroy(packetSelected);
+  return_packet_on_layers(packetSelected, returnAns);
+
+  //If it was deferred, then save it into the rdy list
+  if(MAC_TX_DEFERRED == returnAns) {
+    list_remove(gPacketBuildingList, packetSelected);
+    list_push(gPacketReadyList, packetSelected);
+  } else {
+    packet_destroy(packetSelected);
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -864,7 +879,7 @@ packet_poll_by_priority(uint8_t num)
 
   minTimeout = -1;
   //Get the packet with lowest priority and nearest timeout
-  packetSelected = list_head(gPacketMsgList);
+  packetSelected = list_head(gPacketBuildingList);
   for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
     if(packet->priority != IOTUS_PRIORITY_RADIO &&
        packet->priority <= packetSelected->priority) {
@@ -898,7 +913,7 @@ packet_poll_by_node(iotus_node_t *node, uint8_t num)
 
   minTimeout = -1; //make it the max value...
   //Get the packet with lowest priority and nearest timeout
-  packetSelected = list_head(gPacketMsgList);
+  packetSelected = list_head(gPacketBuildingList);
   for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
     if(packet_get_next_destination(packet) == node) {
       packetTimeout = timestamp_remainder(&packet->timeout);
@@ -912,6 +927,22 @@ packet_poll_by_node(iotus_node_t *node, uint8_t num)
   if(packetSelected != NULL) {
     process_sending_packet_on_layers(packetSelected);
   }
+}
+
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief         If a packet get deferred by the mac layer, this is the function
+ *                that should be called to continue the process of its transmission.
+ * \param packet  The packet to be continued.
+ */
+void
+packet_continue_deferred_packet(iotus_packet_t *packet)
+{
+  iotus_netstack_return returnAns;
+  returnAns = active_data_link_protocol->send(packet);
+  return_packet_on_layers(packet, returnAns);
+  packet_destroy(packet);
 }
 
 /*---------------------------------------------------------------------*/
@@ -928,6 +959,7 @@ packet_deliver_upstack(iotus_packet_t *packet)
   }
 
   iotus_netstack_return returnAns;
+  returnAns = RX_ERR_DROPPED;
   //Call the return functions of each layer
   if(active_data_link_protocol->receive != NULL) {
     returnAns = active_data_link_protocol->receive(packet);
@@ -967,7 +999,7 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
     
 
     // Initiate the lists of module
-    list_init(gPacketMsgList);
+    list_init(gPacketBuildingList);
   } else if (IOTUS_RUN_SERVICE == signal){
 
   } else if (IOTUS_END_SERVICE == signal){

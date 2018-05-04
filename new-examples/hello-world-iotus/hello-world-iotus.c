@@ -72,6 +72,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     IOTUS_CORE_START(0,0,contikiMAC,0);
     packet_set_interface_functions(app_packet_confirm,app_packet_handler);
+    static uint8_t n = 0;
     for(;;) {
         PROCESS_WAIT_EVENT();
 
@@ -80,10 +81,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
-        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 2) {
-            printf("App sending\n");
+        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+            n++;
+            uint8_t nodeAddr = n%7 + 2;
+            printf("App sending to %u\n", nodeAddr);
+            
             uint8_t dest[2];
-            dest[0] = 1;
+            dest[0] = nodeAddr;
             dest[1] = 0;
             iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(destNode != NULL) {

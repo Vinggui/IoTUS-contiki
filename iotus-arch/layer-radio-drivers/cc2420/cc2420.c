@@ -92,7 +92,7 @@ enum write_ram_order {
   WRITE_RAM_REVERSE
 };
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -771,6 +771,7 @@ cc2420_transmit(iotus_packet_t *packet)
       }
 
       RELEASE_LOCK();
+      PRINTF("CC2420 sent %u\n",packet_get_sequence_number(packet));
       return RADIO_TX_OK;
     }
   }
@@ -796,7 +797,7 @@ cc2420_prepare(iotus_packet_t *packet)
   
   GET_LOCK();
 
-  PRINTF("cc2420: sending %d bytes\n", packet->data.size);
+  PRINTF("cc2420: preparing %d bytes\n", packet->data.size);
 
   iotus_parameters_radio_events.transmission++;
 

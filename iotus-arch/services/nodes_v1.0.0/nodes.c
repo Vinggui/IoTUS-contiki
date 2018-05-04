@@ -27,7 +27,7 @@
 #include "timestamp.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nodes"
 #include "safe-printer.h"
 

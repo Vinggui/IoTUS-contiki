@@ -24,7 +24,7 @@
 #include "ringbuf.h"
 #include "timestamp.h"
 
-#define DEBUG IOTUS_PRINT_SIMPLE
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "safe_printer"
 #include "safe-printer.h"
 

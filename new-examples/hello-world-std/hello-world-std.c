@@ -58,24 +58,28 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
 
     linkaddr_t addr;
+    static linkaddr_t addrThis;
+    addrThis.u8[0] = 1;
+    addrThis.u8[1] = 0;
+
     
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*2);
     printf("Hello, world\n");
-
+    static uint8_t n = 0;
     for(;;) {
         PROCESS_WAIT_EVENT();
-
-        
+        n++;
+        uint8_t nodeToSend = n%7 + 2;
         packetbuf_copyfrom("Hello", 5);
-        addr.u8[0] = 1;
+        addr.u8[0] = nodeToSend;
         addr.u8[1] = 0;
         packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
         packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-        if(!linkaddr_cmp(&addr, &linkaddr_node_addr)) {
+        if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+          printf("App sending %u\n", nodeToSend);
           nullnet_output();
-          printf("App sending\n");
         }
         
 

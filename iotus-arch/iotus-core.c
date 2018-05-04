@@ -23,7 +23,7 @@
 */
 #include IOTUS_DYNAMIC_HEADER_FILE
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "iotus-core"
 #include "safe-printer.h"
 

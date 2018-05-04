@@ -21,6 +21,8 @@
  * That means that some packets can still cancel the use of the new header
  */
 #define PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM      0b00000100
+#define PACKET_PARAMETERS_IS_READY_TO_TRANSMIT      0b00000010
+#define PACKET_PARAMETERS_WAS_DEFFERED              0b00000001
 
 
 /////////////////////////////////////////////////////////////

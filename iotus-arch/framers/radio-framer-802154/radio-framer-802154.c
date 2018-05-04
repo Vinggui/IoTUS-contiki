@@ -21,7 +21,7 @@
 #include "nodes.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "rad802frmr"
 #include "safe-printer.h"
 #define PRINTF(...)
@@ -124,7 +124,7 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
   }
 
   uint8_t *tempPanID = nodes_get_address(IOTUS_NODES_ADD_INFO_TYPE_ADDR_PANID,
-                                         packet->nextDestinationNode);
+                                         packet_get_next_destination(packet));
   if(NULL == tempPanID) {
     tempPanID = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_PANID);
   }
@@ -143,7 +143,7 @@ create_frame(iotus_packet_t *packet, Boolean doCreate)
       SAFE_PRINTF_LOG_ERROR("No dest Addr");
       return -1;
     }
-    
+
     memcpy(&params.dest_addr,
             iotusDestAddr,
             ADDRESSES_GET_TYPE_SIZE(iotus_radio_selected_address_type));
