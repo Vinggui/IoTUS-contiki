@@ -85,7 +85,6 @@ pieces_malloc(struct memb *m, uint16_t allocSize,
   
   newPiece->params = 0;
   newPiece->priority = 0;
-  newPiece->callbackHandler = NULL;
   newPiece->finalDestinationNode = NULL;
   return newPiece;
 }

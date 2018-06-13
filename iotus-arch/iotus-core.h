@@ -141,6 +141,7 @@ extern struct iotus_radio_driver_struct const *active_radio_driver;
 //////////////////////////////////////////////////////////////////////////
 //                                Prototypes                            //
 //////////////////////////////////////////////////////////////////////////
+
 void
 iotus_core_netstack_idle_for(iotus_layer_priority layer, uint16_t maxDuration);
 

@@ -24,10 +24,10 @@ typedef struct timestamp {
   clock_time_t fineTime;
 } timestamp_t;
 
-#define TIMESTAMP_GRANULARITY       1000 //Milliseconds
+#define TIMESTAMP_GRANULARITY       1000U //Milliseconds
 
 void
-timestamp_mark(timestamp_t *time, int32_t delta);
+timestamp_mark(timestamp_t *time, int16_t delta);
 
 uint8_t
 timestamp_greater_then(timestamp_t *time_1,timestamp_t *time_2);

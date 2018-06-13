@@ -26,7 +26,7 @@
 
 
 #define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
-#define THIS_LOG_FILE_NAME_DESCRITOR "PhaseR"
+#define THIS_LOG_FILE_NAME_DESCRITOR "PhasR"
 #include "safe-printer.h"
 
 

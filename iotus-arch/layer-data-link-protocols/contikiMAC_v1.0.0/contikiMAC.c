@@ -48,11 +48,11 @@
 #include "iotus-frame802154.h"
 #include "lib/random.h"
 #include "phase_recorder.h"
+#include "piggyback.h"
 #include "seqnum.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
 #include "sys/ctimer.h"
-
 
 
 #include <string.h>
@@ -624,10 +624,20 @@ send_packet(iotus_packet_t *packet)
   } updated to \/\/\/\/\/     */
   if(!packet_get_parameter(packet, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
     packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
+
+    //TODO: Verify if this is supposed to apply piggyback
+    uint16_t freeSpace = get_safe_pdu_for_layer(IOTUS_PRIORITY_DATA_LINK);
+    freeSpace -= contikimac_framer.length(packet);
+    freeSpace -= packet_get_size(packet);
+    packet_optimize_build(packet, freeSpace);
+
     if(contikimac_framer.create(packet) < 0) {
       PRINTF("contikimac: framer failed\n");
       return MAC_TX_ERR_FATAL;
     }
+    uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
+    leds_off(LEDS_BLUE);
+    printf("Pkt built: %lu\n",elapsedBuild);
   }
 
   active_radio_driver->prepare(packet);
@@ -1041,9 +1051,9 @@ init(void)
   PT_INIT(&pt);
 
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_APPLY_PIGGYBACK);
 
   contikimac_is_on = 1;
-
 // #if WITH_PHASE_OPTIMIZATION
 //   phase_init();
 // #endif /* WITH_PHASE_OPTIMIZATION */

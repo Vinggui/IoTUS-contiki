@@ -18,6 +18,8 @@
 #include <string.h>
 #include "contikimac-framer.h"
 #include "iotus-radio.h"
+#include "packet.h"
+#include "packet-defs.h"
 
 #define CONTIKIMAC_ID 0x00
 
@@ -90,6 +92,10 @@ create(iotus_packet_t *packet)
 
   chdr.id = CONTIKIMAC_ID;
   chdr.len = packet_get_size(packet);
+  if(packet_get_parameter(packet,PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM)) {
+    chdr.len |= 0X80;
+  }
+
   packet_push_bit_header(16, (uint8_t *)&chdr, packet);
   pad(packet);
   
@@ -126,6 +132,13 @@ parse(iotus_packet_t *packet)
   //   return FRAMER_FAILED;
   // }
   
+  //Get if this is a new iotus packet
+  if(chdr->len & 0x80) {
+    packet_set_parameter(packet, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM);
+  }
+
+  chdr->len &= 0x7F;
+
   //Removed the pad...
   packet->firstHeaderBitSize += 8*sizeof(struct hdr);
   packet->lastHeaderSize += packet_get_payload_size(packet)

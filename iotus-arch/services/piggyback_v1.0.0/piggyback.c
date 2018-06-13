@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "lib/memb.h"
 #include "list.h"
 #include "iotus-core.h"
@@ -28,7 +29,7 @@
 #include "platform-conf.h"
 #include "timestamp.h"
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
@@ -64,21 +65,30 @@ piggyback_destroy(iotus_piggyback_t *piece) {
  */
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
-    uint8_t targetLayer, iotus_node_t *destinationNode, int32_t timeout)
+    uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout)
 {
   if(headerSize > PIGGYBACK_MAX_FRAME_SIZE) {
     SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
     return NULL;
   }
-  iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(&iotus_piggyback_mem, sizeof(iotus_piggyback_t), headerData, headerSize);
+  iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(
+                                                        &iotus_piggyback_mem,
+                                                        sizeof(iotus_piggyback_t),
+                                                        NULL,
+                                                        headerSize+
+                                                          member_size(iotus_piggyback_t,params)+
+                                                          member_size(iotus_piggyback_t,extendedSize));
   
   if(NULL == newPiece) {
     SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
   }
+  memcpy(pieces_get_data_pointer(newPiece),headerData,headerSize);
   
 
   timestamp_mark(&(newPiece->timeout), timeout);
+
+  printf("remmma2 %li e %lu\n",timeout,timestamp_remainder(&(newPiece->timeout)));
 
   uint8_t params = IOTUS_PIGGYBACK_LAYER & targetLayer;
   /* Encode parameters 
@@ -109,48 +119,75 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
 /*---------------------------------------------------------------------*/
 static Boolean
 insert_piggyback_to_packet(iotus_packet_t *packet_piece,
-                    iotus_piggyback_t *piggyback_piece, Boolean stick)
+                    iotus_piggyback_t *piggyback_piece, Boolean stick,
+                    Boolean isLastPiece, uint16_t availableSpace)
 {
+  /*
   if(packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
     //TODO This packet allows fragmentation...
     SAFE_PRINT("Packet w/ fragTODO\n");
   } else {
-    /*
-      We will only get in here if this packet do NOT accept fragmentation. 
-      Because this list is already ordered into latency sequence,
-      no need to sort or anything
     */
-    SAFE_PRINT("No frag\n");
+   
+  /*
+    We will only get in here if this packet do NOT accept fragmentation. 
+    Because this list is already ordered into latency sequence,
+    no need to sort or anything
+  */
+  SAFE_PRINT("No frag\n");
 
-    uint16_t packetOldSize = packet_get_size(packet_piece);
-    uint16_t piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE)? 1:0;
-    if((get_safe_pdu_for_layer(2) - packetOldSize) >= 
-          piggyback_piece->data.size + member_size(iotus_piggyback_t,params) + piggyback_with_ext_size) {
-      //This piggyback will fit...
-      
-      if(stick) {
-        SAFE_PRINTF_LOG_INFO("Sticking piggy");
-        piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
-      }
-      
-      packet_append_last_header(piggyback_piece->data.size, pieces_get_data_pointer(piggyback_piece), packet_piece);
-      if(piggyback_with_ext_size) {
-        SAFE_PRINTF_LOG_INFO("Extended size");
-        packet_append_last_header(member_size(iotus_piggyback_t,extendedSize), &(piggyback_piece->extendedSize), packet_piece);
-      }
-      packet_append_last_header(member_size(iotus_piggyback_t,params), &(piggyback_piece->params), packet_piece);
-
-      //Operation success
-      SAFE_PRINTF_LOG_INFO("Appended. Deleting");
-      list_remove(gPiggybackFramesList, piggyback_piece);
-      //TODO CALL the CB function of the header
-      piggyback_destroy(piggyback_piece);
-
-      //Set this variable to this packet transmission
-      packet_set_parameter(packet_piece,PACKET_IOTUS_HDR_HAS_PIGGYBACK);
-      return TRUE;
+  uint16_t packetOldSize = packet_get_size(packet_piece);
+  uint16_t piggyback_with_ext_size;
+  piggyback_with_ext_size = 
+    (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE)? 1:0;
+  if((availableSpace - packetOldSize) >= (piggyback_piece->data.size +
+                                          member_size(iotus_piggyback_t,params) +
+                                          piggyback_with_ext_size)) {
+    //This piggyback will fit...
+    
+    if(stick) {
+      SAFE_PRINTF_LOG_INFO("Sticking piggy");
+      piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
     }
+
+    if(isLastPiece) {
+      piggyback_piece->params |= IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT;
+      SAFE_PRINTF_LOG_INFO("Last Piece att");
+    }
+
+    //Insert the header at the end of the data buffer of this piggyback
+    uint8_t piggybackInsertionSize;
+    uint8_t *tempPointer;
+
+    piggybackInsertionSize = piggyback_piece->data.size;
+    tempPointer = pieces_get_data_pointer(piggyback_piece) + piggybackInsertionSize;
+    if(piggyback_with_ext_size) {
+      tempPointer[0] = piggyback_piece->extendedSize;
+      tempPointer += member_size(iotus_piggyback_t,extendedSize);
+      piggybackInsertionSize += member_size(iotus_piggyback_t,extendedSize);
+    }
+    tempPointer[0] = piggyback_piece->params;
+    piggybackInsertionSize += member_size(iotus_piggyback_t,params);
+
+
+    
+    if(0 == packet_append_last_header(piggybackInsertionSize,
+                                      pieces_get_data_pointer(piggyback_piece),
+                                      packet_piece)) {
+      SAFE_PRINTF_LOG_ERROR("Append");
+      return FALSE;
+    }
+
+    //Operation success
+    SAFE_PRINTF_LOG_INFO("Appended");
+    list_remove(gPiggybackFramesList, piggyback_piece);
+    list_push(packet_piece->attachedPiggyback, piggyback_piece);
+    //The callback will be done by the packet service,before destroying it.
+    //
+    //
+    return TRUE;
   }
+  //}
   return FALSE;
 }
 
@@ -160,12 +197,12 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
  * \param bytesSize The amount of bytes that will be appended.
  * \param byteSeq An array of bytes in its normal sequence
  * \param packet_piece Msg to apply this append
- * \return Packet final size
+ * \return Number of bytes inserted.
  */
 uint16_t
-piggyback_apply(iotus_packet_t *packet_piece) {
+piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   if(!packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK) ||
-     !(PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM & packet_piece->params)) {
+    !(packet_get_parameter(packet_piece, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM))) {
     SAFE_PRINTF_LOG_ERROR("Pkt cant piggyback");
     //No piggyback allowed for this packet
     return 0;
@@ -174,7 +211,9 @@ piggyback_apply(iotus_packet_t *packet_piece) {
   //Look for header pieces that match this packet conditions
   iotus_piggyback_t *h;
   iotus_piggyback_t *nextH;
-  
+  Boolean isTheFirstPiggyback = TRUE;
+  uint16_t packetOldSize;
+  packetOldSize = packet_get_size(packet_piece);
 
   h = list_head(gPiggybackFramesList);
   if(h == NULL) {
@@ -183,21 +222,49 @@ piggyback_apply(iotus_packet_t *packet_piece) {
   while(h != NULL) {
     nextH = list_item_next(h);
     SAFE_PRINTF_LOG_INFO("Piggy search ok");
-    //FIXXXX HEREREEEE
-    // If next destination matches, inform that this piggyback is only for next
-    // If not, inform that this piggyback should stick until final destination
-    if(h->finalDestinationNode == packet_get_final_destination(packet_piece)) {
-      SAFE_PRINTF_LOG_INFO("Same Final dest");
-      insert_piggyback_to_packet(packet_piece, h, TRUE);
-    } else if (h->finalDestinationNode == packet_get_final_destination(packet_piece)) {
-      /* Different final destination */
-      insert_piggyback_to_packet(packet_piece, h, FALSE);
+    Boolean toFinalDestination = (h->finalDestinationNode == packet_get_final_destination(packet_piece));
+    if(toFinalDestination ||
+       h->finalDestinationNode == packet_get_next_destination(packet_piece)) {
+      if(TRUE == insert_piggyback_to_packet(packet_piece,
+                                             h,
+                                             toFinalDestination,
+                                             isTheFirstPiggyback,
+                                             availableSpace)) {
+        isTheFirstPiggyback = FALSE;
+      }
     }
     h = nextH;
   }
 
+  return packet_get_size(packet_piece)-packetOldSize;
+}
 
-  return packet_get_size(packet_piece);
+/*---------------------------------------------------------------------*/
+/*
+ * Function to append piggyback informations into the tail of the msg (inversed)
+ * \param bytesSize The amount of bytes that will be appended.
+ * \param byteSeq An array of bytes in its normal sequence
+ * \param packet_piece Msg to apply this append
+ * \return Number of bytes inserted.
+ */
+static void
+piggyback_check_timeout(void) {
+  //Look for header pieces that match this packet conditions
+  iotus_piggyback_t *h;
+  iotus_piggyback_t *nextH;
+
+  h = list_head(gPiggybackFramesList);
+  while(h != NULL) {
+    nextH = list_item_next(h);
+    printf("rema %lu\n", timestamp_remainder(&(h->timeout)));
+    if(timestamp_remainder(&(h->timeout)) <= 0) {
+      //This piggyback frame is already old
+      //Create a packet to transmit him asap
+      printf("got packet to transmit\n");
+      piggyback_destroy(h);
+    }
+    h = nextH;
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -211,9 +278,11 @@ iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
     SAFE_PRINT("\tService Piggyback\n");
     list_init(gPiggybackFramesList);
   }
-  /* else if (IOTUS_RUN_SERVICE == signal){
-
-  } else if (IOTUS_END_SERVICE == signal){
+  else if (IOTUS_RUN_SERVICE == signal){
+    //Verify if any piggyback frame is expiring
+    piggyback_check_timeout();
+  }
+  /*  else if (IOTUS_END_SERVICE == signal){
 
   }*/
 }

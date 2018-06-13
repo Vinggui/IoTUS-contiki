@@ -387,7 +387,7 @@ packet_get_rx_block(iotus_packet_t *packetPiece)
  */
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
-    iotus_layer_priority priority, uint16_t timeout, Boolean insertIotusHeader,
+    iotus_layer_priority priority, uint16_t timeout, Boolean AllowOptimization,
     iotus_node_t *finalDestination)
 {
 
@@ -402,6 +402,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
 
   timestamp_mark(&(newMsg->timeout), timeout);
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
+  LIST_STRUCT_INIT(newMsg, attachedPiggyback);
   
   //this packet will go down the stack, towards the physical layer
   newMsg->firstHeaderBitSize = 0;
@@ -416,7 +417,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   newMsg->finalDestinationNode = finalDestination;
 
   //Set some params into this packet
-  if(TRUE == insertIotusHeader) {
+  if(TRUE == AllowOptimization) {
     packet_set_parameter(newMsg,PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM);
   }
   if(finalDestination == NODES_BROADCAST) {
@@ -982,6 +983,41 @@ packet_deliver_upstack(iotus_packet_t *packet)
 
   packet_destroy(packet);
 }
+
+/*---------------------------------------------------------------------------*/
+/**
+ * Makes the core optimize the packet building
+ * \param time_needed The necessary time needed by this demanding task.
+ * \param task        The function to be called whenever possible.
+ */
+void
+packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
+{
+  if(packet == NULL) {
+    return;
+  }
+
+  /*
+   * Stages of optimization are:
+   * > Applying piggyback
+   * > Not defined...
+   * > Apply the final header to be decoded
+   */
+
+  uint8_t finalHeader[5] = {0};
+  uint8_t finalHdrSize;
+  finalHdrSize = 1;
+
+  //First, try to apply the piggyback, if it exists
+  if(0 < piggyback_apply(packet,freeSpace)) {
+    //Piggyback was successfully applied
+    finalHeader[0] |= PACKET_IOTUS_HDR_HAS_PIGGYBACK;
+  }
+
+  //Apply the final header
+  packet_append_last_header(finalHdrSize, finalHeader, packet);
+}
+
 /*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service

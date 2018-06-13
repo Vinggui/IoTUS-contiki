@@ -376,18 +376,6 @@ set_value(radio_param_t param, radio_value_t value)
       }
       //report to the global system
       iotus_radio_selected_address_type = g_used_address_type;
-
-      //Update header size...
-      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                  IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-        iotus_packet_dimensions.radioHeaders = CHECKSUM_LEN
-                    + ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
-      }
-      if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-                                  IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-        iotus_packet_dimensions.radioHeaders +=
-                      ADDRESSES_GET_TYPE_SIZE(g_used_address_type);
-      }
       return RADIO_RESULT_OK;
     }
     return RADIO_RESULT_INVALID_VALUE;

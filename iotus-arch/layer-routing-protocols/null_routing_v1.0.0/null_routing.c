@@ -16,10 +16,35 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "iotus-netstack.h"
+#include "sys/timer.h"
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
+
+// {source -1, final destination -1}
+int routing_table[8][8] =
+{
+  //1=>
+  {0,2,3,2,2,3,3,3},
+  //2=>
+  {1,0,0,4,5,0,0,0},
+  //3=>
+  {1,0,0,0,0,6,7,8},
+  //4=>
+  {0,2,0,0,5,0,0,0},
+  //5=>
+  {0,2,0,4,0,0,0,0},
+  //6=>
+  {0,0,3,0,0,0,7,8},
+  //7=>
+  {0,0,3,0,0,6,0,8},
+  //8=>
+  {0,0,3,0,0,6,7,0}
+};
+
+//Timer for sending neighbor discovery
+static struct timer sendND;
 
 static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
@@ -37,7 +62,10 @@ input_packet(iotus_packet_t *packet)
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
-  SAFE_PRINTF_LOG_INFO("Null route");
+  //Get the final static destination
+  //uint8_t finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
+  //                                      packet->finalDestinationNode);
+  //if()
   packet->nextDestinationNode = packet->finalDestinationNode;
   //active_data_link_protocol->send(packet);
   return ROUTING_TX_OK;
@@ -54,13 +82,34 @@ static void
 start(void)
 {
   printf("Starting null routing\n");
+
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 }
 
+
+static void
+post_start(void)
+{
+  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    timer_set(&sendND, CLOCK_SECOND*6);
+    piggyback_create_piece(12, "123456789012", IOTUS_PRIORITY_ROUTING, NODES_BROADCAST, 6000);
+  }
+  
+}
 
 static void
 run(void)
 {
   iotus_core_netstack_idle_for(IOTUS_PRIORITY_ROUTING, 0XFFFF);
+  //Test which layer is supposed to do neighbor discovery
+  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    if(timer_expired(&sendND)) {
+      timer_restart(&sendND);
+
+      piggyback_create_piece(12, "123456789012", IOTUS_PRIORITY_ROUTING, NODES_BROADCAST, 6000);
+    }
+  }
+  
 }
 
 static void
@@ -69,7 +118,7 @@ close(void)
 
 struct iotus_routing_protocol_struct null_routing_protocol = {
   start,
-  NULL,
+  post_start,
   run,
   close,
   send,

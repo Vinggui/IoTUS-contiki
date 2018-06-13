@@ -16,7 +16,10 @@
 #ifndef IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
 #define IOTUS_ARCH_GLOBAL_FUNCTIONS_GLOBAL_FUNCTIONS_H_
 
+#include "sys/rtimer.h"
 #define member_size(type, member) sizeof(((type *)0)->member)
+
+extern rtimer_clock_t packetBuildingTime;
 
 uint16_t
 get_safe_pdu_for_layer(uint8_t layer);

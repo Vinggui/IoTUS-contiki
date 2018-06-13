@@ -32,19 +32,20 @@ typedef struct piggyback_piece {
 } iotus_piggyback_t;
 
 #define IOTUS_PIGGYBACK_LAYER                                 0b00000011
-#define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00000100
-#define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00001000
-#define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b11110000
+#define IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT                   0b00000100
+#define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00001000
+#define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00010000
+#define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b11100000
 
 Boolean
 piggyback_destroy(iotus_piggyback_t *piece);
 
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
-    uint8_t targetLayer, iotus_node_t *destinationNode, int32_t timeout);
+    uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout);
 
 uint16_t
-piggyback_apply(iotus_packet_t *packet_piece);
+piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace);
 
 void
 iotus_signal_handler_piggyback(iotus_service_signal signal, void *data);

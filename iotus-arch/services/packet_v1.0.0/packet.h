@@ -43,6 +43,7 @@ typedef struct packet_piece {
   uint16_t firstHeaderBitSize;
   uint16_t lastHeaderSize;
   LIST_STRUCT(additionalInfoList);
+  LIST_STRUCT(attachedPiggyback);
 } iotus_packet_t;
 
 
@@ -136,7 +137,7 @@ packet_get_rx_block(iotus_packet_t *packetPiece);
 
 iotus_packet_t *
 packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
-    iotus_layer_priority priority, uint16_t timeout, Boolean insertIotusHeader,
+    iotus_layer_priority priority, uint16_t timeout, Boolean AllowOptimization,
     iotus_node_t *finalDestination);
 
 Boolean
@@ -185,6 +186,9 @@ packet_continue_deferred_packet(iotus_packet_t *packet);
 
 void
 packet_deliver_upstack(iotus_packet_t *packet);
+
+void
+packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace);
 
 /* This function provides the core access to basic operations into this service */
 void

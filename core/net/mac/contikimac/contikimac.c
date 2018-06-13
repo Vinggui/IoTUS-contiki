@@ -55,6 +55,8 @@
 
 #include <string.h>
 
+rtimer_clock_t packetBuildingTime;
+
 /* TX/RX cycles are synchronized with neighbor wake periods */
 #ifdef CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
 #define WITH_PHASE_OPTIMIZATION      CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
@@ -608,6 +610,10 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       PRINTF("contikimac: framer failed\n");
       return MAC_TX_ERR_FATAL;
     }
+
+    uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
+    leds_off(LEDS_BLUE);
+    printf("Pkt built: %lu\n",elapsedBuild);
   }
 
   transmit_len = packetbuf_totlen();

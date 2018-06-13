@@ -44,6 +44,8 @@
 #include "net/mac/rdc.h"
 #include "dev/radio.h"
 
+extern rtimer_clock_t packetBuildingTime;
+
 extern const struct rdc_driver contikimac_driver;
 
 #endif /* CONTIKIMAC_H */

@@ -41,6 +41,8 @@
 #include "dev/leds.h"
 #include <stdio.h> /* For printf() */
 #include "iotus-api.h"
+
+#include "global-functions.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
@@ -91,6 +93,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             dest[1] = 0;
             iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(destNode != NULL) {
+                leds_on(LEDS_BLUE);
+                packetBuildingTime = RTIMER_NOW();
                 iotus_initiate_msg(
                         10,
                         (const uint8_t *)"BTeste-msg",

@@ -18,6 +18,7 @@
 #include "iotus-core.h"
 #include "platform-conf.h"
 #include "global-parameters.h"
+#include "sys/rtimer.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -26,6 +27,10 @@
 #define PRINTF(...)
 #endif /* DEBUG */
 
+////////////////////////////////////////////////////////////
+//             TEMPORARY MEASURES                         //
+////////////////////////////////////////////////////////////
+rtimer_clock_t packetBuildingTime;
 
 //////////////////////////////////////////////////////////////////
 //                        Packet related                        //
@@ -34,27 +39,26 @@
  * \brief       Calculates the amount of bytes safe to be used
  *              per layer, given that they will insert their
  *              headers.
- * @param layer 2 - Data link
- *              3 - Routing
- *              4 - Transport
- *              5 - Application
+ * @param layer IOTUS_PRIORITY_DATA_LINK
+ *              IOTUS_PRIORITY_ROUTING
+ *              IOTUS_PRIORITY_TRANSPORT
+ *              any - Application
  * \return      The amount of bytes available to be used, per packet.
  */
 uint16_t
-get_safe_pdu_for_layer(uint8_t layer)
+get_safe_pdu_for_layer(iotus_layer_priority layer)
 {
   uint16_t available_pdu;
-  available_pdu = iotus_packet_dimensions.totalSize
-                  - iotus_packet_dimensions.radioHeaders;
-  if(layer == 2) {
+  available_pdu = iotus_packet_dimensions.totalSize;
+  if(layer == IOTUS_PRIORITY_DATA_LINK) {
     return available_pdu;
   }
   available_pdu -= iotus_packet_dimensions.datalinkHeaders;
-  if(layer == 3) {
+  if(layer == IOTUS_PRIORITY_ROUTING) {
     return available_pdu;
   }
   available_pdu -= iotus_packet_dimensions.routingHeaders;
-  if(layer == 4) {
+  if(layer == IOTUS_PRIORITY_TRANSPORT) {
     return available_pdu;
   }
   available_pdu -= iotus_packet_dimensions.transportHeaders;

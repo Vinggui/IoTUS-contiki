@@ -41,6 +41,8 @@
 #include "dev/leds.h"
 #include "nullnet.h"
 #include <stdio.h> /* For printf() */
+
+#include "contikimac.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
@@ -72,12 +74,14 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         PROCESS_WAIT_EVENT();
         n++;
         uint8_t nodeToSend = n%7 + 2;
-        packetbuf_copyfrom("Hello", 5);
-        addr.u8[0] = nodeToSend;
-        addr.u8[1] = 0;
-        packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
-        packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
         if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+          packetBuildingTime = RTIMER_NOW();
+          leds_on(LEDS_BLUE);
+          packetbuf_copyfrom("Hello", 5);
+          addr.u8[0] = nodeToSend;
+          addr.u8[1] = 0;
+          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
+          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
           printf("App sending %u\n", nodeToSend);
           nullnet_output();
         }

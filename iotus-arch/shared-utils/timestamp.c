@@ -30,12 +30,12 @@
 
 /*---------------------------------------------------------------------*/
 /*
- * \brief Get the elapsed time between the provided values and now.
+ * \brief Get the elapsed time between the provided values and now. Max of 30s.
  * \param time          The pointer of the timestamp to be set.
  * \param delta         Add or subtract time (in ms) to the actual momment.
  */
 void
-timestamp_mark(timestamp_t *time, int32_t delta)//(thanks Lucas for this name)
+timestamp_mark(timestamp_t *time, int16_t delta)
 {
   time->fineTime = (clock_time() % CLOCK_CONF_SECOND);
   time->seconds = clock_seconds();
@@ -43,6 +43,7 @@ timestamp_mark(timestamp_t *time, int32_t delta)//(thanks Lucas for this name)
     time->fineTime += (delta % TIMESTAMP_GRANULARITY)*CLOCK_CONF_SECOND;
     time->seconds += delta / TIMESTAMP_GRANULARITY;
   }
+  printf("deu isso %i %u %i\n",delta,time->fineTime, (delta/100));
 }
 
 /*--------------------------------------------------------------------

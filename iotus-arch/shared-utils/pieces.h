@@ -41,7 +41,6 @@
   uint8_t params;\
   iotus_layer_priority priority;\
   timestamp_t timeout;\
-  void *callbackHandler;\
   iotus_node_t *finalDestinationNode;
 
 #define COMMON_ADDITIONAL_INFO_HEADER(structName) \
