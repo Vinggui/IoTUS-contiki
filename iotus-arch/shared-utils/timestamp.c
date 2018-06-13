@@ -43,7 +43,6 @@ timestamp_mark(timestamp_t *time, int16_t delta)
     time->fineTime += (delta % TIMESTAMP_GRANULARITY)*CLOCK_CONF_SECOND;
     time->seconds += delta / TIMESTAMP_GRANULARITY;
   }
-  printf("deu isso %i %u %i\n",delta,time->fineTime, (delta/100));
 }
 
 /*--------------------------------------------------------------------
@@ -85,7 +84,7 @@ timestamp_greater_then(timestamp_t *time_1, timestamp_t *time_2)
  * \return          The elasped time in milliseconds between time 1 and 2
                     (input 1 has to be greater than 2, return 0 otherwise).
  */
-unsigned long
+uint16_t
 timestamp_diference(timestamp_t *time_1, timestamp_t *time_2)
 {
   /* We have to consider every kind of clock implementation.
@@ -112,7 +111,7 @@ timestamp_diference(timestamp_t *time_1, timestamp_t *time_2)
  * \param seconds    The pointer of the timestamp.
  * \return           The elasped time in milliseconds until now.
  */
-unsigned long
+uint16_t
 timestamp_elapsed(timestamp_t *time)
 {
   timestamp_t now;
@@ -126,7 +125,7 @@ timestamp_elapsed(timestamp_t *time)
  * \param seconds    The pointer of the timestamp.
  * \return           The elasped time in milliseconds for this next time.
  */
-unsigned long
+uint16_t
 timestamp_remainder(timestamp_t *time)
 {
   timestamp_t now;

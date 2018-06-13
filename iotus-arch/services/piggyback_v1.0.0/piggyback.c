@@ -88,8 +88,6 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
 
   timestamp_mark(&(newPiece->timeout), timeout);
 
-  printf("remmma2 %li e %lu\n",timeout,timestamp_remainder(&(newPiece->timeout)));
-
   uint8_t params = IOTUS_PIGGYBACK_LAYER & targetLayer;
   /* Encode parameters 
    * 0b00000011 - 2 bits indicates to which layer this frame is supposed to be sent
@@ -256,7 +254,6 @@ piggyback_check_timeout(void) {
   h = list_head(gPiggybackFramesList);
   while(h != NULL) {
     nextH = list_item_next(h);
-    printf("rema %lu\n", timestamp_remainder(&(h->timeout)));
     if(timestamp_remainder(&(h->timeout)) <= 0) {
       //This piggyback frame is already old
       //Create a packet to transmit him asap

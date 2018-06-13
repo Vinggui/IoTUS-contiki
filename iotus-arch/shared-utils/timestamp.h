@@ -32,14 +32,13 @@ timestamp_mark(timestamp_t *time, int16_t delta);
 uint8_t
 timestamp_greater_then(timestamp_t *time_1,timestamp_t *time_2);
 
-unsigned long
+uint16_t
 timestamp_diference(timestamp_t *time_1, timestamp_t *time_2);
 
-unsigned long
+uint16_t
 timestamp_elapsed(timestamp_t *time);
 
-
-unsigned long
+uint16_t
 timestamp_remainder(timestamp_t *time);
 
 

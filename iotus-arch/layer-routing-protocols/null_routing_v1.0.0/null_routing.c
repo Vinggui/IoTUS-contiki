@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "iotus-netstack.h"
+#include "piggyback.h"
 #include "sys/timer.h"
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
