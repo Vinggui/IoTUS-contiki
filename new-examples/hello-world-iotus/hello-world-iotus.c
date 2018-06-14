@@ -72,7 +72,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
-    printf("Hello, world\n");
 
     IOTUS_CORE_START(0,0,contikiMAC,0);
     packet_set_interface_functions(app_packet_confirm,app_packet_handler);

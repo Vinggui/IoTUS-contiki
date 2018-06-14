@@ -39,18 +39,26 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
-#include "nullnet.h"
+#include "staticnet.h"
 #include <stdio.h> /* For printf() */
+#include "random.h"
 
 #include "contikimac.h"
+
+#define MSG_INTERVAL        2//ec
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
-/*void edytee_msg_confirm(int status, const linkaddr_t *dest, int num_tx) {
+void msg_confirm(int status, int num_tx) {
     printf("message sent\n");
-}*/
+}
+
+void msg_input(const linkaddr_t *source) {
+    printf("message received %u: %s\n",packetbuf_datalen(), (uint8_t *)packetbuf_dataptr());
+}
+
 
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
@@ -58,8 +66,26 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     //leds_init();
     //leds_off(LEDS_ALL);
 
+    staticnet_signup(msg_confirm, msg_input);
 
-    linkaddr_t addr;
+    static uint8_t selfAddrValue;
+
+    selfAddrValue = linkaddr_node_addr.u8[0];
+    static uint8_t selfMsg[20];
+
+    sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue);
+
+    // sender addr info...
+    //linkaddr_t addr;
     static linkaddr_t addrThis;
     addrThis.u8[0] = 1;
     addrThis.u8[1] = 0;
@@ -67,23 +93,24 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND*2);
-    printf("Hello, world\n");
+    etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
+
     static uint8_t n = 0;
     for(;;) {
         PROCESS_WAIT_EVENT();
         n++;
-        uint8_t nodeToSend = n%7 + 2;
-        if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+        //uint8_t nodeToSend = n%7 + 2;
+        if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
+           random_rand()%100 > 75) {
           packetBuildingTime = RTIMER_NOW();
           leds_on(LEDS_BLUE);
-          packetbuf_copyfrom("Hello", 5);
-          addr.u8[0] = nodeToSend;
-          addr.u8[1] = 0;
-          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
+
+          packetbuf_copyfrom(selfMsg, 20);
+          //addr.u8[0] = nodeToSend;
+          //addr.u8[1] = 0;
+          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
           packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-          printf("App sending %u\n", nodeToSend);
-          nullnet_output();
+          staticnet_output();
         }
         
 

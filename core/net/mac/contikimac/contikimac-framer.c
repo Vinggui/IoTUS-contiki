@@ -95,13 +95,14 @@ create(void)
   struct hdr *chdr;
   int hdr_len;
   
+  uint8_t oldHdrSize = packetbuf_hdrlen();
   if(packetbuf_hdralloc(sizeof(struct hdr)) == 0) {
     PRINTF("contikimac-framer: too large header\n");
     return FRAMER_FAILED;
   }
   chdr = packetbuf_hdrptr();
   chdr->id = CONTIKIMAC_ID;
-  chdr->len = packetbuf_datalen();
+  chdr->len = packetbuf_datalen() + oldHdrSize;
   pad();
   
   hdr_len = DECORATED_FRAMER.create();
