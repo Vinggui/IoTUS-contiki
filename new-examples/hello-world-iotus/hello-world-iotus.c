@@ -40,6 +40,7 @@
 #include "contiki.h"
 #include <stdio.h> /* For printf() */
 #include "iotus-api.h"
+#include "random.h"
 
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
@@ -75,6 +76,22 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     IOTUS_CORE_START(0,0,contikiMAC,0);
     packet_set_interface_functions(app_packet_confirm,app_packet_handler);
+
+    static uint8_t selfAddrValue;
+    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+    static uint8_t selfMsg[20];
+
+    sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue,
+                                                               selfAddrValue);
+
     static uint8_t n = 0;
     for(;;) {
         PROCESS_WAIT_EVENT();
@@ -84,7 +101,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
-        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 8) {
+        if(selfAddrValue != 1 &&
+           random_rand()%100 > 75) {
             n++;
             uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
@@ -96,7 +114,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             if(destNode != NULL) {
                 iotus_initiate_msg(
                         20,
-                        (const uint8_t *)"abcdefghijklmnopqrst",
+                        selfMsg,
                         PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                         IOTUS_PRIORITY_APPLICATION,
                         5000,

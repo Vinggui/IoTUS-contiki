@@ -62,7 +62,7 @@ vprintfLogSafe(safe_printer_log_type logType, int (* output)(struct ringbuf *r, 
 {
   char subbuffer[IOTUS_SUB_BUF_SIZE];
   if(SAFE_PRINT_CLEAN != logType) {
-    sprintf(subbuffer,"%lu",timestamp_elapsed(&iotus_time_zero)/100);
+    sprintf(subbuffer,"%u",timestamp_elapsed(&iotus_time_zero)/100);
     safe_printer_copy_to_bufring(output, subbuffer,strlen(subbuffer));
     output(&gOutput, '-');
     if(SAFE_PRINT_LOG_TYPE_INFO == logType) {
