@@ -201,7 +201,7 @@ uint16_t
 piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   if(!packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_PIGGYBACK) ||
     !(packet_get_parameter(packet_piece, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM))) {
-    SAFE_PRINTF_LOG_ERROR("Pkt cant piggyback");
+    //SAFE_PRINTF_LOG_WARNING("Pkt %p cant piggyback", packet_piece);
     //No piggyback allowed for this packet
     return 0;
   }
@@ -257,6 +257,8 @@ piggyback_check_timeout(void) {
     if(timestamp_remainder(&(h->timeout)) <= 0) {
       //This piggyback frame is already old
       //Create a packet to transmit him asap
+
+      //TODO THIS...
       printf("got packet to transmit\n");
       piggyback_destroy(h);
     }

@@ -51,7 +51,6 @@
 #include "piggyback.h"
 #include "seqnum.h"
 #include "sys/pt.h"
-#include "sys/timer.h"
 #include "sys/rtimer.h"
 #include "sys/ctimer.h"
 
@@ -270,9 +269,6 @@ static struct compower_activity current_packet;
 static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
-
-//Timer for sending broadcasts
-static struct timer sendBC;
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -1061,8 +1057,6 @@ init(void)
 // #if WITH_PHASE_OPTIMIZATION
 //   phase_init();
 // #endif /* WITH_PHASE_OPTIMIZATION */
-
-  // iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
 /*---------------------------------------------------------------------------*/
 static unsigned short
@@ -1074,9 +1068,6 @@ duty_cycle(void)
 static void
 post_start(void)
 {
-  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
-  //   timer_set(&sendBC, CLOCK_SECOND*10);
-  // }
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -1084,15 +1075,6 @@ run(void)
 {
   //Poll packets available
   packet_poll_by_priority(1);
-
-  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
-  //   if(timer_expired(&sendBC)) {
-  //     timer_restart(&sendBC);
-
-  //     iotus_packet_t *pkt = packet_create_msg(20, "abcdefghijklmnopqrst", IOTUS_PRIORITY_DATA_LINK, 0, TRUE, NODES_BROADCAST);
-  //     packet_set_parameter(pkt, PACKET_PARAMETERS_ALLOW_PIGGYBACK);
-  //   }
-  // }
 }
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",

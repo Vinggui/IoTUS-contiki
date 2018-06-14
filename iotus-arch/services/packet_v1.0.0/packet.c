@@ -16,10 +16,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "dev/leds.h"
 #include "global-parameters.h"
 #include "iotus-core.h"
 #include "iotus-netstack.h"
 #include "packet-defs.h"
+#include "piggyback.h"
 #include "lib/memb.h"
 #include "list.h"
 #include "packet.h"
@@ -399,6 +401,11 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
   }
+  
+  if(priority != IOTUS_PRIORITY_RADIO) {
+    leds_on(LEDS_BLUE);
+    packetBuildingTime = RTIMER_NOW();
+  }
 
   timestamp_mark(&(newMsg->timeout), timeout);
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
@@ -426,7 +433,6 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   }
   //Link the message into the list, sorting...
   pieces_insert_timeout_priority(gPacketBuildingList, newMsg);
-
   return newMsg;
 }
 
@@ -686,6 +692,22 @@ packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t 
 
 /*---------------------------------------------------------------------*/
 /*
+ * \brief  Read one byte pushed in an incoming packet.
+ * \param packetPiece Packet to be read.
+ * \return Byte read.
+ */
+uint8_t
+packet_unwrap_pushed_byte(iotus_packet_t *packetPiece)
+{
+  uint16_t byteToRead;
+  byteToRead = packetPiece->firstHeaderBitSize/8;
+
+  packetPiece->firstHeaderBitSize += 8;
+  return pieces_get_data_pointer(packetPiece)[byteToRead];
+}
+
+/*---------------------------------------------------------------------*/
+/*
  * \brief  Read bits pushed in an incoming packet. Max of 32 bit a at time.
  * \param 
  * \param packetPiece Packet to be read.
@@ -698,8 +720,8 @@ packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num)
     return 0;
   }
   uint32_t result;
-  uint16_t byteToRead;
   uint8_t bitMask;
+  uint16_t byteToRead;
 
   /**
    * Adding this remainder is necessary for correct read of the whole requested
@@ -841,14 +863,23 @@ return_packet_on_layers(iotus_packet_t *packetSelected, iotus_netstack_return re
 static void
 process_sending_packet_on_layers(iotus_packet_t *packetSelected)
 {
-  //Call the building packet of each layer
+  /*
+   * Call the building packet of each layer.
+   * 
+   * This sequence of If and Else has to follow the exactly priority per layer,
+   * that is, when the routing layer creates a frame (with routing priority),
+   * only the lower layers have to process it's frame. If Data link create a frame,
+   * it can send tha packet right away.
+  */
   iotus_netstack_return returnAns = TRANSPORT_TX_OK;
-  if(active_transport_protocol->build_to_send != NULL) {
+  if(active_transport_protocol->build_to_send != NULL &&
+     packetSelected->priority > IOTUS_PRIORITY_TRANSPORT) {
     returnAns = active_transport_protocol->build_to_send(packetSelected);
   }
   if(TRANSPORT_TX_OK == returnAns) {
     returnAns = ROUTING_TX_OK;
-    if(active_routing_protocol->build_to_send != NULL) {
+    if(active_routing_protocol->build_to_send != NULL &&
+       packetSelected->priority > IOTUS_PRIORITY_ROUTING) {
       returnAns = active_routing_protocol->build_to_send(packetSelected);
     }
     if(ROUTING_TX_OK == returnAns) {

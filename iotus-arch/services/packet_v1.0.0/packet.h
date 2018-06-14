@@ -160,6 +160,9 @@ packet_read_byte(uint16_t bytePos, iotus_packet_t *packet_piece);
 Status
 packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t num);
 
+uint8_t
+packet_unwrap_pushed_byte(iotus_packet_t *packetPiece);
+
 uint32_t
 packet_unwrap_pushed_bit(iotus_packet_t *packetPiece, int8_t num);
 

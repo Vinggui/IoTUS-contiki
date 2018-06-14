@@ -38,12 +38,13 @@
  */
 
 #include "contiki.h"
-#include "dev/leds.h"
 #include <stdio.h> /* For printf() */
 #include "iotus-api.h"
 
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
+#define MSG_INTERVAL        2//ec
+
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
@@ -57,7 +58,7 @@ app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 static void
 app_packet_handler(iotus_packet_t *packet)
 {
-    printf("message received: %s\n", packet_get_payload_data(packet));
+    printf("message received %u bytes: %s\n", packet_get_payload_size(packet), packet_get_payload_data(packet));
 }
 
 PROCESS_THREAD(hello_world_process, ev, data) {
@@ -69,7 +70,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND*2);
+    etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
     printf("Hello, world\n");
 
     IOTUS_CORE_START(0,0,contikiMAC,0);
@@ -83,9 +84,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
-        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+        if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 8) {
             n++;
-            uint8_t nodeAddr = n%7 + 2;
+            uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
             
             uint8_t dest[2];
@@ -93,12 +94,10 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             dest[1] = 0;
             iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(destNode != NULL) {
-                leds_on(LEDS_BLUE);
-                packetBuildingTime = RTIMER_NOW();
                 iotus_initiate_msg(
-                        10,
-                        (const uint8_t *)"BTeste-msg",
-                        PACKET_PARAMETERS_WAIT_FOR_ACK,
+                        20,
+                        (const uint8_t *)"abcdefghijklmnopqrst",
+                        PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                         IOTUS_PRIORITY_APPLICATION,
                         5000,
                         destNode);

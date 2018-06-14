@@ -304,10 +304,10 @@ pieces_insert_timeout_priority(list_t list, void *item)
       //insert it here
       list_insert(list, prevPiece, item);
       return;
-      break;
     }
     prevPiece = piece;
   }
+  list_insert(list, prevPiece, item);
   return;
 }
 

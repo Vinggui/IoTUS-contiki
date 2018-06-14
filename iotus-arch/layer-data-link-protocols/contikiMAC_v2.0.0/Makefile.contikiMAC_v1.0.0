@@ -1,0 +1,7 @@
+# $Id: Makefile.contikiMAC_v1_0_0,v 1.00 2017/10/29 17:08:42 vinicius Exp $
+
+IOTUS_PROTOCOL_NAME = contikiMAC
+
+# If more folders need to be compiled, just add them to the following line, like
+# THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/<NEW FOLDER 1> $(THIS_MODULE_FOLDER)/<NEW FOLDER 2>
+THIS_SUB_MODULES := $(THIS_MODULE_FOLDER)/teste
