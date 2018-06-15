@@ -106,7 +106,7 @@ input_packet(iotus_packet_t *packet)
     return RX_SEND_UP_STACK;
   } else {
     iotus_packet_t *packetForward = NULL;
-    
+
     //search for the next node...
     uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestAddr];
 
@@ -174,7 +174,7 @@ post_start(void)
 {
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
     timer_set(&sendND, CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL);
-    piggyback_create_piece(12, "123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+    piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
   }
 }
 
@@ -187,7 +187,7 @@ run(void)
     if(timer_expired(&sendND)) {
       timer_restart(&sendND);
 
-      piggyback_create_piece(12, "123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+      piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
     }
   }
   

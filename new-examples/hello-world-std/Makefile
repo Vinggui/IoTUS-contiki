@@ -1,4 +1,5 @@
 CONTIKI_PROJECT = hello-world-std
+APPS+=powertrace
 
 # For the use of the new archtecture, this declaration is necessary
 #CONTIKI_COMM_NEW_STACK = IoTUS

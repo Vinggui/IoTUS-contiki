@@ -39,6 +39,7 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
+#include "powertrace.h"
 #include "staticnet.h"
 #include <stdio.h> /* For printf() */
 #include "random.h"
@@ -88,6 +89,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     addrThis.u8[0] = 1;
     addrThis.u8[1] = 0;
 
+
+    /* Start powertracing, once every two seconds. */
+    powertrace_start(CLOCK_SECOND * 2);
     
     static struct etimer timer;
     // set the etimer module to generate an event in one second.

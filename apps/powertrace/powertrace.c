@@ -64,7 +64,6 @@ struct powertrace_sniff_stats {
 
 #define MAX_NUM_STATS  16
 
-MEMB(stats_memb, struct powertrace_sniff_stats, MAX_NUM_STATS);
 LIST(stats_list);
 
 PROCESS(powertrace_process, "Periodic power output");
@@ -115,9 +114,9 @@ powertrace_print(char *str)
   all_radio = energest_type_time(ENERGEST_TYPE_LISTEN) +
     energest_type_time(ENERGEST_TYPE_TRANSMIT);
 
-  printf("%s %lu P %d.%d %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (radio %d.%02d%% / %d.%02d%% tx %d.%02d%% / %d.%02d%% listen %d.%02d%% / %d.%02d%%)\n",
+  printf("%s %lu P %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (radio %d.%02d%% / %d.%02d%% tx %d.%02d%% / %d.%02d%% listen %d.%02d%% / %d.%02d%%)\n",
          str,
-         clock_time(), linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], seqno,
+         clock_time(), seqno,
          all_cpu, all_lpm, all_transmit, all_listen, all_idle_transmit, all_idle_listen,
          cpu, lpm, transmit, listen, idle_transmit, idle_listen,
          (int)((100L * (all_transmit + all_listen)) / all_time),
@@ -136,8 +135,8 @@ powertrace_print(char *str)
   for(s = list_head(stats_list); s != NULL; s = list_item_next(s)) {
 
 #if ! NETSTACK_CONF_WITH_IPV6
-    printf("%s %lu SP %d.%d %lu %u %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (channel %d radio %d.%02d%% / %d.%02d%%)\n",
-           str, clock_time(), linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], seqno,
+    printf("%s %lu SP %lu %u %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (channel %d radio %d.%02d%% / %d.%02d%%)\n",
+           str, clock_time(), seqno,
            s->channel,
            s->num_input, s->input_txtime, s->input_rxtime,
            s->input_txtime - s->last_input_txtime,
@@ -159,8 +158,8 @@ powertrace_print(char *str)
                            s->last_output_rxtime + s->last_output_txtime))) /
                  radio));
 #else
-    printf("%s %lu SP %d.%d %lu %u %u %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (proto %u(%u) radio %d.%02d%% / %d.%02d%%)\n",
-           str, clock_time(), linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], seqno,
+    printf("%s %lu SP %lu %u %u %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu (proto %u(%u) radio %d.%02d%% / %d.%02d%%)\n",
+           str, clock_time(), seqno,
            s->proto, s->channel,
            s->num_input, s->input_txtime, s->input_rxtime,
            s->input_txtime - s->last_input_txtime,
@@ -207,7 +206,7 @@ PROCESS_THREAD(powertrace_process, ev, data)
   while(1) {
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
     etimer_reset(&periodic);
-    powertrace_print("");
+    powertrace_print("PT");
   }
 
   PROCESS_END();
@@ -225,136 +224,3 @@ powertrace_stop(void)
   process_exit(&powertrace_process);
 }
 /*---------------------------------------------------------------------------*/
-static void
-add_stats(struct powertrace_sniff_stats *s, int input_or_output)
-{
-  if(input_or_output == INPUT) {
-    s->num_input++;
-    s->input_txtime += packetbuf_attr(PACKETBUF_ATTR_TRANSMIT_TIME);
-    s->input_rxtime += packetbuf_attr(PACKETBUF_ATTR_LISTEN_TIME);
-  } else if(input_or_output == OUTPUT) {
-    s->num_output++;
-    s->output_txtime += packetbuf_attr(PACKETBUF_ATTR_TRANSMIT_TIME);
-    s->output_rxtime += packetbuf_attr(PACKETBUF_ATTR_LISTEN_TIME);
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void
-add_packet_stats(int input_or_output)
-{
-  struct powertrace_sniff_stats *s;
-
-  /* Go through the list of stats to find one that matches the channel
-     of the packet. If we don't find one, we allocate a new one and
-     put it on the list. */
-  for(s = list_head(stats_list); s != NULL; s = list_item_next(s)) {
-    if(s->channel == packetbuf_attr(PACKETBUF_ATTR_CHANNEL)
-#if NETSTACK_CONF_WITH_IPV6
-       && s->proto == packetbuf_attr(PACKETBUF_ATTR_NETWORK_ID)
-#endif
-       ) {
-      add_stats(s, input_or_output);
-      break;
-    }
-  }
-  if(s == NULL) {
-    s = memb_alloc(&stats_memb);
-    if(s != NULL) {
-      memset(s, 0, sizeof(struct powertrace_sniff_stats));
-      s->channel = packetbuf_attr(PACKETBUF_ATTR_CHANNEL);
-#if NETSTACK_CONF_WITH_IPV6
-      s->proto = packetbuf_attr(PACKETBUF_ATTR_NETWORK_ID);
-#endif
-      list_add(stats_list, s);
-      add_stats(s, input_or_output);
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void
-input_sniffer(void)
-{
-  add_packet_stats(INPUT);
-}
-/*---------------------------------------------------------------------------*/
-static void
-output_sniffer(int mac_status)
-{
-  add_packet_stats(OUTPUT);
-}
-/*---------------------------------------------------------------------------*/
-#if NETSTACK_CONF_WITH_RIME
-static void
-sniffprint(char *prefix, int seqno)
-{
-  const linkaddr_t *esender;
-  esender = packetbuf_addr(PACKETBUF_ADDR_ESENDER);
-
-  printf("%lu %s %d %u %d %d %d.%d %u %u\n",
-         clock_time(),
-         prefix,
-         linkaddr_node_addr.u8[0], seqno,
-         packetbuf_attr(PACKETBUF_ATTR_CHANNEL),
-         packetbuf_attr(PACKETBUF_ATTR_PACKET_TYPE),
-         esender->u8[0], esender->u8[1],
-         packetbuf_attr(PACKETBUF_ATTR_TRANSMIT_TIME),
-         packetbuf_attr(PACKETBUF_ATTR_LISTEN_TIME));
-}
-/*---------------------------------------------------------------------------*/
-static void
-input_printsniffer(void)
-{
-  static int seqno = 0; 
-  sniffprint("I", seqno++);
-
-  if(packetbuf_attr(PACKETBUF_ATTR_CHANNEL) == 0) {
-    int i;
-    uint8_t *dataptr;
-
-    printf("x %d ", packetbuf_totlen());
-    dataptr = packetbuf_hdrptr();
-    printf("%02x ", dataptr[0]);
-    for(i = 1; i < packetbuf_totlen(); ++i) {
-      printf("%02x ", dataptr[i]);
-    }
-    printf("\n");
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void
-output_printsniffer(int mac_status)
-{
-  static int seqno = 0;
-  sniffprint("O", seqno++);
-}
-/*---------------------------------------------------------------------------*/
-RIME_SNIFFER(printsniff, input_printsniffer, output_printsniffer);
-/*---------------------------------------------------------------------------*/
-void
-powertrace_printsniff(powertrace_onoff_t onoff)
-{
-  switch(onoff) {
-  case POWERTRACE_ON:
-    rime_sniffer_add(&printsniff);
-    break;
-  case POWERTRACE_OFF:
-    rime_sniffer_remove(&printsniff);
-    break;
-  }
-}
-#endif /* NETSTACK_CONF_WITH_RIME */
-/*---------------------------------------------------------------------------*/
-RIME_SNIFFER(powersniff, input_sniffer, output_sniffer);
-/*---------------------------------------------------------------------------*/
-void
-powertrace_sniff(powertrace_onoff_t onoff)
-{
-  switch(onoff) {
-  case POWERTRACE_ON:
-    rime_sniffer_add(&powersniff);
-    break;
-  case POWERTRACE_OFF:
-    rime_sniffer_remove(&powersniff);
-    break;
-  }
-}

@@ -57,7 +57,7 @@ recursirve_add_dependencies = $(if $(1),\
 #                      Ignore some default file from contiki                     #
 ##################################################################################
 # Ignore... Core/dev/radio.h
-CFLAGS += -DRADIO_H_=1 -DFRAME_802154_H=1
+CFLAGS += -DRADIO_H_=1 -DFRAME_802154_H=1 -DMAC_H_=1
 # Ignore sources
 IGNORE_SOURCE_FILE_LIST += nullradio.c
 

@@ -37,8 +37,9 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
-#include "contiki.h"
 #include <stdio.h> /* For printf() */
+#include "contiki.h"
+#include "powertrace.h"
 #include "iotus-api.h"
 #include "random.h"
 
@@ -90,6 +91,10 @@ PROCESS_THREAD(hello_world_process, ev, data) {
                                                                selfAddrValue,
                                                                selfAddrValue,
                                                                selfAddrValue);
+
+    
+    /* Start powertracing, once every two seconds. */
+    powertrace_start(CLOCK_SECOND * 2);
 
     static uint8_t n = 0;
     for(;;) {
