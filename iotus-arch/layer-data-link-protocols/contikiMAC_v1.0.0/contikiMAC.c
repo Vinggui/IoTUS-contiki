@@ -50,6 +50,7 @@
 #include "phase_recorder.h"
 #include "piggyback.h"
 #include "seqnum.h"
+#include "sys/compower.h"
 #include "sys/pt.h"
 #include "sys/timer.h"
 #include "sys/rtimer.h"
@@ -837,7 +838,7 @@ send_packet(iotus_packet_t *packet)
      packet to packet attributes so that the higher levels can keep
      track of the amount of energy spent on transmitting the
      packet. */
-  compower_attrconv(&current_packet);
+  //compower_attrconv(&current_packet);
 
   /* Clear the accumulated power consumption so that it is ready for
      the next packet. */
@@ -954,7 +955,7 @@ input_packet(iotus_packet_t *packet)
          packet to packet attributes so that the higher levels can
          keep track of the amount of energy spent on receiving the
          packet. */
-      compower_attrconv(&current_packet);
+      // compower_attrconv(&current_packet);
 
       /* Clear the accumulated power consumption so that it is ready
          for the next packet. */

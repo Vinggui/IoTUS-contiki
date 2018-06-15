@@ -174,7 +174,7 @@ post_start(void)
 {
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
     timer_set(&sendND, CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL);
-    piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+    piggyback_create_piece(30, (uint8_t *)"123456789012345678901234567890", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
   }
 }
 
@@ -187,7 +187,7 @@ run(void)
     if(timer_expired(&sendND)) {
       timer_restart(&sendND);
 
-      piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+      piggyback_create_piece(30, (uint8_t *)"123456789012345678901234567890", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
     }
   }
   

@@ -26,6 +26,12 @@
 #define NETSTACK_CONF_RADIO   cc2420_driver
 #endif /* NETSTACK_CONF_RADIO */
 
+/* Specify whether the RDC layer should enable
+   per-packet power profiling. */
+#define CONTIKIMAC_CONF_COMPOWER         1
+#define XMAC_CONF_COMPOWER               1
+#define CXMAC_CONF_COMPOWER              1
+
 
 /* The TSCH default slot length of 10ms is a bit too short for this platform,
  * use 15ms instead. */

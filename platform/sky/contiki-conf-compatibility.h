@@ -23,11 +23,6 @@
  * use 15ms instead. */
 #define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 15000
 
-/* Specify whether the RDC layer should enable
-   per-packet power profiling. */
-#define CONTIKIMAC_CONF_COMPOWER         1
-#define XMAC_CONF_COMPOWER               1
-#define CXMAC_CONF_COMPOWER              1
 
 #if NETSTACK_CONF_WITH_IPV6
 /* Network setup for IPv6 */

@@ -79,18 +79,22 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     static uint8_t selfAddrValue;
     selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-    static uint8_t selfMsg[20];
+    static uint8_t selfMsg[30];
 
-    sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue);
+    sprintf((char *)selfMsg, "+%u %u %u %u %u %u %u %u %u %u %u %u %u %u +", selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue);
 
     
     /* Start powertracing, once every two seconds. */
@@ -106,7 +110,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         //}
         
         if(selfAddrValue != 1 &&
-           random_rand()%100 > 75) {
+           random_rand()%100 > 66) {
             n++;
             uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
@@ -117,7 +121,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(destNode != NULL) {
                 iotus_initiate_msg(
-                        20,
+                        30,
                         selfMsg,
                         PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                         IOTUS_PRIORITY_APPLICATION,
