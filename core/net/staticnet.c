@@ -11,16 +11,20 @@
 #define PRINTF(...)
 #endif
 
+
+#include "contikimac.h"
+#include "dev/leds.h"
 #include "net/linkaddr.h"
 #include "net/netstack.h"
 #include "net/rime/rime.h"
-#include "net/rime/chameleon.h"
-#include "net/rime/route.h"
-#include "net/rime/announcement.h"
-#include "net/rime/broadcast-announcement.h"
 #include "net/mac/mac.h"
+#include "sys/ctimer.h"
 
 #include "lib/list.h"
+
+
+#define NEIGHBOR_DISCOVERY_INTERVAL       15//sec
+#define ROUTING_PACKETS_TIMEOUT           5000//msec
 
 #ifdef RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
 #define BROADCAST_ANNOUNCEMENT_CHANNEL RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
@@ -70,7 +74,8 @@ int routing_table[9][9] =
 };
 
 //Timer for sending neighbor discovery
-static struct timer sendND;
+ static struct ctimer sendNDTimer;
+
 void (* up_msg_confirm)(int status, int num_tx) = NULL;
 void (* up_msg_input)(const linkaddr_t *source) = NULL;
 
@@ -109,6 +114,10 @@ staticnet_output(void)
     return 0;
   }
 
+  //Self build packet timer...
+  packetBuildingTime = RTIMER_NOW();
+  leds_on(LEDS_BLUE);
+
   static linkaddr_t addrNext;
   addrNext.u8[0] = routing_table[linkaddr_node_addr.u8[0]][finalReceiver->u8[0]];
   addrNext.u8[1] = 0;
@@ -138,14 +147,6 @@ input(void)
     staticnet_output();
   }
 }
-/*---------------------------------------------------------------------------*/
-static void
-init(void)
-{
-  PRINTF("nullnet started\n");
-  queuebuf_init();
-  packetbuf_clear();
-}
 
 /*---------------------------------------------------------------------------*/
 void
@@ -154,6 +155,34 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
   up_msg_confirm = msg_confirm;
   up_msg_input = msg_input;
 }
+
+/*---------------------------------------------------------------------------*/
+static void
+send_neighbor_discovery(void *ptr)
+{
+ ctimer_reset(&sendNDTimer);
+ 
+
+  packetbuf_copyfrom("1234656789012", 12);
+  linkaddr_t addr;
+  addr.u8[0] = 1;
+  addr.u8[1] = 0;
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+  staticnet_output();
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+init(void)
+{
+  PRINTF("nullnet started\n");
+  queuebuf_init();
+  packetbuf_clear();
+
+  ctimer_set(&sendNDTimer, CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL, send_neighbor_discovery, NULL);
+}
+
 
 /*---------------------------------------------------------------------------*/
 const struct network_driver staticnet_driver = {

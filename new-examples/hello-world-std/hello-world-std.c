@@ -43,8 +43,6 @@
 #include <stdio.h> /* For printf() */
 #include "random.h"
 
-#include "contikimac.h"
-
 #define MSG_INTERVAL        2//ec
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
@@ -102,8 +100,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         //uint8_t nodeToSend = n%7 + 2;
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
            random_rand()%100 > 75) {
-          packetBuildingTime = RTIMER_NOW();
-          leds_on(LEDS_BLUE);
 
           packetbuf_copyfrom(selfMsg, 20);
           //addr.u8[0] = nodeToSend;
