@@ -163,7 +163,7 @@ send_neighbor_discovery(void *ptr)
  ctimer_reset(&sendNDTimer);
  
 
-  packetbuf_copyfrom("1234656789012", 12);
+  packetbuf_copyfrom("123456789012345678901234567890", 30);
   linkaddr_t addr;
   addr.u8[0] = 1;
   addr.u8[1] = 0;

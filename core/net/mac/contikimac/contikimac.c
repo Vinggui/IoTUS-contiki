@@ -800,7 +800,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
      packet to packet attributes so that the higher levels can keep
      track of the amount of energy spent on transmitting the
      packet. */
-  compower_attrconv(&current_packet);
+  // compower_attrconv(&current_packet);
 
   /* Clear the accumulated power consumption so that it is ready for
      the next packet. */
@@ -1001,7 +1001,7 @@ input_packet(void)
          packet to packet attributes so that the higher levels can
          keep track of the amount of energy spent on receiving the
          packet. */
-      compower_attrconv(&current_packet);
+      // compower_attrconv(&current_packet);
 
       /* Clear the accumulated power consumption so that it is ready
          for the next packet. */

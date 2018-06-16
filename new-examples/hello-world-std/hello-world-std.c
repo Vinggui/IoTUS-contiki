@@ -70,18 +70,22 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     static uint8_t selfAddrValue;
 
     selfAddrValue = linkaddr_node_addr.u8[0];
-    static uint8_t selfMsg[20];
+    static uint8_t selfMsg[30];
 
-    sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue);
+    sprintf((char *)selfMsg, "+%u %u %u %u %u %u %u %u %u %u %u %u %u %u +", selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue,
+                                                                               selfAddrValue);
 
     // sender addr info...
     //linkaddr_t addr;
@@ -103,9 +107,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         n++;
         //uint8_t nodeToSend = n%7 + 2;
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
-           random_rand()%100 > 75) {
+           random_rand()%100 > 66) {
 
-          packetbuf_copyfrom(selfMsg, 20);
+          packetbuf_copyfrom(selfMsg, 30);
           //addr.u8[0] = nodeToSend;
           //addr.u8[1] = 0;
           packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
