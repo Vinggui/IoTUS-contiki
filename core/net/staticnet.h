@@ -30,6 +30,8 @@
 
 #include "net/mac/mac.h"
 
+extern rtimer_clock_t packetBuildingTime;
+
 void
 staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input)(const linkaddr_t *source));
 

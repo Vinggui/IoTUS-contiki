@@ -52,10 +52,9 @@
 #include "sys/pt.h"
 #include "sys/rtimer.h"
 
+#include "staticnet.h"
 
 #include <string.h>
-
-rtimer_clock_t packetBuildingTime;
 
 /* TX/RX cycles are synchronized with neighbor wake periods */
 #ifdef CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
@@ -286,8 +285,8 @@ off(void)
 {
   if(contikimac_is_on && radio_is_on != 0 &&
      contikimac_keep_radio_on == 0) {
-    radio_is_on = 0;
-    NETSTACK_RADIO.off();
+    //radio_is_on = 0;
+    //NETSTACK_RADIO.off();
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -1078,8 +1077,8 @@ turn_off(int keep_radio_on)
     radio_is_on = 1;
     return NETSTACK_RADIO.on();
   } else {
-    radio_is_on = 0;
-    return NETSTACK_RADIO.off();
+    //radio_is_on = 0;
+    return 1;//NETSTACK_RADIO.off();
   }
 }
 /*---------------------------------------------------------------------------*/

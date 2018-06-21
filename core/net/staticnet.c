@@ -18,6 +18,7 @@
 #include "net/netstack.h"
 #include "net/rime/rime.h"
 #include "net/mac/mac.h"
+#include "random.h"
 #include "sys/ctimer.h"
 
 #include "lib/list.h"
@@ -25,6 +26,7 @@
 
 #define NEIGHBOR_DISCOVERY_INTERVAL       15//sec
 #define ROUTING_PACKETS_TIMEOUT           5000//msec
+
 
 #ifdef RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
 #define BROADCAST_ANNOUNCEMENT_CHANNEL RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
@@ -74,7 +76,8 @@ int routing_table[9][9] =
 };
 
 //Timer for sending neighbor discovery
- static struct ctimer sendNDTimer;
+static struct ctimer sendNDTimer;
+rtimer_clock_t packetBuildingTime;
 
 void (* up_msg_confirm)(int status, int num_tx) = NULL;
 void (* up_msg_input)(const linkaddr_t *source) = NULL;
@@ -103,8 +106,13 @@ packet_sent(void *ptr, int status, int num_tx)
 int
 staticnet_output(void)
 {
+  //Self build packet timer...
+  packetBuildingTime = RTIMER_NOW();
+  leds_on(LEDS_BLUE);
+
   RIMESTATS_ADD(tx);
 
+#if BROADCAST_EXAMPLE == 0
   linkaddr_t const *finalReceiver = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
   if(packetbuf_hdralloc(1)) {
     uint8_t *buf = packetbuf_hdrptr();
@@ -114,14 +122,11 @@ staticnet_output(void)
     return 0;
   }
 
-  //Self build packet timer...
-  packetBuildingTime = RTIMER_NOW();
-  leds_on(LEDS_BLUE);
-
   static linkaddr_t addrNext;
   addrNext.u8[0] = routing_table[linkaddr_node_addr.u8[0]][finalReceiver->u8[0]];
   addrNext.u8[1] = 0;
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrNext);
+#endif
 
   packetbuf_compact();
   NETSTACK_LLSEC.send(packet_sent, NULL);
@@ -160,8 +165,8 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 static void
 send_neighbor_discovery(void *ptr)
 {
- ctimer_reset(&sendNDTimer);
- 
+  clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+  ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
 
   // packetbuf_copyfrom("123456789012345678901234567890", 30);
   packetbuf_copyfrom("123456789012", 12);
@@ -181,7 +186,18 @@ init(void)
   queuebuf_init();
   packetbuf_clear();
 
-  ctimer_set(&sendNDTimer, CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL, send_neighbor_discovery, NULL);
+
+  linkaddr_t addrThis;
+  addrThis.u8[0] = 1;
+  addrThis.u8[1] = 0;
+
+#if BROADCAST_EXAMPLE == 0
+  if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+    clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+    ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
+  }
+#endif
+
 }
 
 

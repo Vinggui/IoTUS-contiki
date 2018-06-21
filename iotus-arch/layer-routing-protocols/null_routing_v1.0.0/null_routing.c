@@ -107,6 +107,14 @@ input_packet(iotus_packet_t *packet)
   } else {
     iotus_packet_t *packetForward = NULL;
 
+
+    static uint8_t selfAddrValue;
+    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+
+    if(selfAddrValue == 1) {
+      printf("failure\n");
+      return RX_SEND_UP_STACK;
+    }
     //search for the next node...
     uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestAddr];
 
@@ -173,7 +181,8 @@ static void
 post_start(void)
 {
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    timer_set(&sendND, CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL);
+    clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%500))/1000;//ms
+    timer_set(&sendND, backoff);
   }
 }
 
@@ -183,10 +192,19 @@ run(void)
   iotus_core_netstack_idle_for(IOTUS_PRIORITY_ROUTING, 0XFFFF);
   //Test which layer is supposed to do neighbor discovery
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    if(timer_expired(&sendND)) {
-      timer_restart(&sendND);
 
-      piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+    static uint8_t selfAddrValue;
+    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+
+    if(selfAddrValue != 1) {
+      if(timer_expired(&sendND)) {
+        //timer_restart(&sendND);
+        clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%500))/1000;//ms
+        timer_set(&sendND, backoff);
+
+        printf("Creating piggy\n");
+        piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+      }
     }
   }
   

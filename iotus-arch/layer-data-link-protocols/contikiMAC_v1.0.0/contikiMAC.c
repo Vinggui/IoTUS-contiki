@@ -290,8 +290,8 @@ off(void)
 {
   if(contikimac_is_on && radio_is_on != 0 &&
      contikimac_keep_radio_on == 0) {
-    radio_is_on = 0;
-    active_radio_driver->off();
+    //radio_is_on = 0;
+    //active_radio_driver->off();
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -1044,8 +1044,9 @@ turn_off(int keep_radio_on)
     radio_is_on = 1;
     return active_radio_driver->on();
   } else {
-    radio_is_on = 0;
-    return active_radio_driver->off();
+    //TODOOOO AQUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUIIIIIIIIIIIIIIIIIIIIIIIIIII
+    //radio_is_on = 0;
+    //return active_radio_driver->off();
   }
 }
 /*---------------------------------------------------------------------------*/

@@ -38,6 +38,9 @@
  *         Niclas Finne <nfi@sics.se>
  */
 
+
+#include <stdio.h> /* For printf() */
+#include "dev/leds.h"
 #include "net/mac/mac-sequence.h"
 #include "net/mac/nullrdc.h"
 #include "net/packetbuf.h"
@@ -45,6 +48,7 @@
 #include "net/netstack.h"
 #include "net/rime/rimestats.h"
 #include <string.h>
+#include "staticnet.h"
 
 #if CONTIKI_TARGET_COOJA || CONTIKI_TARGET_COOJA_IP64
 #include "lib/simEnvChange.h"
@@ -126,6 +130,12 @@ send_one_packet(mac_callback_t sent, void *ptr)
     PRINTF("nullrdc: send failed, too large header\n");
     ret = MAC_TX_ERR_FATAL;
   } else {
+
+    uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
+    leds_off(LEDS_BLUE);
+    printf("Pkt built: %lu\n",elapsedBuild);
+
+    
 #if NULLRDC_802154_AUTOACK
     int is_broadcast;
     uint8_t dsn;

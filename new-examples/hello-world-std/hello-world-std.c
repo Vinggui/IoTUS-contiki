@@ -44,11 +44,19 @@
 #include <stdio.h> /* For printf() */
 #include "random.h"
 
-#define MSG_INTERVAL        2//ec
+#define MSG_INTERVAL                      2//sec
+#define POWER_TRACE_RATE                  2
+#define BROADCAST_EXAMPLE                 1
+
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
+
+static struct ctimer sendMsgTimer;
+static uint8_t selfMsg[20];
+
+static linkaddr_t addrThis;
 
 void msg_confirm(int status, int num_tx) {
     printf("message sent\n");
@@ -58,6 +66,20 @@ void msg_input(const linkaddr_t *source) {
     printf("message received %u: %s\n",packetbuf_datalen(), (uint8_t *)packetbuf_dataptr());
 }
 
+static void
+send_msg(void *ptr)
+{
+  packetbuf_copyfrom(selfMsg, 20);
+  //addr.u8[0] = nodeToSend;
+  //addr.u8[1] = 0;
+#if BROADCAST_EXAMPLE == 1
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+#else
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+#endif
+  staticnet_output();
+}
 
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
@@ -70,7 +92,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     static uint8_t selfAddrValue;
 
     selfAddrValue = linkaddr_node_addr.u8[0];
-    static uint8_t selfMsg[20];
 
     sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
                                                                selfAddrValue,
@@ -100,13 +121,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     // sender addr info...
     //linkaddr_t addr;
-    static linkaddr_t addrThis;
+    //
     addrThis.u8[0] = 1;
     addrThis.u8[1] = 0;
 
 
     /* Start powertracing, once every two seconds. */
-    powertrace_start(CLOCK_SECOND * 2);
+    powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
     
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
@@ -120,12 +141,10 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
            random_rand()%100 > 66) {
 
-          packetbuf_copyfrom(selfMsg, 20);
-          //addr.u8[0] = nodeToSend;
-          //addr.u8[1] = 0;
-          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
-          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-          staticnet_output();
+          send_msg(NULL);
+          //uint8_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+          //ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
+          
         }
         
 

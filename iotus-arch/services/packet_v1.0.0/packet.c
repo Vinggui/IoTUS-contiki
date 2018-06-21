@@ -32,7 +32,7 @@
 #include "nodes.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
