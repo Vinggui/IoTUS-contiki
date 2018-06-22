@@ -45,9 +45,12 @@
 
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
-#define MSG_INTERVAL        2//ec
+#define MSG_INTERVAL                      2//sec
+#define POWER_TRACE_RATE                  2
+#define BROADCAST_EXAMPLE                 1
+#define USE_NEW_FEATURES                  1
 
-PROCESS(hello_world_process, "Test process");
+PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
@@ -125,7 +128,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             n++;
             uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
-            
+
+
+#if BROADCAST_EXAMPLE == 0
             uint8_t dest[2];
             dest[0] = nodeAddr;
             dest[1] = 0;
@@ -139,6 +144,15 @@ PROCESS_THREAD(hello_world_process, ev, data) {
                         5000,
                         destNode);
             }
+#else
+            iotus_initiate_msg(
+                    20,
+                    selfMsg,
+                    0,
+                    IOTUS_PRIORITY_APPLICATION,
+                    5000,
+                    NODES_BROADCAST);
+#endif
         }
 
         etimer_reset(&timer);
