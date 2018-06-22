@@ -18,6 +18,7 @@
 #include "iotus-netstack.h"
 #include "piggyback.h"
 #include "sys/timer.h"
+#include "random.h"
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
@@ -203,10 +204,10 @@ run(void)
         //timer_restart(&sendND);
         clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%500))/1000;//ms
         timer_set(&sendND, backoff);
-#if USE_NEW_FEATURES == 1
+//#if USE_NEW_FEATURES == 1
         printf("Creating piggy\n");
         piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
-#else
+/*#else
         uint8_t dest[2];
         dest[0] = 1;
         dest[1] = 0;
@@ -220,7 +221,7 @@ run(void)
                     5000,
                     destNode);
         }
-#endif
+#endif*/
       }
     }
 #endif

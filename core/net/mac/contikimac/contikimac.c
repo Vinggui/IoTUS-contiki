@@ -285,8 +285,10 @@ off(void)
 {
   if(contikimac_is_on && radio_is_on != 0 &&
      contikimac_keep_radio_on == 0) {
-    //radio_is_on = 0;
-    //NETSTACK_RADIO.off();
+#if ALOHA_STYLE == 0
+    radio_is_on = 0;
+    NETSTACK_RADIO.off();
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -1077,8 +1079,12 @@ turn_off(int keep_radio_on)
     radio_is_on = 1;
     return NETSTACK_RADIO.on();
   } else {
-    //radio_is_on = 0;
-    return 1;//NETSTACK_RADIO.off();
+#if ALOHA_STYLE == 0
+    radio_is_on = 0;
+    return NETSTACK_RADIO.off();
+#else
+    return 1;
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/

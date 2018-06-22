@@ -49,6 +49,7 @@
 #define POWER_TRACE_RATE                  2
 #define BROADCAST_EXAMPLE                 0
 #define USE_NEW_FEATURES                  0
+#define ALOHA_STYLE                       0
 
 PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);

@@ -55,7 +55,7 @@
 #endif /* CC2420_CONF_AUTOACK */
 
 //#define RDC_WITH_DUPLICATE_DETECTION            1
-#define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
+#define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 1
 
 /*
  * Definitions below are dictated by the hardware and not really
