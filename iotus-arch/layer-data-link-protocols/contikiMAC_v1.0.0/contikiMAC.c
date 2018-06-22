@@ -290,8 +290,10 @@ off(void)
 {
   if(contikimac_is_on && radio_is_on != 0 &&
      contikimac_keep_radio_on == 0) {
-    //radio_is_on = 0;
-    //active_radio_driver->off();
+#if ALOHA_STYLE == 0
+    radio_is_on = 0;
+    active_radio_driver->off();
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -1044,9 +1046,13 @@ turn_off(int keep_radio_on)
     radio_is_on = 1;
     return active_radio_driver->on();
   } else {
+#if ALOHA_STYLE == 0
     //TODOOOO AQUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUIIIIIIIIIIIIIIIIIIIIIIIIIII
-    //radio_is_on = 0;
-    //return active_radio_driver->off();
+    radio_is_on = 0;
+    return active_radio_driver->off();
+#else
+    return 1;
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/
