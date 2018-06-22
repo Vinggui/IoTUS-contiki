@@ -58,33 +58,41 @@ static iotus_node_t *rootNode;
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
-  //Get the final static destination
-   uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
-                                        packet->finalDestinationNode);
+  iotus_node_t *nextHopNode;
 
-  uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestLastAddress[0]];
-  
-  if(nextHop == 0) {
-    //This is for ourself. Cancel...
-    return ROUTING_TX_ERR;
-  }
+  if(NODES_BROADCAST == packet->finalDestinationNode) {
+    packet->nextDestinationNode = NODES_BROADCAST;
+  } else {
+    //Get the final static destination
+    uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
+                                          packet->finalDestinationNode);
 
-  printf("Final %u next %u\n",finalDestLastAddress[0],nextHop);
+    uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestLastAddress[0]];
+    
+    if(nextHop == 0) {
+      //This is for ourself. Cancel...
+      return ROUTING_TX_ERR;
+    }
 
-  uint8_t addressNext[2] = {nextHop,0};
-  iotus_node_t *nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
+    printf("Final %u next %u\n",finalDestLastAddress[0],nextHop);
 
-  if(NULL == nextHopNode) {
-    SAFE_PRINTF_LOG_ERROR("No next hop");
-    return ROUTING_TX_ERR;
-  }
+    uint8_t addressNext[2] = {nextHop,0};
+    nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
 
-  packet->nextDestinationNode = nextHopNode;
+    if(NULL == nextHopNode) {
+      SAFE_PRINTF_LOG_ERROR("No next hop");
+      return ROUTING_TX_ERR;
+    }
 
-  uint8_t bitSequence[1];
-  bitSequence[0] = finalDestLastAddress[0];
-  packet_push_bit_header(8, bitSequence, packet);
-  
+
+    packet->nextDestinationNode = nextHopNode;
+
+    uint8_t bitSequence[1];
+    bitSequence[0] = finalDestLastAddress[0];
+    packet_push_bit_header(8, bitSequence, packet);
+   }
+
+
   //active_data_link_protocol->send(packet);
   return ROUTING_TX_OK;
 }
@@ -183,7 +191,7 @@ post_start(void)
 {
 #if BROADCAST_EXAMPLE == 0
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%500))/1000;//ms
+    clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
     timer_set(&sendND, backoff);
   }
 #endif
@@ -202,12 +210,12 @@ run(void)
     if(selfAddrValue != 1) {
       if(timer_expired(&sendND)) {
         //timer_restart(&sendND);
-        clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%500))/1000;//ms
+        clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
         timer_set(&sendND, backoff);
-//#if USE_NEW_FEATURES == 1
+#if USE_NEW_FEATURES == 1
         printf("Creating piggy\n");
         piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
-/*#else
+#else
         uint8_t dest[2];
         dest[0] = 1;
         dest[1] = 0;
@@ -221,7 +229,7 @@ run(void)
                     5000,
                     destNode);
         }
-#endif*/
+#endif
       }
     }
 #endif

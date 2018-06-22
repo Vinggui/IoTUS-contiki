@@ -1070,7 +1070,7 @@ init(void)
 //   phase_init();
 // #endif /* WITH_PHASE_OPTIMIZATION */
 
-  // iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
 /*---------------------------------------------------------------------------*/
 static unsigned short
