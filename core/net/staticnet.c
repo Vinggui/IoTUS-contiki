@@ -165,7 +165,7 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 static void
 send_neighbor_discovery(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+  clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
   ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
 
   // packetbuf_copyfrom("123456789012345678901234567890", 30);
@@ -193,7 +193,7 @@ init(void)
 
 #if BROADCAST_EXAMPLE == 0
   if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-    clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+    clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
     ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
   }
 #endif

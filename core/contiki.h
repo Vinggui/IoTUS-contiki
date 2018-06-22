@@ -58,4 +58,12 @@
 
 #include "sys/energest.h"
 
+
+
+#define POWER_TRACE_RATE                  2
+#define BROADCAST_EXAMPLE                 1
+#define USE_NEW_FEATURES                  0
+#define ALOHA_STYLE                       0
+#define BACKOFF_TIME					  1000
+
 #endif /* CONTIKI_H_ */
