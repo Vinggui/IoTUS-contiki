@@ -46,6 +46,7 @@
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
 #define MSG_INTERVAL                      8//sec
+#define SINGLE_NODE_NULL                  1
 
 PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);
@@ -74,7 +75,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
-    IOTUS_CORE_START(0,0,contikiMAC,0);
+    IOTUS_CORE_START(0,0,0,0);//contikiMAC,0);
     packet_set_interface_functions(app_packet_confirm,app_packet_handler);
 
     static uint8_t selfAddrValue;
@@ -120,8 +121,12 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
         
+#if SINGLE_NODE_NULL == 0
         if(selfAddrValue != 1 &&
            random_rand()%100 > 66) {
+#else
+        {
+#endif
             n++;
             uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
