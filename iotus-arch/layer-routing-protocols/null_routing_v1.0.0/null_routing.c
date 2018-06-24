@@ -25,7 +25,7 @@
 #include "safe-printer.h"
 
 #define NEIGHBOR_DISCOVERY_INTERVAL       15//sec
-#define ROUTING_PACKETS_TIMEOUT           5000//msec
+#define ROUTING_PACKETS_TIMEOUT           60000//msec
 
 // Next dest table using final value{source, final destination}
 int routing_table[9][9] =
