@@ -46,7 +46,7 @@
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
 #define MSG_INTERVAL                      8//sec
-#define SINGLE_NODE_NULL                  1
+#define SINGLE_NODE_NULL                  0
 
 PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);
