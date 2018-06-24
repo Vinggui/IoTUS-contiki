@@ -15,6 +15,7 @@
  */
 #include <stdio.h>
 #include "contiki.h"
+#include "iotus-api.h"
 #include "iotus-netstack.h"
 #include "piggyback.h"
 #include "sys/timer.h"
@@ -213,19 +214,20 @@ run(void)
         clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
         timer_set(&sendND, backoff);
 #if USE_NEW_FEATURES == 1
-        printf("Creating piggy\n");
+        printf("Creating piggy routing\n");
         piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
 #else
+        printf("Creating keep alive alone\n");
         uint8_t dest[2];
         dest[0] = 1;
         dest[1] = 0;
         iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
         if(destNode != NULL) {
             iotus_initiate_msg(
-                    20,
-                    "123456789012",
+                    12,
+                    (uint8_t *)"123456789012",
                     PACKET_PARAMETERS_WAIT_FOR_ACK,
-                    IOTUS_PRIORITY_ROUTING,
+                    IOTUS_PRIORITY_APPLICATION,
                     5000,
                     destNode);
         }
