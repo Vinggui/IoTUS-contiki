@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004, Swedish Institute of Computer Science.
+ * Copyright (c) 2010, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,42 +28,17 @@
  *
  * This file is part of the Contiki operating system.
  *
- * Author: Adam Dunkels <adam@sics.se>
- *
  */
-#ifndef CONTIKI_H_
-#define CONTIKI_H_
 
-#include "contiki-version.h"
-#include "contiki-conf.h"
+/**
+ * \file
+ *         Creates and parses the ContikiMAC header.
+ * \author
+ *         Konrad Krentz <konrad.krentz@gmail.com>
+ */
 
-#ifndef CONTIKI_COMM_NEW_STACK
-#include "contiki-default-conf.h"
-#endif
+#ifndef CONTIKIMAC_FRAMER_H_
+#define CONTIKIMAC_FRAMER_H_
 
-#include "sys/process.h"
-#include "sys/autostart.h"
-
-#include "sys/timer.h"
-#include "sys/ctimer.h"
-#include "sys/etimer.h"
-#include "sys/rtimer.h"
-
-#include "sys/pt.h"
-
-#include "sys/procinit.h"
-
-#include "sys/loader.h"
-#include "sys/clock.h"
-
-#include "sys/energest.h"
-
-
-
-#define POWER_TRACE_RATE                  2
-#define BROADCAST_EXAMPLE                 1
-#define USE_NEW_FEATURES                  0
-#define ALOHA_STYLE                       0
-#define BACKOFF_TIME                      1000
-
-#endif /* CONTIKI_H_ */
+const struct framer contikimac_framer;
+#endif /* CONTIKIMAC_FRAMER_H_ */
