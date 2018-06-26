@@ -91,7 +91,7 @@ send(iotus_packet_t *packet)
     uint8_t bitSequence[1];
     bitSequence[0] = finalDestLastAddress[0];
     packet_push_bit_header(8, bitSequence, packet);
-   }
+  }
 
 
   //active_data_link_protocol->send(packet);
