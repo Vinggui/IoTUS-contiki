@@ -15,60 +15,68 @@
  */
 #include <stdio.h>
 #include "contiki.h"
+#include "iotus-netstack.h"
 #include "iotus-data-link.h"
+#include "contikimac-framer.h"
 
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT
+#define THIS_LOG_FILE_NAME_DESCRITOR "nullMac"
+#include "safe-printer.h"
 
-PROCESS(null_MAC_proc, "Null MAC Protocol");
 
-/* Implementation of the IoTus core process */
-PROCESS_THREAD(null_MAC_proc, ev, data)
+/*---------------------------------------------------------------------------*/
+//send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
+//      struct rdc_buf_list *buf_list,
+//            int is_receiver_awake)
+static int8_t
+send_packet(iotus_packet_t *packet)
 {
-  /* variables are declared static to ensure their values are kept
-   * between kernel calls.
-   */
 
-  /* Any process must start with this. */
-  PROCESS_BEGIN();
-
-  /* Initiate the lists of module */
-
-  //Main loop here
-  //for(;;) {
-  //  PROCESS_PAUSE();
-  //}
-  // any process must end with this, even if it is never reached.
-  PROCESS_END();
+  if(contikimac_framer.create(packet) < 0) {
+    printf("contikimac: framer failed\n");
+    return MAC_TX_ERR_FATAL;
+  }
+  printf("test %u %u\n",packet_get_size(packet), packet_get_payload_size(packet));
+  active_radio_driver->prepare(packet);
+  active_radio_driver->transmit(packet);
+  return MAC_TX_OK;
 }
-
-
+/*---------------------------------------------------------------------------*/
+static iotus_netstack_return
+input_packet(iotus_packet_t *packet)
+{
+  return RX_SEND_UP_STACK;
+}
+/*---------------------------------------------------------------------------*/
 static void
-start(void)
+init(void)
 {
-  printf("Starting null MAC\n");
 }
 
-
+/*---------------------------------------------------------------------------*/
+static void
+post_start(void)
+{
+  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
+  //   timer_set(&sendBC, CLOCK_SECOND*10);
+  // }
+}
+/*---------------------------------------------------------------------------*/
 static void
 run(void)
-{
+{ 
+  packet_poll_by_priority(1);
 }
-
-static void
-close(void)
-{}
 
 const struct iotus_data_link_protocol_struct null_MAC_protocol = {
   "nullMAC",
-  start,
-  NULL,
+  init,
+  post_start,
   run,
-  close
+  NULL,
+  send_packet,
+  NULL,
+  input_packet
 };
 
 /* The following stuff ends the \defgroup block at the beginning of

@@ -225,7 +225,7 @@ run(void)
                     20,
                     "123456789012",
                     PACKET_PARAMETERS_WAIT_FOR_ACK,
-                    IOTUS_PRIORITY_ROUTING,
+                    IOTUS_PRIORITY_APPLICATION,
                     5000,
                     destNode);
         }
@@ -239,7 +239,9 @@ run(void)
 
 static void
 close(void)
-{}
+{
+  
+}
 
 struct iotus_routing_protocol_struct null_routing_protocol = {
   start,
