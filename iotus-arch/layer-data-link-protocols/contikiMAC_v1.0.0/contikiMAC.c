@@ -1049,7 +1049,6 @@ turn_off(int keep_radio_on)
     return active_radio_driver->on();
   } else {
 #if ALOHA_STYLE == 0
-    asdasd
     //TODOOOO AQUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUIIIIIIIIIIIIIIIIIIIIIIIIIII
     radio_is_on = 0;
     return active_radio_driver->off();

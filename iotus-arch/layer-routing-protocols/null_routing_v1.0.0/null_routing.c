@@ -68,8 +68,17 @@ send(iotus_packet_t *packet)
     uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
                                           packet->finalDestinationNode);
 
+#if EXP_STAR_LIKE == 1
+    uint8_t nextHop = 1;
+#else
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 7 ||
+       finalDestLastAddress[0] > 7) {
+      printf("wrong destination");
+      return ROUTING_TX_ERR;
+    }
     uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestLastAddress[0]];
-    
+#endif
+
     if(nextHop == 0) {
       //This is for ourself. Cancel...
       return ROUTING_TX_ERR;
@@ -176,7 +185,11 @@ start(void)
   uint8_t rootValue = 0;
   int i;
   for(i=0; i<3; i++) {
+#if EXP_STAR_LIKE == 0
     rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][i];
+#else
+    rootValue = 1;
+#endif
     if(rootValue != 0) {
       break;
     }

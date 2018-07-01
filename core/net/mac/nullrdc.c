@@ -247,7 +247,13 @@ send_one_packet(mac_callback_t sent, void *ptr)
 static void
 send_packet(mac_callback_t sent, void *ptr)
 {
+#if SINGLE_NODE_NULL == 1
+  // NETSTACK_RADIO.on();
   send_one_packet(sent, ptr);
+  // NETSTACK_RADIO.off();
+#else
+  send_one_packet(sent, ptr);
+#endif
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -362,7 +368,9 @@ channel_check_interval(void)
 static void
 init(void)
 {
+#if SINGLE_NODE_NULL == 0
   on();
+#endif
 }
 /*---------------------------------------------------------------------------*/
 const struct rdc_driver nullrdc_driver = {

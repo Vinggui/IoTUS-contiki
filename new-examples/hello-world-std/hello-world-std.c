@@ -136,8 +136,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         PROCESS_WAIT_EVENT();
         n++;
         //uint8_t nodeToSend = n%7 + 2;
+
+#if SINGLE_NODE_NULL == 0
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
            random_rand()%100 > 66) {
+#else
+          {
+#endif
 
           send_msg(NULL);
           //uint8_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms

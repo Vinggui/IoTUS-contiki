@@ -123,7 +123,12 @@ staticnet_output(void)
   }
 
   static linkaddr_t addrNext;
+
+#if EXP_STAR_LIKE == 1
+  addrNext.u8[0] = 1;
+#else
   addrNext.u8[0] = routing_table[linkaddr_node_addr.u8[0]][finalReceiver->u8[0]];
+#endif
   addrNext.u8[1] = 0;
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrNext);
 #endif

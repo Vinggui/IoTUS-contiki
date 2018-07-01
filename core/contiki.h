@@ -61,9 +61,30 @@
 
 
 #define POWER_TRACE_RATE                  2
-#define BROADCAST_EXAMPLE                 1
-#define USE_NEW_FEATURES                  0
+#define BROADCAST_EXAMPLE                 0
+#define USE_NEW_FEATURES                  1
 #define ALOHA_STYLE                       0
-#define BACKOFF_TIME                      1000
+#define EXP_STAR_LIKE					  0
+#define SINGLE_NODE_NULL                  1
+#define BACKOFF_TIME                      6000
+
+#if ALOHA_STYLE == 1
+	#if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 1
+		#error CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION is ON!
+	#endif
+#elif SINGLE_NODE_NULL == 1
+	#if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 1
+		#error CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION is ON!
+	#endif
+	#if NETSTACK_CONF_RDC != nullrdc_driver
+		#error NETSTACK_CONF_RDC is not nullrdc_driver!
+	#endif
+#else
+	#if EXP_STAR_LIKE == 0
+		#if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 0
+			#error CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION is OFF!
+		#endif
+	#endif
+#endif
 
 #endif /* CONTIKI_H_ */
