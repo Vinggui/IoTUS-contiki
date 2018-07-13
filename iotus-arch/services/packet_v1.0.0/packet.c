@@ -30,6 +30,8 @@
 #include "pieces.h"
 #include "platform-conf.h"
 #include "nodes.h"
+#include "random.h"
+#include "sys/timer.h"
 
 
 #define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT
@@ -44,6 +46,7 @@ LIST(gPacketReadyList);
 
 static packet_sent_cb gApplicationConfirmationCB;
 static packet_handler gApplicationPacketHandler;
+static struct timer inter_sending_timer;
 
 /*---------------------------------------------------------------------*/
 /*
@@ -906,6 +909,11 @@ process_sending_packet_on_layers(iotus_packet_t *packetSelected)
 void
 packet_poll_by_priority(uint8_t num)
 {
+  if(!timer_expired(&inter_sending_timer)) {
+    return;
+  }
+  clock_time_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+  timer_set(&inter_sending_timer, backoff);
   iotus_packet_t *packet, *packetSelected;
   unsigned long minTimeout, packetTimeout;
 
@@ -1067,6 +1075,9 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
 
     // Initiate the lists of module
     list_init(gPacketBuildingList);
+
+    clock_time_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+    timer_set(&inter_sending_timer, backoff);
   } else if (IOTUS_RUN_SERVICE == signal){
 
   } else if (IOTUS_END_SERVICE == signal){

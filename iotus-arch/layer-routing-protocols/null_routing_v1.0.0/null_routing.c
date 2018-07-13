@@ -54,6 +54,8 @@ int routing_table[9][9] =
 //Timer for sending neighbor discovery
 static struct timer sendND;
 static iotus_node_t *rootNode;
+static iotus_node_t *fatherNode;
+static uint8_t private_keep_alive[12];
 
 
 static iotus_netstack_return
@@ -71,8 +73,8 @@ send(iotus_packet_t *packet)
 #if EXP_STAR_LIKE == 1
     uint8_t nextHop = 1;
 #else
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 7 ||
-       finalDestLastAddress[0] > 7) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 8 ||
+       finalDestLastAddress[0] > 8) {
       printf("wrong destination");
       return ROUTING_TX_ERR;
     }
@@ -138,30 +140,29 @@ input_packet(iotus_packet_t *packet)
     uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestAddr];
 
     if(nextHop != 0) {
+      if(nextHop == 1) {
+        if(rootNode != NULL) {
+          packetForward = packet_create_msg(
+                            packet_get_payload_size(packet),
+                            packet_get_payload_data(packet),
+                            IOTUS_PRIORITY_ROUTING,
+                            ROUTING_PACKETS_TIMEOUT,
+                            TRUE,
+                            rootNode);
 
-      uint8_t dest[2];
-      dest[0] = nextHop;
-      dest[1] = 0;
-      iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
-      if(destNode != NULL) {
-
-        packetForward = packet_create_msg(
-                          packet_get_payload_size(packet),
-                          packet_get_payload_data(packet),
-                          IOTUS_PRIORITY_ROUTING,
-                          ROUTING_PACKETS_TIMEOUT,
-                          TRUE,
-                          destNode);
-
-        if(NULL == packetForward) {
-          SAFE_PRINTF_LOG_INFO("Packet failed");
-          return RX_ERR_DROPPED;
+          if(NULL == packetForward) {
+            SAFE_PRINTF_LOG_INFO("Packet failed");
+            return RX_ERR_DROPPED;
+          }
+          packet_set_parameter(packetForward, packet->params);
+          SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
         }
-        packet_set_parameter(packetForward, packet->params);
-        SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
+        send(packetForward);
+      } else {
+        printf("Not sending correctly");
+        return RX_ERR_DROPPED;
       }
-
-      send(packetForward);
+      
     }
     return RX_PROCESSED;
   }
@@ -196,7 +197,15 @@ start(void)
   }
 
   uint8_t address[2] = {rootValue,0};
-  rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
+  fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
+
+  uint8_t address2[2] = {1,0};
+  rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
+
+  uint8_t selfAddrValue;
+  selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+  sprintf((char *)private_keep_alive, "### %u  %u ###", selfAddrValue,
+                                                        selfAddrValue);
 }
 
 
@@ -228,21 +237,17 @@ run(void)
         timer_set(&sendND, backoff);
 #if USE_NEW_FEATURES == 1
         printf("Creating piggy routing\n");
-        piggyback_create_piece(12, (uint8_t *)"123456789012", IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+        piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
 #else
-        printf("Creating keep alive alone\n");
-        uint8_t dest[2];
-        dest[0] = 1;
-        dest[1] = 0;
-        iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
-        if(destNode != NULL) {
+        printf("Create KA alone\n");
+        if(rootNode != NULL) {
             iotus_initiate_msg(
                     12,
-                    (uint8_t *)"123456789012",
+                    private_keep_alive,
                     PACKET_PARAMETERS_WAIT_FOR_ACK,
                     IOTUS_PRIORITY_APPLICATION,
                     5000,
-                    destNode);
+                    rootNode);
         }
 #endif
       }
