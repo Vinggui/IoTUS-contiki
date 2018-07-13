@@ -54,6 +54,21 @@ piggyback_destroy(iotus_piggyback_t *piece) {
 }
 
 /*---------------------------------------------------------------------*/
+/**
+ * \brief     Destroy the list of additional information that a piece may contain.
+ * \param h   The pointer to this list.
+ */
+void
+piggyback_clean_list(list_t list)
+{
+  iotus_piggyback_t *h;
+  while(NULL != (h =list_pop(list))) {
+    piggyback_destroy(h);
+  }
+  SAFE_PRINTF_LOG_INFO("Piggy list clean");
+}
+
+/*---------------------------------------------------------------------*/
 /*
  * Function to create     header pieces to be attached
  * \param headerSize      Size of the header in bytes

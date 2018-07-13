@@ -78,6 +78,7 @@ int routing_table[9][9] =
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer;
 rtimer_clock_t packetBuildingTime;
+static uint8_t private_keep_alive[12];
 
 void (* up_msg_confirm)(int status, int num_tx) = NULL;
 void (* up_msg_input)(const linkaddr_t *source) = NULL;
@@ -174,7 +175,7 @@ send_neighbor_discovery(void *ptr)
   ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
 
   // packetbuf_copyfrom("123456789012345678901234567890", 30);
-  packetbuf_copyfrom("123456789012", 12);
+  packetbuf_copyfrom(private_keep_alive, 12);
   linkaddr_t addr;
   addr.u8[0] = 1;
   addr.u8[1] = 0;
@@ -203,6 +204,12 @@ init(void)
   }
 #endif
 
+
+  static uint8_t selfAddrValue;
+
+  selfAddrValue = linkaddr_node_addr.u8[0];
+  sprintf((char *)private_keep_alive, "### %u  %u ###", selfAddrValue,
+                                                        selfAddrValue);
 }
 
 
