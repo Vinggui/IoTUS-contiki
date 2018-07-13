@@ -40,6 +40,9 @@ typedef struct piggyback_piece {
 Boolean
 piggyback_destroy(iotus_piggyback_t *piece);
 
+void
+piggyback_clean_list(list_t list);
+
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
     uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout);
