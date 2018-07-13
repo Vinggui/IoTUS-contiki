@@ -71,8 +71,8 @@ send(iotus_packet_t *packet)
 #if EXP_STAR_LIKE == 1
     uint8_t nextHop = 1;
 #else
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 7 ||
-       finalDestLastAddress[0] > 7) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 8 ||
+       finalDestLastAddress[0] > 8) {
       printf("wrong destination");
       return ROUTING_TX_ERR;
     }

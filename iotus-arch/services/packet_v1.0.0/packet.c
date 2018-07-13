@@ -60,6 +60,7 @@ packet_destroy(iotus_packet_t *piece) {
   list_remove(gPacketReadyList, piece);
   list_remove(gPacketBuildingList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
+  //destroy attacjed piggyback
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
 
