@@ -1,10 +1,10 @@
 CONTIKI_PROJECT = hello-world-iotus
 APPS+=powertrace
 
-# For the use of the new archtecture, this declaration is necessary
+# For the use of the new architecture, this declaration is necessary
 CONTIKI_COMM_NEW_STACK = IoTUS
 
-# These 3 declarations are mandatory to explicity define IoTUS
+# These 3 declarations are mandatory to explicitly define IoTUS
 IOTUS_CONF_USING_TRANSPORT = 0
 IOTUS_CONF_USING_ROUTING = 1
 IOTUS_CONF_USING_DATA_LINK = 1
@@ -17,7 +17,7 @@ IOTUS_CONF_USING_DATA_LINK = 1
 #IOTUS_CONF_STATIC_DATA_LINK_LAYER =   edytee_MAC_v1.0.0
 
 IOTUS_CONF_COMPILE_MODE = DYNAMIC
-# If dynamic mode is selected, then profiles must be selected or explicite protocols
+# If dynamic mode is selected, then profiles must be selected or declared protocols
 IOTUS_CONF_DYNAMIC_MODE_PROFILES = TEST
 #IOTUS_CONF_TRANSPORT_PROTOCOLS_LIST = null_v1.0.0
 #IOTUS_CONF_ROUTING_PROTOCOLS_LIST = null_v1.0.0 edytee_routing_v1.0.0
