@@ -25,36 +25,41 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 
-#define NEIGHBOR_DISCOVERY_INTERVAL       15//sec
-#define ROUTING_PACKETS_TIMEOUT           60000//msec
-
 // Next dest table using final value{source, final destination}
-int routing_table[9][9] =
+int routing_table[13][13] =
 {
-  //0=>
-  {0,   0,   0,   0,   0,   0,   0,   0,   0},
+  //0=> 1    2    3    4    5    6    7    8    9   10   11   12
+  {0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
   //1=>
-  {0,   0,   2,   3,   2,   2,   3,   3,   3},
+  {0,   0,   2,   3,   2,   2,   3,   3,   3,   2,   3,   3,   3},
   //2=>
-  {0,   1,   0,   3,   4,   5,   3,   3,   3},
+  {0,   1,   0,   3,   4,   5,   3,   3,   3,   4,   3,   3,   3},
   //3=>
-  {0,   1,   2,   0,   2,   2,   6,   7,   8},
+  {0,   1,   2,   0,   2,   2,   6,   7,   8,   2,   6,   6,   6},
   //4=>
-  {0,   2,   2,   2,   0,   5,   2,   2,   2},
+  {0,   2,   2,   2,   0,   5,   2,   2,   2,   9,   2,   2,   2},
   //5=>
-  {0,   2,   2,   2,   4,   0,   2,   2,   2},
+  {0,   2,   2,   2,   4,   0,   2,   2,   2,   4,   2,   2,   2},
   //6=>
-  {0,   3,   3,   3,   3,   3,   0,   7,   8},
+  {0,   3,   3,   3,   3,   3,   0,   7,   8,   3,  10,  10,  10},
   //7=>
-  {0,   3,   3,   3,   3,   3,   6,   0,   8},
+  {0,   3,   3,   3,   3,   3,   6,   0,   8,   3,   6,   6,   6},
   //8=>
-  {0,   3,   3,   3,   3,   3,   6,   7,   0}
+  {0,   3,   3,   3,   3,   3,   6,   7,   0,   3,   6,   6,   6},
+  //9=>
+  {0,   4,   4,   4,   4,   4,   4,   4,   4,   0,   4,   4,   4},
+  //10=>
+  {0,   6,   6,   6,   6,   6,   6,   6,   6,   6,   0,  11,  12},
+  //11=>
+  {0,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,   0,  10},
+  //12=>
+  {0,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  11,   0}
 };
 
 //Timer for sending neighbor discovery
 static struct timer sendND;
-static iotus_node_t *rootNode;
-static iotus_node_t *fatherNode;
+iotus_node_t *rootNode;
+iotus_node_t *fatherNode;
 static uint8_t private_keep_alive[12];
 
 
@@ -73,8 +78,8 @@ send(iotus_packet_t *packet)
 #if EXP_STAR_LIKE == 1
     uint8_t nextHop = 1;
 #else
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 8 ||
-       finalDestLastAddress[0] > 8) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 12 ||
+       finalDestLastAddress[0] > 12) {
       printf("wrong destination");
       return ROUTING_TX_ERR;
     }
@@ -88,16 +93,16 @@ send(iotus_packet_t *packet)
 
     printf("Final %u next %u\n",finalDestLastAddress[0],nextHop);
 
-    uint8_t addressNext[2] = {nextHop,0};
-    nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
+    // uint8_t addressNext[2] = {nextHop,0};
+    // nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
 
-    if(NULL == nextHopNode) {
-      SAFE_PRINTF_LOG_ERROR("No next hop");
-      return ROUTING_TX_ERR;
-    }
+    // if(NULL == nextHopNode) {
+      // SAFE_PRINTF_LOG_ERROR("No next hop");
+      // return ROUTING_TX_ERR;
+    // }
 
 
-    packet->nextDestinationNode = nextHopNode;
+    packet->nextDestinationNode = fatherNode;
 
     uint8_t bitSequence[1];
     bitSequence[0] = finalDestLastAddress[0];
@@ -137,10 +142,10 @@ input_packet(iotus_packet_t *packet)
       return RX_SEND_UP_STACK;
     }
     //search for the next node...
-    uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestAddr];
+    uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+    uint8_t nextHop = routing_table[ourAddr][finalDestAddr];
 
     if(nextHop != 0) {
-      if(nextHop == 1) {
         if(rootNode != NULL) {
           packetForward = packet_create_msg(
                             packet_get_payload_size(packet),
@@ -154,15 +159,10 @@ input_packet(iotus_packet_t *packet)
             SAFE_PRINTF_LOG_INFO("Packet failed");
             return RX_ERR_DROPPED;
           }
-          packet_set_parameter(packetForward, packet->params);
+          packet_set_parameter(packetForward, packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK);
           SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
+          send(packetForward);
         }
-        send(packetForward);
-      } else {
-        printf("Not sending correctly");
-        return RX_ERR_DROPPED;
-      }
-      
     }
     return RX_PROCESSED;
   }
@@ -184,17 +184,11 @@ start(void)
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 
   uint8_t rootValue = 0;
-  int i;
-  for(i=0; i<3; i++) {
 #if EXP_STAR_LIKE == 0
-    rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][i];
+  rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][1];
 #else
-    rootValue = 1;
+  rootValue = 1;
 #endif
-    if(rootValue != 0) {
-      break;
-    }
-  }
 
   uint8_t address[2] = {rootValue,0};
   fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
@@ -204,7 +198,7 @@ start(void)
 
   uint8_t selfAddrValue;
   selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-  sprintf((char *)private_keep_alive, "### %u  %u ###", selfAddrValue,
+  sprintf((char *)private_keep_alive, "### %02u %02u###", selfAddrValue,
                                                         selfAddrValue);
 }
 
@@ -214,7 +208,7 @@ post_start(void)
 {
 #if BROADCAST_EXAMPLE == 0
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+    clock_time_t backoff = CLOCK_SECOND*(KEEP_ALIVE_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
     timer_set(&sendND, backoff);
   }
 #endif
@@ -233,11 +227,11 @@ run(void)
     if(selfAddrValue != 1) {
       if(timer_expired(&sendND)) {
         //timer_restart(&sendND);
-        clock_time_t backoff = CLOCK_SECOND*(NEIGHBOR_DISCOVERY_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+        clock_time_t backoff = CLOCK_SECOND*(KEEP_ALIVE_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
         timer_set(&sendND, backoff);
 #if USE_NEW_FEATURES == 1
         printf("Creating piggy routing\n");
-        piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, NEIGHBOR_DISCOVERY_INTERVAL*1000);
+        piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, KEEP_ALIVE_INTERVAL*1000);
 #else
         printf("Create KA alone\n");
         if(rootNode != NULL) {

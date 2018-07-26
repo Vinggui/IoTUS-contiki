@@ -913,7 +913,7 @@ packet_poll_by_priority(uint8_t num)
   if(!timer_expired(&inter_sending_timer)) {
     return;
   }
-  clock_time_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
+  clock_time_t backoff = (CLOCK_SECOND*(125/*+random_rand()%500*/))/1000;//ms
   timer_set(&inter_sending_timer, backoff);
   iotus_packet_t *packet, *packetSelected;
   unsigned long minTimeout, packetTimeout;

@@ -25,7 +25,7 @@
 #include "sys/rtimer.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "PhasR"
 #include "safe-printer.h"
 
@@ -190,14 +190,22 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
     ctimewait = (CLOCK_SECOND * (wait - guard_time)) / RTIMER_ARCH_SECOND;
 
     if(ctimewait > PHASE_DEFER_THRESHOLD) {
-      struct phase_queueitem *p;
-      
-      p = memb_alloc(&phased_packets_memb);
-      if(p != NULL) {
-        p->packetPhased = packet;
-        SAFE_PRINTF_LOG_INFO("saved for later! %u\n", packet_get_sequence_number(packet));
-        ctimer_set(&p->timer, ctimewait, send_packet, p);
-        return PHASE_DEFERRED;
+      if(!packet_get_parameter(packet, PACKET_PARAMETERS_WAS_DEFFERED)) {
+        // This paket was not yet deffered, update data
+        struct phase_queueitem *p;
+        
+        p = memb_alloc(&phased_packets_memb);
+        if(p != NULL) {
+          p->packetPhased = packet;
+          SAFE_PRINTF_LOG_INFO("saved for later!\n");
+          ctimer_set(&p->timer, ctimewait, send_packet, p);
+          packet_set_parameter(packet,PACKET_PARAMETERS_WAS_DEFFERED);
+          packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
+          return PHASE_DEFERRED;
+        } else {
+          SAFE_PRINTF_LOG_INFO("Error allocating!\n");
+          return PHASE_UNKNOWN;
+        }
       }
     }
 

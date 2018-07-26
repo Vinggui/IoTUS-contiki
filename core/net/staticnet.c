@@ -24,10 +24,6 @@
 #include "lib/list.h"
 
 
-#define NEIGHBOR_DISCOVERY_INTERVAL       15//sec
-#define ROUTING_PACKETS_TIMEOUT           5000//msec
-
-
 #ifdef RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
 #define BROADCAST_ANNOUNCEMENT_CHANNEL RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL
 #else /* RIME_CONF_BROADCAST_ANNOUNCEMENT_CHANNEL */
@@ -53,26 +49,34 @@
 #endif /* RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME */
 
 // Next dest table using final value{source, final destination}
-int routing_table[9][9] =
+int routing_table[13][13] =
 {
-  //0=>
-  {0,   0,   0,   0,   0,   0,   0,   0,   0},
+  //0=> 1    2    3    4    5    6    7    8    9   10   11   12
+  {0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
   //1=>
-  {0,   0,   2,   3,   2,   2,   3,   3,   3},
+  {0,   0,   2,   3,   2,   2,   3,   3,   3,   2,   3,   3,   3},
   //2=>
-  {0,   1,   0,   3,   4,   5,   3,   3,   3},
+  {0,   1,   0,   3,   4,   5,   3,   3,   3,   4,   3,   3,   3},
   //3=>
-  {0,   1,   2,   0,   2,   2,   6,   7,   8},
+  {0,   1,   2,   0,   2,   2,   6,   7,   8,   2,   6,   6,   6},
   //4=>
-  {0,   2,   2,   2,   0,   5,   2,   2,   2},
+  {0,   2,   2,   2,   0,   5,   2,   2,   2,   9,   2,   2,   2},
   //5=>
-  {0,   2,   2,   2,   4,   0,   2,   2,   2},
+  {0,   2,   2,   2,   4,   0,   2,   2,   2,   4,   2,   2,   2},
   //6=>
-  {0,   3,   3,   3,   3,   3,   0,   7,   8},
+  {0,   3,   3,   3,   3,   3,   0,   7,   8,   3,  10,  10,  10},
   //7=>
-  {0,   3,   3,   3,   3,   3,   6,   0,   8},
+  {0,   3,   3,   3,   3,   3,   6,   0,   8,   3,   6,   6,   6},
   //8=>
-  {0,   3,   3,   3,   3,   3,   6,   7,   0}
+  {0,   3,   3,   3,   3,   3,   6,   7,   0,   3,   6,   6,   6},
+  //9=>
+  {0,   4,   4,   4,   4,   4,   4,   4,   4,   0,   4,   4,   4},
+  //10=>
+  {0,   6,   6,   6,   6,   6,   6,   6,   6,   6,   0,  11,  12},
+  //11=>
+  {0,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,   0,  10},
+  //12=>
+  {0,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  11,   0}
 };
 
 //Timer for sending neighbor discovery
@@ -169,10 +173,10 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 
 /*---------------------------------------------------------------------------*/
 static void
-send_neighbor_discovery(void *ptr)
+send_keep_alive(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-  ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
+  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+  ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 
   // packetbuf_copyfrom("123456789012345678901234567890", 30);
   packetbuf_copyfrom(private_keep_alive, 12);
@@ -199,8 +203,8 @@ init(void)
 
 #if BROADCAST_EXAMPLE == 0
   if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-    clock_time_t backoff = CLOCK_SECOND*NEIGHBOR_DISCOVERY_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-    ctimer_set(&sendNDTimer, backoff, send_neighbor_discovery, NULL);
+    clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
   }
 #endif
 
@@ -208,7 +212,7 @@ init(void)
   static uint8_t selfAddrValue;
 
   selfAddrValue = linkaddr_node_addr.u8[0];
-  sprintf((char *)private_keep_alive, "### %u  %u ###", selfAddrValue,
+  sprintf((char *)private_keep_alive, "### %02u %02u###", selfAddrValue,
                                                         selfAddrValue);
 }
 

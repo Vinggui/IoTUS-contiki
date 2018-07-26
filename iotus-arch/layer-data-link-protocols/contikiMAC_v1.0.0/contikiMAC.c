@@ -61,7 +61,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -652,14 +652,10 @@ send_packet(iotus_packet_t *packet)
   active_radio_driver->prepare(packet);
 
 #if WITH_PHASE_OPTIMIZATION
-  if(!is_broadcast && !is_receiver_awake &&
-     !packet_get_parameter(packet, PACKET_PARAMETERS_WAS_DEFFERED)) {
-
-    ret = phase_recorder_wait(packet_get_next_destination(packet),
+  if(!is_broadcast && !is_receiver_awake) {
+      ret = phase_recorder_wait(packet_get_next_destination(packet),
                                CYCLE_TIME, GUARD_TIME, packet);
     if(ret == PHASE_DEFERRED) {
-      packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
-      packet_set_parameter(packet,PACKET_PARAMETERS_WAS_DEFFERED);
       return MAC_TX_DEFERRED;
     }
     if(ret != PHASE_UNKNOWN) {
@@ -803,7 +799,8 @@ send_packet(iotus_packet_t *packet)
 
         iotus_packet_t *ack = active_radio_driver->read();
         if(NULL == ack) {
-          SAFE_PRINTF_LOG_ERROR("No ack received\n");
+          SAFE_PRINTF_LOG_ERROR("contikimac: collisions while sending\n");
+          collisions++;
           iotus_parameters_radio_events.collisions++;
         } else {
           uint8_t ackLength = packet_get_payload_size(ack);

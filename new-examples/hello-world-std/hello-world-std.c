@@ -44,8 +44,6 @@
 #include <stdio.h> /* For printf() */
 #include "random.h"
 
-#define MSG_INTERVAL                      8//sec
-
 /*---------------------------------------------------------------------------*/
 PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
@@ -91,11 +89,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     selfAddrValue = linkaddr_node_addr.u8[0];
 
-    sprintf((char *)selfMsg, "%u %u %u %u %u %u %u %u %u %u+", selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
+    sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
                                                                selfAddrValue,
                                                                selfAddrValue,
                                                                selfAddrValue,
@@ -139,7 +133,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
 #if SINGLE_NODE_NULL == 0
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
-           random_rand()%100 > 66) {
+           random_rand()%100 > (100-TRANSMISSION_CHANCE)) {
 #else
           {
 #endif

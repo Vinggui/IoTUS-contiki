@@ -22,6 +22,9 @@
 #ifndef IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_
 #define IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_
 
+extern iotus_node_t *rootNode;
+extern iotus_node_t *fatherNode;
+
 extern struct iotus_routing_protocol_struct null_routing_protocol;
 
 

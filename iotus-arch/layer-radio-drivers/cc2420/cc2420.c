@@ -92,7 +92,7 @@ enum write_ram_order {
   WRITE_RAM_REVERSE
 };
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -975,7 +975,7 @@ PROCESS_THREAD(cc2420_process, ev, data)
     PROCESS_YIELD_UNTIL(!poll_mode && ev == PROCESS_EVENT_POLL);
     //PRINTF("SETar timestamp");
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    iotus_packet_t *packet;
+    iotus_packet_t *packet = NULL;
     packet = cc2420_read();
     //packetbuf_set_datalen(len);
     
