@@ -19,7 +19,7 @@
 #include "clock.h"
 
 
-typedef struct timestamp {
+typedef struct __attribute__ ((__packed__)) timestamp {
   unsigned long seconds;
   clock_time_t fineTime;
 } timestamp_t;

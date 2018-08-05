@@ -71,7 +71,7 @@
 
 #define POWER_TRACE_RATE                  2
 #define BROADCAST_EXAMPLE                 0
-#define USE_NEW_FEATURES                  1
+#define USE_NEW_FEATURES                  0
 #define ALOHA_STYLE                       0
 #define EXP_STAR_LIKE                     0
 #define SINGLE_NODE_NULL                  0
