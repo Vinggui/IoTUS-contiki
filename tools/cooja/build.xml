@@ -39,6 +39,7 @@ The COOJA Simulator
   <target name="init">
     <tstamp/>
   </target>
+
   
   <target name="export-jar" depends="init, jar">
     <java fork="yes" dir="${build}" classname="org.contikios.cooja.util.ExecuteJAR" maxmemory="512m">

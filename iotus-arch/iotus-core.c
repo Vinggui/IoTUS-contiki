@@ -94,7 +94,7 @@ uint16_t netstackFreeTime = 0;
 
 static application_demanding_task gApplicationDemandingTask;
 
-PROCESS(iotus_core_process, "Core IoTUS Process");
+// PROCESS(iotus_core_process, "Core IoTUS Process");
 
 
 /*---------------------------------------------------------------------------*/
@@ -257,7 +257,7 @@ iotus_core_start_system (
   ACTIVE_DATA_LINK_PROTOCOL(post_start);
   #endif
 
-  process_start(&iotus_core_process, NULL);
+  // process_start(&iotus_core_process, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -308,63 +308,63 @@ iotus_set_demanding_task(uint16_t time_needed, application_demanding_task task)
 
 /*---------------------------------------------------------------------------*/
 /* Implementation of the IoTus core process */
-PROCESS_THREAD(iotus_core_process, ev, data)
-{
+// PROCESS_THREAD(iotus_core_process, ev, data)
+// {
   /* variables are declared static to ensure their values are kept
    * between kernel calls.
    */
   //static struct stimer refreshingIICTimer;
 
   /* Any process must start with this. */
-  PROCESS_BEGIN();
+  // PROCESS_BEGIN();
 
   /* Initiate the lists of module */
 
   //PROCESS_PAUSE();
 
   //Main loop here
-  for(;;) {
+  // for(;;) {
 
-    //Time to run protocols
-    ACTIVE_RADIO_DRIVER(run);
-    #if IOTUS_CONF_USING_DATA_LINK == 1
-      ACTIVE_DATA_LINK_PROTOCOL(run);
-    #else
-      sleepGreenFlag = (1<<IOTUS_PRIORITY_DATA_LINK);
-    #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
-    #if IOTUS_CONF_USING_ROUTING == 1
-      ACTIVE_ROUTING_PROTOCOL(run);
-    #else
-      sleepGreenFlag = (1<<IOTUS_PRIORITY_ROUTING);
-    #endif/*IOTUS_CONF_USING_ROUTING == 1*/
-    #if IOTUS_CONF_USING_TRANSPORT == 1
-      ACTIVE_TRANSPORT_PROTOCOL(run);
-    #else
-      sleepGreenFlag = (1<<IOTUS_PRIORITY_TRANSPORT);
-    #endif/*IOTUS_CONF_USING_TRANSPORT == 1*/
-    // Run each services
-    send_signal_to_services(IOTUS_RUN_SERVICE, NULL);
-    if(netstackFreeTime > iotus_QoS.applicationDuration) {
-      //Execute the demanding application task
+  //   //Time to run protocols
+  //   ACTIVE_RADIO_DRIVER(run);
+  //   #if IOTUS_CONF_USING_DATA_LINK == 1
+  //     ACTIVE_DATA_LINK_PROTOCOL(run);
+  //   #else
+  //     sleepGreenFlag = (1<<IOTUS_PRIORITY_DATA_LINK);
+  //   #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
+  //   #if IOTUS_CONF_USING_ROUTING == 1
+  //     ACTIVE_ROUTING_PROTOCOL(run);
+  //   #else
+  //     sleepGreenFlag = (1<<IOTUS_PRIORITY_ROUTING);
+  //   #endif/*IOTUS_CONF_USING_ROUTING == 1*/
+  //   #if IOTUS_CONF_USING_TRANSPORT == 1
+  //     ACTIVE_TRANSPORT_PROTOCOL(run);
+  //   #else
+  //     sleepGreenFlag = (1<<IOTUS_PRIORITY_TRANSPORT);
+  //   #endifIOTUS_CONF_USING_TRANSPORT == 1
+  //   // Run each services
+  //   send_signal_to_services(IOTUS_RUN_SERVICE, NULL);
+  //   if(netstackFreeTime > iotus_QoS.applicationDuration) {
+  //     //Execute the demanding application task
       
-    }
-    if(allowSystemSleep &&
-      sleepGreenFlag == 0b00011110) {//radio=0, data_link=1, routing=2, transport=3, app=4
-      /* 
-       * Time management is now necessary.
-       * The stack will take as long as it needs to operate
-       * and then give the rest of the time to the application layer.
-       */
-      //sleep();
-      sleepGreenFlag = 0;
-    }
+  //   }
+  //   if(allowSystemSleep &&
+  //     sleepGreenFlag == 0b00011110) {//radio=0, data_link=1, routing=2, transport=3, app=4
+  //     /* 
+  //      * Time management is now necessary.
+  //      * The stack will take as long as it needs to operate
+  //      * and then give the rest of the time to the application layer.
+  //      */
+  //     //sleep();
+  //     sleepGreenFlag = 0;
+  //   }
     //Reset the sleep flag
 
-    PROCESS_PAUSE();
-  }
+    // PROCESS_WAIT_EVENT();
+  // }
   // any process must end with this, even if it is never reached.
-  PROCESS_END();
-}
+  // PROCESS_END();
+// }
 
 
 /* The following stuff ends the \defgroup block at the beginning of
