@@ -66,8 +66,6 @@ static uint8_t private_keep_alive[12];
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
-  iotus_node_t *nextHopNode;
-
   if(NODES_BROADCAST == packet->finalDestinationNode) {
     packet->nextDestinationNode = NODES_BROADCAST;
   } else {
@@ -161,7 +159,7 @@ input_packet(iotus_packet_t *packet)
           }
           packet_set_parameter(packetForward, packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK);
           SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
-          send(packetForward);
+          packet_send(packetForward);
         }
     }
     return RX_PROCESSED;
@@ -260,7 +258,6 @@ close(void)
 struct iotus_routing_protocol_struct null_routing_protocol = {
   start,
   post_start,
-  run,
   close,
   send,
   send_cb,

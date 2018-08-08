@@ -179,10 +179,13 @@ Boolean
 packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
 
 void
-packet_poll_by_priority(uint8_t num);
+packet_send(iotus_packet_t *packetSelected);
 
-void
-packet_poll_by_node(iotus_node_t *node, uint8_t num);
+// void
+// packet_poll_by_priority(uint8_t num);
+
+// void
+// packet_poll_by_node(iotus_node_t *node, uint8_t num);
 
 void
 packet_continue_deferred_packet(iotus_packet_t *packet);

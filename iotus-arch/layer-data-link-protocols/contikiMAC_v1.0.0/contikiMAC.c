@@ -1045,13 +1045,8 @@ turn_off(int keep_radio_on)
     radio_is_on = 1;
     return active_radio_driver->on();
   } else {
-#if ALOHA_STYLE == 0
-    //TODOOOO AQUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUIIIIIIIIIIIIIIIIIIIIIIIIIII
     radio_is_on = 0;
     return active_radio_driver->off();
-#else
-    return 1;
-#endif
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -1085,27 +1080,11 @@ post_start(void)
   //   timer_set(&sendBC, CLOCK_SECOND*10);
   // }
 }
-/*---------------------------------------------------------------------------*/
-static void
-run(void)
-{
-  //Poll packets available
-  packet_poll_by_priority(1);
 
-  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
-  //   if(timer_expired(&sendBC)) {
-  //     timer_restart(&sendBC);
-
-  //     iotus_packet_t *pkt = packet_create_msg(20, "abcdefghijklmnopqrst", IOTUS_PRIORITY_DATA_LINK, 0, TRUE, NODES_BROADCAST);
-  //     packet_set_parameter(pkt, PACKET_PARAMETERS_ALLOW_PIGGYBACK);
-  //   }
-  // }
-}
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",
   init,
   post_start,
-  run,
   NULL,
   send_packet,
   NULL,

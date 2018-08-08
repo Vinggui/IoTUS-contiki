@@ -46,7 +46,7 @@ LIST(gPacketReadyList);
 
 static packet_sent_cb gApplicationConfirmationCB;
 static packet_handler gApplicationPacketHandler;
-static struct timer inter_sending_timer;
+
 
 /*---------------------------------------------------------------------*/
 /*
@@ -864,8 +864,8 @@ return_packet_on_layers(iotus_packet_t *packetSelected, iotus_netstack_return re
   }
 }
 /*---------------------------------------------------------------------*/
-static void
-process_sending_packet_on_layers(iotus_packet_t *packetSelected)
+void
+packet_send(iotus_packet_t *packetSelected)
 {
   /*
    * Call the building packet of each layer.
@@ -877,13 +877,13 @@ process_sending_packet_on_layers(iotus_packet_t *packetSelected)
   */
   iotus_netstack_return returnAns = TRANSPORT_TX_OK;
   if(active_transport_protocol->build_to_send != NULL &&
-     packetSelected->priority > IOTUS_PRIORITY_TRANSPORT) {
+     packetSelected->priority >= IOTUS_PRIORITY_TRANSPORT) {
     returnAns = active_transport_protocol->build_to_send(packetSelected);
   }
   if(TRANSPORT_TX_OK == returnAns) {
     returnAns = ROUTING_TX_OK;
     if(active_routing_protocol->build_to_send != NULL &&
-       packetSelected->priority > IOTUS_PRIORITY_ROUTING) {
+       packetSelected->priority >= IOTUS_PRIORITY_ROUTING) {
       returnAns = active_routing_protocol->build_to_send(packetSelected);
     }
     if(ROUTING_TX_OK == returnAns) {
@@ -907,68 +907,63 @@ process_sending_packet_on_layers(iotus_packet_t *packetSelected)
  * \brief   Select one packet and initiate the stack signaling of packet to be sent.
  * \param num   The number of packets to be polled and ready to transmit.
  */
-void
-packet_poll_by_priority(uint8_t num)
-{
-  if(!timer_expired(&inter_sending_timer)) {
-    return;
-  }
-  clock_time_t backoff = (CLOCK_SECOND*(125/*+random_rand()%500*/))/1000;//ms
-  timer_set(&inter_sending_timer, backoff);
-  iotus_packet_t *packet, *packetSelected;
-  unsigned long minTimeout, packetTimeout;
+// void
+// packet_poll_by_priority(uint8_t num)
+// {
+//   iotus_packet_t *packet, *packetSelected;
+//   unsigned long minTimeout, packetTimeout;
 
-  minTimeout = -1;
-  //Get the packet with lowest priority and nearest timeout
-  packetSelected = list_head(gPacketBuildingList);
-  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
-    if(packet->priority != IOTUS_PRIORITY_RADIO &&
-       packet->priority <= packetSelected->priority) {
-      packetTimeout = timestamp_remainder(&packet->timeout);
-      if(packetTimeout < minTimeout) {
-        minTimeout = packetTimeout;
-        packetSelected = packet;
-      }
-    }
-  }
+//   minTimeout = -1;
+//   //Get the packet with lowest priority and nearest timeout
+//   packetSelected = list_head(gPacketBuildingList);
+//   for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+//     if(packet->priority != IOTUS_PRIORITY_RADIO &&
+//        packet->priority <= packetSelected->priority) {
+//       packetTimeout = timestamp_remainder(&packet->timeout);
+//       if(packetTimeout < minTimeout) {
+//         minTimeout = packetTimeout;
+//         packetSelected = packet;
+//       }
+//     }
+//   }
 
-  if(packetSelected != NULL) {
-    process_sending_packet_on_layers(packetSelected);
-  }
-}
+//   if(packetSelected != NULL) {
+//     packet_send(packetSelected);
+//   }
+// }
 
 /*---------------------------------------------------------------------*/
 /**
  * \brief   Select one packet and initiate the stack signaling of packet to be sent.
  * \param num   The number of packets to be polled and ready to transmit.
  */
-void
-packet_poll_by_node(iotus_node_t *node, uint8_t num)
-{
-  iotus_packet_t *packet, *packetSelected;
-  unsigned long minTimeout, packetTimeout;
+// void
+// packet_poll_by_node(iotus_node_t *node, uint8_t num)
+// {
+//   iotus_packet_t *packet, *packetSelected;
+//   unsigned long minTimeout, packetTimeout;
 
-  if(node == NULL) {
-    return;
-  }
+//   if(node == NULL) {
+//     return;
+//   }
 
-  minTimeout = -1; //make it the max value...
-  //Get the packet with lowest priority and nearest timeout
-  packetSelected = list_head(gPacketBuildingList);
-  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
-    if(packet_get_next_destination(packet) == node) {
-      packetTimeout = timestamp_remainder(&packet->timeout);
-      if(packetTimeout < minTimeout) {
-        minTimeout = packetTimeout;
-        packetSelected = packet;
-      }
-    }
-  }
+//   minTimeout = -1; //make it the max value...
+//   //Get the packet with lowest priority and nearest timeout
+//   packetSelected = list_head(gPacketBuildingList);
+//   for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+//     if(packet_get_next_destination(packet) == node) {
+//       packetTimeout = timestamp_remainder(&packet->timeout);
+//       if(packetTimeout < minTimeout) {
+//         minTimeout = packetTimeout;
+//         packetSelected = packet;
+//       }
+//     }
+//   }
 
-  if(packetSelected != NULL) {
-    process_sending_packet_on_layers(packetSelected);
-  }
-}
+//   if(packetSelected != NULL) {
+//     packet_send(packetSelected);
+//   }
+// }
 
 
 /*---------------------------------------------------------------------*/
@@ -1073,13 +1068,8 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
     SAFE_PRINT("\tService Packet:Malloc\n");
     #endif
     
-
     // Initiate the lists of module
     list_init(gPacketBuildingList);
-
-    clock_time_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
-    timer_set(&inter_sending_timer, backoff);
-  } else if (IOTUS_RUN_SERVICE == signal){
 
   } else if (IOTUS_END_SERVICE == signal){
 

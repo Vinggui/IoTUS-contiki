@@ -72,7 +72,6 @@ const struct iotus_data_link_protocol_struct null_MAC_protocol = {
   "nullMAC",
   init,
   post_start,
-  run,
   NULL,
   send_packet,
   NULL,

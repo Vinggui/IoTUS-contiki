@@ -137,7 +137,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         }
 
         etimer_reset(&timer);
-        iotus_allow_sleep(TRUE);
     }
 
 

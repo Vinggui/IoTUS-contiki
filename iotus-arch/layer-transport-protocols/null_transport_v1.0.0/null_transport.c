@@ -48,7 +48,6 @@ close(void)
 const struct iotus_transport_protocol_struct null_transport_protocol = {
   start,
   NULL,
-  run,
   close,
   NULL,
   send_cb,

@@ -292,10 +292,9 @@ iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
     SAFE_PRINT("\tService Piggyback\n");
     list_init(gPiggybackFramesList);
   }
-  else if (IOTUS_RUN_SERVICE == signal){
-    //Verify if any piggyback frame is expiring
-    piggyback_check_timeout();
-  }
+  //Verify if any piggyback frame is expiring
+  // piggyback_check_timeout();
+
   /*  else if (IOTUS_END_SERVICE == signal){
 
   }*/

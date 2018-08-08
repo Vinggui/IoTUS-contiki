@@ -125,13 +125,10 @@ iotus_signal_handler_safe_printer(iotus_service_signal signal, void *data)
     SAFE_PRINT("\tService safe printer\n");
     ringbuf_init(&gOutput, gBuffer, IOTUS_SAFE_PRINTER_BUFFER_SIZE);
     timestamp_mark(&iotus_time_zero,0);
-  } else if (IOTUS_RUN_SERVICE == signal){
-    uint8_t i;
-    for(i=0;i<ringbuf_elements(&gOutput);i++){
-      putchar(ringbuf_get(&gOutput));
-    }
-  }/* else if (IOTUS_END_SERVICE == signal){
-
-  }*/
+  }
+  
+  // uint8_t i;
+  // for(i=0;i<ringbuf_elements(&gOutput);i++){
+  //   putchar(ringbuf_get(&gOutput));
 }
 /*---------------------------------------------------------------------*/

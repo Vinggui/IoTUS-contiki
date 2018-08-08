@@ -124,6 +124,8 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
   }
   packet_set_parameter(packet,params);
   SAFE_PRINTF_LOG_INFO("Packet created");
+
+  packet_send(packet);
   return packet;
 }
 
@@ -271,22 +273,6 @@ iotus_core_netstack_idle_for(iotus_layer_priority layer, uint16_t maxDuration)
   if(layer < 8) {
     sleepGreenFlag |= (1<<layer);
     maxDuration=maxDuration;
-  }
-}
-
-/*---------------------------------------------------------------------------*/
-/**
- * Function for the application layer, informing if the system can go to sleep
- * \param isAllowed Boolean variable to allow the system to go to sleep.
- */
-void
-iotus_allow_sleep(Boolean isAllowed)
-{
-  allowSystemSleep = isAllowed;
-  if(isAllowed) {
-    iotus_core_netstack_idle_for(IOTUS_PRIORITY_APPLICATION, 0xFFFF);
-    SAFE_PRINTF_LOG_INFO("Sleeping for %u", 1000);
-
   }
 }
 
