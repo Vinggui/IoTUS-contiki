@@ -19,7 +19,17 @@
 #include "sys/rtimer.h"
 #define member_size(type, member) sizeof(((type *)0)->member)
 
+
 extern rtimer_clock_t packetBuildingTime;
+extern uint32_t elapsedBuild;
+
+////////////////////////////////////////////////////////////
+//             TEMPORARY MEASURES                         //
+////////////////////////////////////////////////////////////
+#define TIC() leds_on(LEDS_RED);packetBuildingTime = RTIMER_NOW()
+#define TOC(msg) elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;\
+      leds_off(LEDS_RED);\
+      printf("%s %lu\n",msg,elapsedBuild);
 
 uint16_t
 get_safe_pdu_for_layer(uint8_t layer);

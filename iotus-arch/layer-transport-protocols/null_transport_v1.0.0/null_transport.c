@@ -17,7 +17,7 @@
 #include "contiki.h"
 #include "iotus-netstack.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullTrans"
 #include "safe-printer.h"
 

@@ -564,7 +564,6 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   int len;
   uint8_t seqno;
 #endif
-
   /* Exit if RDC and radio were explicitly turned off */
    if(!contikimac_is_on && !contikimac_keep_radio_on) {
     PRINTF("contikimac: radio is turned off\n");
@@ -612,9 +611,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       return MAC_TX_ERR_FATAL;
     }
 
-    uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
-    leds_off(LEDS_BLUE);
-    printf("Pkt built: %lu\n",elapsedBuild);
+    // uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
+    // leds_off(LEDS_BLUE);
+    // printf("Pkt built: %lu\n",elapsedBuild);
   }
 
   transmit_len = packetbuf_totlen();

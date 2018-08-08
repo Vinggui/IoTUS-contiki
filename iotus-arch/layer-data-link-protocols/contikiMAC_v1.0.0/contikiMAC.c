@@ -61,7 +61,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -570,7 +570,6 @@ send_packet(iotus_packet_t *packet)
 #if !RDC_CONF_HARDWARE_ACK
   uint8_t seqno;
 #endif
-
   uint8_t is_receiver_awake = 0;
 
   /* Exit if RDC and radio were explicitly turned off */
@@ -589,7 +588,7 @@ send_packet(iotus_packet_t *packet)
   //packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
   //No action is necessary here, since this procedure is verified at the packet assymbly.
 #endif
-  //if(packetbuf_holds_broadcast()) {
+  
   if(TRUE == packet_holds_broadcast(packet)) {
     is_broadcast = 1;
     PRINTDEBUG("contikimac: send broadcast\n");
@@ -623,6 +622,8 @@ send_packet(iotus_packet_t *packet)
     }
 #endif /* NETSTACK_CONF_WITH_IPV6 */
   }
+
+
   /*
   if(!packetbuf_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED)) {
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
@@ -644,9 +645,9 @@ send_packet(iotus_packet_t *packet)
       PRINTF("contikimac: framer failed\n");
       return MAC_TX_ERR_FATAL;
     }
-    uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
-    leds_off(LEDS_BLUE);
-    printf("Pkt built: %lu\n",elapsedBuild);
+    // uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
+    // leds_off(LEDS_BLUE);
+    // printf("Pkt built: %lu\n",elapsedBuild);
   }
 
   active_radio_driver->prepare(packet);

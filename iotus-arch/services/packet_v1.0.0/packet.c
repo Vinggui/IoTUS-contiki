@@ -34,7 +34,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -407,8 +407,8 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   }
   
   if(priority != IOTUS_PRIORITY_RADIO) {
-    leds_on(LEDS_BLUE);
-    packetBuildingTime = RTIMER_NOW();
+    // leds_on(LEDS_BLUE);
+    // packetBuildingTime = RTIMER_NOW();
   }
 
   timestamp_mark(&(newMsg->timeout), timeout);

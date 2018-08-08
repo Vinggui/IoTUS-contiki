@@ -21,7 +21,7 @@
 #include "sys/timer.h"
 #include "random.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 

@@ -31,6 +31,7 @@
 //             TEMPORARY MEASURES                         //
 ////////////////////////////////////////////////////////////
 rtimer_clock_t packetBuildingTime;
+uint32_t elapsedBuild;
 
 //////////////////////////////////////////////////////////////////
 //                        Packet related                        //

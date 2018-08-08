@@ -112,8 +112,8 @@ int
 staticnet_output(void)
 {
   //Self build packet timer...
-  packetBuildingTime = RTIMER_NOW();
-  leds_on(LEDS_BLUE);
+  // packetBuildingTime = RTIMER_NOW();
+  // leds_on(LEDS_BLUE);
 
   RIMESTATS_ADD(tx);
 
