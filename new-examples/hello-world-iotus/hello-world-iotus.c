@@ -110,7 +110,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             uint8_t nodeAddr = 1;//n%7 + 2;
             printf("App sending to %u\n", nodeAddr);
 
-
+            
+  TIC();
 #if BROADCAST_EXAMPLE == 0
             uint8_t dest[2];
             dest[0] = nodeAddr;

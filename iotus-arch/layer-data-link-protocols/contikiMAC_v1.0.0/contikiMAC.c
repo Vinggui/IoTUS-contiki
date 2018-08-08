@@ -645,9 +645,8 @@ send_packet(iotus_packet_t *packet)
       PRINTF("contikimac: framer failed\n");
       return MAC_TX_ERR_FATAL;
     }
-    // uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
-    // leds_off(LEDS_BLUE);
-    // printf("Pkt built: %lu\n",elapsedBuild);
+    
+    TOC("pkt ");
   }
 
   active_radio_driver->prepare(packet);

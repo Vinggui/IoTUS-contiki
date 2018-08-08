@@ -396,7 +396,6 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     iotus_layer_priority priority, uint16_t timeout, Boolean AllowOptimization,
     iotus_node_t *finalDestination)
 {
-
   iotus_packet_t *newMsg = (iotus_packet_t *)pieces_malloc(
                                     &iotus_packet_struct_mem,
                                     sizeof(iotus_packet_t),

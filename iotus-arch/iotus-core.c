@@ -110,7 +110,7 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     SAFE_PRINTF_LOG_ERROR("Packet input");
     return NULL;
   }
-
+  
   packet = packet_create_msg(
                 payloadSize,
                 payload,
