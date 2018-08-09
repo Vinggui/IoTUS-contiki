@@ -18,7 +18,7 @@
 #include "iotus-api.h"
 #include "iotus-netstack.h"
 #include "piggyback.h"
-#include "sys/timer.h"
+#include "sys/ctimer.h"
 #include "random.h"
 
 #define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
@@ -57,7 +57,7 @@ int routing_table[13][13] =
 };
 
 //Timer for sending neighbor discovery
-static struct timer sendND;
+static struct ctimer sendNDTimer;
 iotus_node_t *rootNode;
 iotus_node_t *fatherNode;
 static uint8_t private_keep_alive[12];
@@ -78,7 +78,7 @@ send(iotus_packet_t *packet)
 #else
     if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 12 ||
        finalDestLastAddress[0] > 12) {
-      printf("wrong destination");
+      SAFE_PRINTF_LOG_ERROR("wrong destination");
       return ROUTING_TX_ERR;
     }
     uint8_t nextHop = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][finalDestLastAddress[0]];
@@ -89,7 +89,7 @@ send(iotus_packet_t *packet)
       return ROUTING_TX_ERR;
     }
 
-    printf("Final %u next %u\n",finalDestLastAddress[0],nextHop);
+    SAFE_PRINTF_LOG_INFO("Final %u next %u\n",finalDestLastAddress[0],nextHop);
 
     // uint8_t addressNext[2] = {nextHop,0};
     // nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
@@ -136,7 +136,7 @@ input_packet(iotus_packet_t *packet)
     selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
 
     if(selfAddrValue == 1) {
-      printf("failure\n");
+      SAFE_PRINTF_LOG_ERROR("failure\n");
       return RX_SEND_UP_STACK;
     }
     //search for the next node...
@@ -174,10 +174,42 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
 }
 
+
+
+/*---------------------------------------------------------------------------*/
+static void
+send_keep_alive(void *ptr)
+{
+  static uint8_t selfAddrValue;
+  selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+
+  if(selfAddrValue != 1) {
+    clock_time_t backoff = CLOCK_SECOND*(KEEP_ALIVE_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+
+#if USE_NEW_FEATURES == 1
+    SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
+    piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, KEEP_ALIVE_INTERVAL*1000);
+#else
+    SAFE_PRINTF_LOG_INFO("Create KA alone\n");
+    if(rootNode != NULL) {
+        iotus_initiate_msg(
+                12,
+                private_keep_alive,
+                PACKET_PARAMETERS_WAIT_FOR_ACK,
+                IOTUS_PRIORITY_APPLICATION,
+                5000,
+                rootNode);
+      }
+#endif
+  }
+}
+
+/*---------------------------------------------------------------------------*/
 static void
 start(void)
 {
-  printf("Starting null routing\n");
+  SAFE_PRINTF_LOG_INFO("Starting null routing\n");
 
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 
@@ -200,53 +232,16 @@ start(void)
                                                         selfAddrValue);
 }
 
-
+/*---------------------------------------------------------------------------*/
 static void
 post_start(void)
 {
 #if BROADCAST_EXAMPLE == 0
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
     clock_time_t backoff = CLOCK_SECOND*(KEEP_ALIVE_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-    timer_set(&sendND, backoff);
+    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
   }
 #endif
-}
-
-static void
-run(void)
-{
-  iotus_core_netstack_idle_for(IOTUS_PRIORITY_ROUTING, 0XFFFF);
-  //Test which layer is supposed to do neighbor discovery
-  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-#if BROADCAST_EXAMPLE == 0
-    static uint8_t selfAddrValue;
-    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-
-    if(selfAddrValue != 1) {
-      if(timer_expired(&sendND)) {
-        //timer_restart(&sendND);
-        clock_time_t backoff = CLOCK_SECOND*(KEEP_ALIVE_INTERVAL) +(CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-        timer_set(&sendND, backoff);
-#if USE_NEW_FEATURES == 1
-        printf("Creating piggy routing\n");
-        piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, KEEP_ALIVE_INTERVAL*1000);
-#else
-        printf("Create KA alone\n");
-        if(rootNode != NULL) {
-            iotus_initiate_msg(
-                    12,
-                    private_keep_alive,
-                    PACKET_PARAMETERS_WAIT_FOR_ACK,
-                    IOTUS_PRIORITY_APPLICATION,
-                    5000,
-                    rootNode);
-        }
-#endif
-      }
-    }
-#endif
-  }
-  
 }
 
 static void

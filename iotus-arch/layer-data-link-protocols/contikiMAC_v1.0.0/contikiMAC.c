@@ -65,8 +65,8 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
-#define PRINTF(...)         SAFE_PRINTF_LOG_ERROR(__VA_ARGS__)
-#define PRINTDEBUG(...)     SAFE_PRINTF_LOG_ERROR(__VA_ARGS__)
+#define PRINTF(...)         printf(__VA_ARGS__)
+#define PRINTDEBUG(...)     printf(__VA_ARGS__)
 
 
 /* TX/RX cycles are synchronized with neighbor wake periods */
@@ -646,7 +646,7 @@ send_packet(iotus_packet_t *packet)
       return MAC_TX_ERR_FATAL;
     }
     
-    TOC("pkt ");
+    TOC();
   }
 
   active_radio_driver->prepare(packet);

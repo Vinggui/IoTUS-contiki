@@ -22,13 +22,17 @@
 
 extern rtimer_clock_t packetBuildingTime;
 extern uint32_t elapsedBuild;
+extern uint8_t ticTocFlag;
 
 ////////////////////////////////////////////////////////////
 //             TEMPORARY MEASURES                         //
 ////////////////////////////////////////////////////////////
-#define TIC() packetBuildingTime = RTIMER_NOW()
-#define TOC(msg) elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;\
-      printf("%s %lu\n",msg,elapsedBuild)
+#define TIC() packetBuildingTime = RTIMER_NOW();ticTocFlag++
+#define TOC() \
+  if(ticTocFlag > 0) {\
+    printf("pkt %lu\n",((1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND));\
+    ticTocFlag = 0;\
+  }
 
 uint16_t
 get_safe_pdu_for_layer(uint8_t layer);

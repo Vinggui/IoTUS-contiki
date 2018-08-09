@@ -611,9 +611,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       return MAC_TX_ERR_FATAL;
     }
 
-    // uint32_t elapsedBuild = (1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND;
-    // leds_off(LEDS_BLUE);
-    // printf("Pkt built: %lu\n",elapsedBuild);
+    TOC();
   }
 
   transmit_len = packetbuf_totlen();

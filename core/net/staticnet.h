@@ -31,6 +31,17 @@
 #include "net/mac/mac.h"
 
 extern rtimer_clock_t packetBuildingTime;
+extern uint8_t ticTocFlag;
+
+////////////////////////////////////////////////////////////
+//             TEMPORARY MEASURES                         //
+////////////////////////////////////////////////////////////
+#define TIC() packetBuildingTime = RTIMER_NOW();ticTocFlag++
+#define TOC() \
+  if(ticTocFlag > 0) {\
+    printf("pkt %lu\n",((1000000*(RTIMER_NOW() - packetBuildingTime))/RTIMER_ARCH_SECOND));\
+    ticTocFlag = 0;\
+  }
 
 void
 staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input)(const linkaddr_t *source));

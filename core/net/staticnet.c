@@ -82,6 +82,8 @@ int routing_table[13][13] =
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer;
 rtimer_clock_t packetBuildingTime;
+uint8_t ticTocFlag = 0;
+
 static uint8_t private_keep_alive[12];
 
 void (* up_msg_confirm)(int status, int num_tx) = NULL;
@@ -111,10 +113,6 @@ packet_sent(void *ptr, int status, int num_tx)
 int
 staticnet_output(void)
 {
-  //Self build packet timer...
-  // packetBuildingTime = RTIMER_NOW();
-  // leds_on(LEDS_BLUE);
-
   RIMESTATS_ADD(tx);
 
 #if BROADCAST_EXAMPLE == 0

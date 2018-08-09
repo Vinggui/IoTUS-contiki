@@ -65,6 +65,7 @@ void msg_input(const linkaddr_t *source) {
 static void
 send_msg(void *ptr)
 {
+  TIC();
   packetbuf_copyfrom(selfMsg, 20);
   //addr.u8[0] = nodeToSend;
   //addr.u8[1] = 0;
