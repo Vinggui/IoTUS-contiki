@@ -98,7 +98,7 @@ create(iotus_packet_t *packet)
 
   packet_push_bit_header(16, (uint8_t *)&chdr, packet);
   pad(packet);
-  
+
   hdr_len = DECORATED_FRAMER.create(packet);
   if(hdr_len < 0) {
     SAFE_PRINTF_LOG_ERROR("decorated framer");
@@ -143,7 +143,6 @@ parse(iotus_packet_t *packet)
   packet->firstHeaderBitSize += 8*sizeof(struct hdr);
   packet->lastHeaderSize += packet_get_payload_size(packet)
                                           - chdr->len;
-
   
   return hdr_len + sizeof(struct hdr);
 }

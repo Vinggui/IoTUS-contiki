@@ -1034,7 +1034,6 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
   /*
    * Stages of optimization are:
    * > Applying piggyback
-   * > Not defined...
    * > Apply the final header to be decoded
    */
 

@@ -72,7 +72,6 @@ send(iotus_packet_t *packet)
     //Get the final static destination
     uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
                                           packet->finalDestinationNode);
-
 #if EXP_STAR_LIKE == 1
     uint8_t nextHop = 1;
 #else
@@ -122,7 +121,6 @@ input_packet(iotus_packet_t *packet)
   //   SAFE_PRINTF_CLEAN("%02x ", packet_get_payload_data(packet)[i]);
   // }
   // SAFE_PRINTF_CLEAN("\n");
-
   uint8_t finalDestAddr = packet_unwrap_pushed_byte(packet);
 
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {

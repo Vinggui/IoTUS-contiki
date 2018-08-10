@@ -70,19 +70,19 @@ piggyback_clean_list(list_t list)
 
 /*---------------------------------------------------------------------*/
 /*
- * Function to create     header pieces to be attached
- * \param headerSize      Size of the header in bytes
- * \param headerData      The information to be attached
- * \param type            The type of header to be piggybacked.
- * \param destinationNode The destination node of this data.
- * \param timeout         The time available for this header to be piggyback, before it turns into a packet.
+ * Function to create      header pieces to be attached
+ * \param piggyPayloadSize Size of the header in bytes
+ * \param piggyPayload     The information to be attached
+ * \param type             The type of header to be piggybacked.
+ * \param destinationNode  The destination node of this data.
+ * \param timeout          The time available for this header to be piggyback, before it turns into a packet.
  * \return Pointer to the struct with the final packet to be transmited (read by framer layer).
  */
 iotus_piggyback_t *
-piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
+piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
     uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout)
 {
-  if(headerSize > PIGGYBACK_MAX_FRAME_SIZE) {
+  if(piggyPayloadSize > PIGGYBACK_MAX_FRAME_SIZE) {
     SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
     return NULL;
   }
@@ -90,32 +90,30 @@ piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
                                                         &iotus_piggyback_mem,
                                                         sizeof(iotus_piggyback_t),
                                                         NULL,
-                                                        headerSize+
-                                                          member_size(iotus_piggyback_t,params)+
-                                                          member_size(iotus_piggyback_t,extendedSize));
+                                                        piggyPayloadSize);
   
   if(NULL == newPiece) {
     SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
   }
-  memcpy(pieces_get_data_pointer(newPiece),headerData,headerSize);
+  memcpy(pieces_get_data_pointer(newPiece),piggyPayload,piggyPayloadSize);
   
 
   timestamp_mark(&(newPiece->timeout), timeout);
 
   uint8_t params = IOTUS_PIGGYBACK_LAYER & targetLayer;
   /* Encode parameters 
-   * 0b00000011 - 2 bits indicates to which layer this frame is supposed to be sent
-   * 0b00000100 - 1 bit indicate if this frame is to the next node or stick to final destination
-   * 0b00001000 - 1 bit indicate if this frame has a second byte to describe header size
-   * 0b11110000 - 4 bits indicate the size of the header (if smaller than 16bytes) or the
+   * 0b11000000 - 2 bits indicates to which layer this frame is supposed to be sent
+   * 0b00100000 - 1 bit indicate if this frame is to the next node or stick to final destination
+   * 0b00010000 - 1 bit indicate if this frame has a second byte to describe header size
+   * 0b00001111 - 4 bits indicate the size of the header (if smaller than 16bytes) or the
    *                most significant byte of the size (if bigger).
    */
-  if(headerSize > PIGGYBACK_SINGLE_HEADER_FRAME) {
-    params |= ((uint8_t)((headerSize>>8)&0x000F) << 4) | 0x08;
-    newPiece->extendedSize = (uint8_t)(headerSize & 0x00FF);
+  if(piggyPayloadSize > PIGGYBACK_SINGLE_HEADER_FRAME) {
+    params |= (uint8_t)(piggyPayloadSize&0x000F) | IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE;
+    newPiece->extendedSize = (uint8_t)(piggyPayloadSize & 0x00FF);
   } else {
-    params |= (uint8_t)((headerSize & 0x000F)<< 4);
+    params |= (uint8_t)(piggyPayloadSize & 0x000F);
   }
   newPiece->params = params;
 
@@ -151,11 +149,12 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
 
   uint16_t packetOldSize = packet_get_size(packet_piece);
   uint16_t piggyback_with_ext_size;
-  piggyback_with_ext_size = 
-    (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE)? 1:0;
+  
+  piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE);
+
   if((availableSpace - packetOldSize) >= (piggyback_piece->data.size +
                                           member_size(iotus_piggyback_t,params) +
-                                          piggyback_with_ext_size)) {
+                                          member_size(iotus_piggyback_t,extendedSize))) {
     //This piggyback will fit...
     
     if(stick) {
@@ -163,29 +162,28 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
       piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
     }
 
-    if(isLastPiece) {
-      piggyback_piece->params |= IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT;
-      SAFE_PRINTF_LOG_INFO("Last Piece att");
-    }
+    // This changed, we'll use a new byte at the beggining *************
+     // if(isLastPiece) {
+    //   piggyback_piece->params |= IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT;
+    //   SAFE_PRINTF_LOG_INFO("Last Piece att");
+    // }
 
     //Insert the header at the end of the data buffer of this piggyback
-    uint8_t piggybackInsertionSize;
-    uint8_t *tempPointer;
+    uint8_t tempBuffer[piggyback_piece->data.size +
+                       member_size(iotus_piggyback_t,params) +
+                       member_size(iotus_piggyback_t,extendedSize)];
+    uint8_t *tempBuffPointer = tempBuffer;
 
-    piggybackInsertionSize = piggyback_piece->data.size;
-    tempPointer = pieces_get_data_pointer(piggyback_piece) + piggybackInsertionSize;
+    *tempBuffPointer = piggyback_piece->params;
+    tempBuffPointer++;
     if(piggyback_with_ext_size) {
-      tempPointer[0] = piggyback_piece->extendedSize;
-      tempPointer += member_size(iotus_piggyback_t,extendedSize);
-      piggybackInsertionSize += member_size(iotus_piggyback_t,extendedSize);
+      *tempBuffPointer = piggyback_piece->extendedSize;
+      tempBuffPointer++;
     }
-    tempPointer[0] = piggyback_piece->params;
-    piggybackInsertionSize += member_size(iotus_piggyback_t,params);
+    memcpy(tempBuffPointer, pieces_get_data_pointer(piggyback_piece), piggyback_piece->data.size);
 
-
-    
-    if(0 == packet_append_last_header(piggybackInsertionSize,
-                                      pieces_get_data_pointer(piggyback_piece),
+    if(0 == packet_append_last_header((uint16_t)(tempBuffPointer-tempBuffer+piggyback_piece->data.size),
+                                      tempBuffer,
                                       packet_piece)) {
       SAFE_PRINTF_LOG_ERROR("Append");
       return FALSE;
@@ -238,6 +236,7 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
     Boolean toFinalDestination = (h->finalDestinationNode == packet_get_final_destination(packet_piece));
     if(toFinalDestination ||
        h->finalDestinationNode == packet_get_next_destination(packet_piece)) {
+
       if(TRUE == insert_piggyback_to_packet(packet_piece,
                                              h,
                                              toFinalDestination,

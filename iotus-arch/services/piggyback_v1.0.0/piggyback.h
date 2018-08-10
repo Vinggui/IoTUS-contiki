@@ -31,11 +31,10 @@ typedef struct piggyback_piece {
   uint8_t extendedSize;
 } iotus_piggyback_t;
 
-#define IOTUS_PIGGYBACK_LAYER                                 0b00000011
-#define IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT                   0b00000100
-#define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00001000
+#define IOTUS_PIGGYBACK_LAYER                                 0b11000000
+#define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00100000
 #define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00010000
-#define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b11100000
+#define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b00001111
 
 Boolean
 piggyback_destroy(iotus_piggyback_t *piece);

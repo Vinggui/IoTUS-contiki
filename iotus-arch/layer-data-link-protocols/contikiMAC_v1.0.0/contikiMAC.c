@@ -623,7 +623,6 @@ send_packet(iotus_packet_t *packet)
 #endif /* NETSTACK_CONF_WITH_IPV6 */
   }
 
-
   /*
   if(!packetbuf_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED)) {
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
@@ -900,7 +899,7 @@ input_packet(iotus_packet_t *packet)
   int original_datalen;
   uint8_t *original_dataptr;
 
-  original_datalen = packet_get_payload_size(packet);//packetbuf_datalen();
+  original_datalen = packet_get_payload_size(packet);
   original_dataptr = pieces_get_data_pointer(packet);
 #endif
 

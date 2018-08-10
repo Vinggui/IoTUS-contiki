@@ -33,13 +33,6 @@ start(void)
   printf("Starting null transport\n");
 }
 
-
-static void
-run(void)
-{
-  iotus_core_netstack_idle_for(IOTUS_PRIORITY_TRANSPORT, 0XFFFF);
-}
-
 static void
 close(void)
 {
