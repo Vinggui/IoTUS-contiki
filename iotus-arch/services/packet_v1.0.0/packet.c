@@ -1037,7 +1037,7 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
    * > Apply the final header to be decoded
    */
 
-  uint8_t finalHeader[5] = {0};
+  uint8_t finalHeader[5] = {0xFF};
   uint8_t finalHdrSize;
   finalHdrSize = 1;
 
