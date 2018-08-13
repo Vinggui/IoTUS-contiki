@@ -170,7 +170,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
   pieces_insert_timeout_priority(gPiggybackFramesList,newPiece);
   update_piggy_timeout_timer();
 
-  printf("Frame created\n");
+  SAFE_PRINTF_LOG_INFO("Frame created\n");
   return newPiece;
 }
 

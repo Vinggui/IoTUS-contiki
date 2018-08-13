@@ -1011,6 +1011,10 @@ input_packet(iotus_packet_t *packet)
 #endif /* CONTIKIMAC_SEND_SW_ACK */
 
       if(!duplicate) {
+        //Verify if we are working with piggybacks
+        if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+          // piggyback_unwrap();
+        }
         return RX_SEND_UP_STACK;
       }
       return RX_PROCESSED;
@@ -1063,7 +1067,7 @@ init(void)
 //   phase_init();
 // #endif /* WITH_PHASE_OPTIMIZATION */
 
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
+  //iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
 /*---------------------------------------------------------------------------*/
 static unsigned short
