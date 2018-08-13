@@ -61,6 +61,7 @@ typedef struct generic_additional_info {
 ///////////////////////////////////////////
 //             MACROS                    //
 ///////////////////////////////////////////
+#define pieces_get_data_size(piecePointer)    ((uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.size))
 #define pieces_get_data_pointer(piecePointer) ((uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.ptr))
 
 //////////////////////////////////////////
@@ -89,7 +90,6 @@ pieces_get_additional_info_var(list_t list, uint8_t type);
 
 Boolean
 pieces_destroy(struct memb *m, void *h);
-
 
 void
 pieces_insert_timeout_priority(list_t list, void *item);

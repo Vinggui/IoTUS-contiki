@@ -187,7 +187,7 @@ send_keep_alive(void *ptr)
 
 #if USE_NEW_FEATURES == 1
     SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
-    piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, KEEP_ALIVE_INTERVAL*1000);
+    piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, ROUTING_PACKETS_TIMEOUT);
 #else
     SAFE_PRINTF_LOG_INFO("Create KA alone\n");
     if(rootNode != NULL) {

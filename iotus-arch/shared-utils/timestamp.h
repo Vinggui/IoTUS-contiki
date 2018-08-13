@@ -19,12 +19,14 @@
 #include "clock.h"
 
 
-typedef struct __attribute__ ((__packed__)) timestamp {
-  unsigned long seconds;
-  clock_time_t fineTime;
-} timestamp_t;
+// typedef struct __attribute__ ((__packed__)) timestamp {
+//   //unsigned long seconds;
+//   clock_time_t fineTime;
+// } timestamp_t;
+typedef clock_time_t timestamp_t;
 
 #define TIMESTAMP_GRANULARITY       1000U //Milliseconds
+#define TIMESTAMP_MAX_DELAY         30000*CLOCK_CONF_SECOND //Milliseconds
 
 void
 timestamp_mark(timestamp_t *time, int16_t delta);

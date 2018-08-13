@@ -27,7 +27,7 @@
 
 
 /////////////////////////////////////////////////////////////
-//              Packet iotus dynamic header                //
+//              Packet iotus dynamic header           FIXXX     //
 /////////////////////////////////////////////////////////////
 #define PACKET_IOTUS_HDR_NEIGHBOR_DISC      0b00000100
 #define PACKET_IOTUS_HDR_HAS_PIGGYBACK      0b00000010

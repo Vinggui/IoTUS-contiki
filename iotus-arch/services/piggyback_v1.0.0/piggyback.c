@@ -27,6 +27,7 @@
 #include "pieces.h"
 #include "piggyback.h"
 #include "platform-conf.h"
+#include "sys/ctimer.h"
 #include "timestamp.h"
 
 #define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
@@ -39,6 +40,10 @@
 MEMB(iotus_piggyback_mem, iotus_piggyback_t, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gPiggybackFramesList);
 
+static struct ctimer piggyback_timeout_ctimer;
+
+static void
+update_piggy_timeout_timer(void);
 
 /*---------------------------------------------------------------------*/
 /*
@@ -66,6 +71,47 @@ piggyback_clean_list(list_t list)
     piggyback_destroy(h);
   }
   SAFE_PRINTF_LOG_INFO("Piggy list clean");
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ */
+static void
+piggyback_timeout_handler(void *ptr) {
+  //Get the first of the list
+  iotus_piggyback_t *h;
+  h = list_pop(gPiggybackFramesList);
+
+  if(h == NULL) {
+    return;
+  }
+  printf("aeeeeeee %u %s\n", pieces_get_data_size(h), pieces_get_data_pointer(h));
+
+  iotus_initiate_msg(
+                pieces_get_data_size(h),
+                pieces_get_data_pointer(h),
+                PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                h->priority,
+                0,
+                h->finalDestinationNode);
+
+  piggyback_destroy(h);
+
+  update_piggy_timeout_timer();
+}
+
+/*---------------------------------------------------------------------*/
+static void
+update_piggy_timeout_timer(void) {
+  //Look for header pieces that match this packet conditions
+  iotus_piggyback_t *h;
+  h = list_head(gPiggybackFramesList);
+
+  if(h != NULL) {
+    ctimer_set(&piggyback_timeout_ctimer, h->timeout, piggyback_timeout_handler, NULL);
+  } else {
+    ctimer_stop(&piggyback_timeout_ctimer);
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -122,7 +168,9 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
 
   //Link the header into the list, sorting insertion
   pieces_insert_timeout_priority(gPiggybackFramesList,newPiece);
-  SAFE_PRINTF_LOG_INFO("Frame created");
+  update_piggy_timeout_timer();
+
+  printf("Frame created");
   return newPiece;
 }
 
@@ -196,6 +244,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
     //The callback will be done by the packet service,before destroying it.
     //
     //
+    update_piggy_timeout_timer();
     return TRUE;
   }
   //}
@@ -249,35 +298,6 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   }
 
   return packet_get_size(packet_piece)-packetOldSize;
-}
-
-/*---------------------------------------------------------------------*/
-/*
- * Function to append piggyback informations into the tail of the msg (inversed)
- * \param bytesSize The amount of bytes that will be appended.
- * \param byteSeq An array of bytes in its normal sequence
- * \param packet_piece Msg to apply this append
- * \return Number of bytes inserted.
- */
-static void
-piggyback_check_timeout(void) {
-  //Look for header pieces that match this packet conditions
-  iotus_piggyback_t *h;
-  iotus_piggyback_t *nextH;
-
-  h = list_head(gPiggybackFramesList);
-  while(h != NULL) {
-    nextH = list_item_next(h);
-    if(timestamp_remainder(&(h->timeout)) <= 0) {
-      //This piggyback frame is already old
-      //Create a packet to transmit him asap
-
-      //TODO THIS...
-      printf("got packet to transmit\n");
-      piggyback_destroy(h);
-    }
-    h = nextH;
-  }
 }
 
 /*---------------------------------------------------------------------*/

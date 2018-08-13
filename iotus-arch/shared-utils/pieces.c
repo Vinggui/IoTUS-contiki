@@ -286,7 +286,6 @@ pieces_get_additional_info_var(list_t list, uint8_t type)
  * \brief 
  * \param   list    [description]
  * \param   item    [description]
- * \return          [description]
  */
 void
 pieces_insert_timeout_priority(list_t list, void *item)
