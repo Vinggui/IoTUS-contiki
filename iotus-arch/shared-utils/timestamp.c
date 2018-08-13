@@ -35,9 +35,8 @@
  * \param delta         Add or subtract time (in ms) to the actual momment.
  */
 void
-timestamp_mark(timestamp_t *time, int16_t delta)
+timestamp_delay(timestamp_t *time, int16_t delta)
 {
-  *time = clock_time();
   if(delta > 0) {
     *time += (delta*CLOCK_CONF_SECOND)/1000U;
   } else {

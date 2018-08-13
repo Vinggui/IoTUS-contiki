@@ -85,7 +85,7 @@ piggyback_timeout_handler(void *ptr) {
   if(h == NULL) {
     return;
   }
-  printf("aeeeeeee %u %s\n", pieces_get_data_size(h), pieces_get_data_pointer(h));
+  // printf("aeeeeeee %u %u %s\n", (uint8_t)h->priority, pieces_get_data_size(h), pieces_get_data_pointer(h));
 
   iotus_initiate_msg(
                 pieces_get_data_size(h),
@@ -144,9 +144,9 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
   }
   memcpy(pieces_get_data_pointer(newPiece),piggyPayload,piggyPayloadSize);
   
+  timestamp_delay(&(newPiece->timeout), timeout);
 
-  timestamp_mark(&(newPiece->timeout), timeout);
-
+  newPiece->priority = targetLayer;
   uint8_t params = IOTUS_PIGGYBACK_LAYER & targetLayer;
   /* Encode parameters 
    * 0b11000000 - 2 bits indicates to which layer this frame is supposed to be sent
@@ -170,7 +170,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
   pieces_insert_timeout_priority(gPiggybackFramesList,newPiece);
   update_piggy_timeout_timer();
 
-  printf("Frame created");
+  printf("Frame created\n");
   return newPiece;
 }
 

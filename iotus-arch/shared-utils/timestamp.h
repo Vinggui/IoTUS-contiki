@@ -28,8 +28,10 @@ typedef clock_time_t timestamp_t;
 #define TIMESTAMP_GRANULARITY       1000U //Milliseconds
 #define TIMESTAMP_MAX_DELAY         30000*CLOCK_CONF_SECOND //Milliseconds
 
+#define timestamp_mark(time) time = clock_time()
+
 void
-timestamp_mark(timestamp_t *time, int16_t delta);
+timestamp_delay(timestamp_t *time, int16_t delta);
 
 uint8_t
 timestamp_greater_then(timestamp_t *time_1,timestamp_t *time_2);

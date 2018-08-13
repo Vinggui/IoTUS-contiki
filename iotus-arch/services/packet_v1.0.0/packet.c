@@ -410,7 +410,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     // packetBuildingTime = RTIMER_NOW();
   }
 
-  timestamp_mark(&(newMsg->timeout), timeout);
+  timestamp_delay(&(newMsg->timeout), timeout);
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
   LIST_STRUCT_INIT(newMsg, attachedPiggyback);
   

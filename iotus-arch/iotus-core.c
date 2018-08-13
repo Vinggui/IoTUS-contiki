@@ -105,7 +105,6 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
   iotus_packet_t *packet;
 
   if(payloadSize == 0 || payload == NULL ||
-    priority < IOTUS_PRIORITY_APPLICATION ||
     finalDestination == NULL) {
     SAFE_PRINTF_LOG_ERROR("Packet input");
     return NULL;
