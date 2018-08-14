@@ -26,7 +26,7 @@
 #include "platform-conf.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "pieces"
 #include "safe-printer.h"
 
@@ -63,6 +63,7 @@ pieces_malloc(struct memb *m, uint16_t allocSize,
     return NULL;
   }
 
+  memset(newPiece, 0, sizeof(iotus_generic_piece_t));
 
 #if IOTUS_USING_MALLOC == 0
   if(mmem_alloc(&(newPiece->data), dataSize) == 0) {
@@ -81,8 +82,11 @@ pieces_malloc(struct memb *m, uint16_t allocSize,
 #endif /* IOTUS_USING_MALLOC == 0 */
   if(NULL != data) {
     memcpy(newPiece->data.ptr, data, dataSize);
+  } else {
+    memset(newPiece->data.ptr, 0, dataSize);
   }
   
+  newPiece->next = NULL;
   newPiece->params = 0;
   newPiece->priority = 0;
   newPiece->finalDestinationNode = NULL;

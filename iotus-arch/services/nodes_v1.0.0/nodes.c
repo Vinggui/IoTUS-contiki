@@ -146,7 +146,8 @@ create_node(void) {
     return NULL;
   }
 
-  newChunk->params = 0;
+  memset(newChunk,0,sizeof(iotus_node_t)); 
+
   LIST_STRUCT_INIT(newChunk, additionalInfoList);
 
   list_push(gNodesList, newChunk);
@@ -168,6 +169,11 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
     //node was not found
     h = create_node();
 
+    if(NULL == h) {
+      SAFE_PRINT("Aloc node");
+      printf("deu merda!!!!\n");
+      return NULL;
+    }
     //Only new nodes need to update the address
     nodes_set_address(h, addressType, address);
   }
