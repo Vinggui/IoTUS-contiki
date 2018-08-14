@@ -29,7 +29,6 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "PhasR"
 #include "safe-printer.h"
 
-
 #if PHASE_CONF_DRIFT_CORRECT
 #define PHASE_DRIFT_CORRECT PHASE_CONF_DRIFT_CORRECT
 #else
@@ -50,6 +49,13 @@ struct phase_queueitem {
   iotus_packet_t *packetPhased;
 };
 
+/**
+ * This struct is necessary to work with additionalInfo system
+ */
+typedef struct __attribute__ ((__packed__)) phase_recorder_t {
+  rtimer_clock_t ptr;
+} phase_recorder_t;
+
 MEMB(phased_packets_memb, struct phase_queueitem, PHASE_QUEUESIZE);
 
 /*---------------------------------------------------------------------------*/
@@ -63,7 +69,7 @@ phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
 
   /* If we have an entry for this neighbor already, we renew it. */
   //e = nbr_table_get_from_lladdr(nbr_phase, neighbor);
-  rtimer_clock_t *phasePointer = pieces_get_additional_info_var(
+  phase_recorder_t *phasePointer = pieces_get_additional_info_var(
                                   neighbor->additionalInfoList,
                                   IOTUS_NODES_ADD_INFO_TYPE_WAKEUP_PHASE);
 
@@ -72,7 +78,7 @@ phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
 #if PHASE_DRIFT_CORRECT
       //e->drift = time - e->time;
 #endif
-      *phasePointer = time;
+      phasePointer->ptr = time;
       SAFE_PRINTF_LOG_INFO("Saved time again %u\n", *phasePointer);
     }
     /**
@@ -109,8 +115,10 @@ phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
         SAFE_PRINTF_LOG_ERROR("Set");
         return;
       }
-      *phasePointer = time;
-      SAFE_PRINTF_LOG_INFO("Saved time %u\n", *phasePointer);
+
+      phasePointer->ptr = time;
+      
+      SAFE_PRINTF_LOG_INFO("Saved time %u\n", phasePointer->ptr);
       //e = nbr_table_add_lladdr(nbr_phase, neighbor, NBR_TABLE_REASON_MAC, NULL);
     }
   }
@@ -135,13 +143,13 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
      time for the next expected phase and setup a ctimer to switch on
      the radio just before the phase. */
   //e = nbr_table_get_from_lladdr(nbr_phase, neighbor);
-  rtimer_clock_t *phasePointer = pieces_get_additional_info_var(
+  phase_recorder_t *phasePointer = pieces_get_additional_info_var(
                                   neighbor->additionalInfoList,
                                   IOTUS_NODES_ADD_INFO_TYPE_WAKEUP_PHASE);
 
 
   if(phasePointer != NULL) {
-    SAFE_PRINTF_LOG_INFO("recovered %u\n", *phasePointer);
+    SAFE_PRINTF_LOG_INFO("recovered %u\n", phasePointer->ptr);
     rtimer_clock_t wait, now, expected, sync;
     clock_time_t ctimewait;
     
@@ -161,7 +169,7 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
     
     now = RTIMER_NOW();
 
-    sync = (phasePointer == NULL) ? now : *phasePointer;
+    sync = (phasePointer == NULL) ? now : phasePointer->ptr;
 
 #if PHASE_DRIFT_CORRECT
     {

@@ -172,7 +172,7 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
     nodes_set_address(h, addressType, address);
   }
 
-  timestamp_mark(h->timestamp);
+  // h->timestamp = clock_time();
 
   return h;
 }

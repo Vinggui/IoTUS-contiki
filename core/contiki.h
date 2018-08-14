@@ -75,11 +75,11 @@
 #define ALOHA_STYLE                       0
 #define EXP_STAR_LIKE                     0
 #define SINGLE_NODE_NULL                  0
-#define BACKOFF_TIME                      7000
-#define MSG_INTERVAL                      50//sec
+#define MSG_INTERVAL                      8//sec
+#define BACKOFF_TIME                      ((MSG_INTERVAL-1)*1000)
 #define TRANSMISSION_CHANCE               66//%
 #define KEEP_ALIVE_INTERVAL               15//sec
-#define ROUTING_PACKETS_TIMEOUT           1000//msec
+#define ROUTING_PACKETS_TIMEOUT           BACKOFF_TIME//msec
 
 #if ALOHA_STYLE == 1
     #if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 1

@@ -19,6 +19,7 @@
 #include <string.h>
 #include "lib/memb.h"
 #include "list.h"
+#include "iotus-api.h"
 #include "iotus-core.h"
 #include "global-functions.h"
 #include "global-parameters.h"
@@ -34,8 +35,7 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
-#define PIGGYBACK_MAX_FRAME_SIZE            0x0FFF
-#define PIGGYBACK_SINGLE_HEADER_FRAME       0x000F
+#define PIGGYBACK_MAX_ATTACHED_PIECES     ((1<<(PIGGYBACK_MAX_ATTACHED_PIECES_POWER)) -1)
 
 MEMB(iotus_piggyback_mem, iotus_piggyback_t, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gPiggybackFramesList);
@@ -98,6 +98,26 @@ piggyback_timeout_handler(void *ptr) {
   piggyback_destroy(h);
 
   update_piggy_timeout_timer();
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ */
+void
+piggyback_unwrap_payload(iotus_packet_t *packet) {
+  if(packet_get_parameter(packet, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM)) {
+    //Get the first byte of the pigyback payload
+
+    uint8_t piggyHeader=0;
+    //packet_unwrap_appended_byte(packet, &piggyHeader, 1);
+
+    uint8_t numberOfPieces = piggyHeader & PIGGYBACK_MAX_ATTACHED_PIECES;
+    uint8_t i = 0;    
+    for(; i < numberOfPieces; i++) {
+      printf("got piggy\n");
+    }
+
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -178,8 +198,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
 /*---------------------------------------------------------------------*/
 static Boolean
 insert_piggyback_to_packet(iotus_packet_t *packet_piece,
-                    iotus_piggyback_t *piggyback_piece, Boolean stick,
-                    Boolean isLastPiece, uint16_t availableSpace)
+                    iotus_piggyback_t *piggyback_piece, Boolean stick, uint16_t availableSpace)
 {
   /*
   if(packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
@@ -200,7 +219,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
   
   piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE);
 
-  if((availableSpace - packetOldSize) >= (piggyback_piece->data.size +
+  if((availableSpace - packetOldSize) >= (pieces_get_data_size(piggyback_piece) +
                                           member_size(iotus_piggyback_t,params) +
                                           member_size(iotus_piggyback_t,extendedSize))) {
     //This piggyback will fit...
@@ -210,14 +229,8 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
       piggyback_piece->params |= IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST;
     }
 
-    // This changed, we'll use a new byte at the beggining *************
-     // if(isLastPiece) {
-    //   piggyback_piece->params |= IOTUS_PIGGYBACK_IS_FINAL_ATTACHMENT;
-    //   SAFE_PRINTF_LOG_INFO("Last Piece att");
-    // }
-
     //Insert the header at the end of the data buffer of this piggyback
-    uint8_t tempBuffer[piggyback_piece->data.size +
+    uint8_t tempBuffer[pieces_get_data_size(piggyback_piece) +
                        member_size(iotus_piggyback_t,params) +
                        member_size(iotus_piggyback_t,extendedSize)];
     uint8_t *tempBuffPointer = tempBuffer;
@@ -228,9 +241,9 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
       *tempBuffPointer = piggyback_piece->extendedSize;
       tempBuffPointer++;
     }
-    memcpy(tempBuffPointer, pieces_get_data_pointer(piggyback_piece), piggyback_piece->data.size);
+    memcpy(tempBuffPointer, pieces_get_data_pointer(piggyback_piece), pieces_get_data_size(piggyback_piece));
 
-    if(0 == packet_append_last_header((uint16_t)(tempBuffPointer-tempBuffer+piggyback_piece->data.size),
+    if(0 == packet_append_last_header((uint16_t)(tempBuffPointer-tempBuffer + pieces_get_data_size(piggyback_piece)),
                                       tempBuffer,
                                       packet_piece)) {
       SAFE_PRINTF_LOG_ERROR("Append");
@@ -271,7 +284,7 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   //Look for header pieces that match this packet conditions
   iotus_piggyback_t *h;
   iotus_piggyback_t *nextH;
-  Boolean isTheFirstPiggyback = TRUE;
+  uint8_t piggyPiecesInserted = 0;
   uint16_t packetOldSize;
   packetOldSize = packet_get_size(packet_piece);
 
@@ -289,12 +302,17 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
       if(TRUE == insert_piggyback_to_packet(packet_piece,
                                              h,
                                              toFinalDestination,
-                                             isTheFirstPiggyback,
                                              availableSpace)) {
-        isTheFirstPiggyback = FALSE;
+        piggyPiecesInserted++;
       }
     }
     h = nextH;
+  }
+
+  if(0 == packet_append_last_header(1,
+                                    &piggyPiecesInserted,
+                                    packet_piece)) {
+    SAFE_PRINTF_LOG_ERROR("Append");
   }
 
   return packet_get_size(packet_piece)-packetOldSize;

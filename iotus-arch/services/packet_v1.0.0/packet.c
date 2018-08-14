@@ -447,7 +447,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
  */
 unsigned int
 packet_get_size(iotus_packet_t *packetPiece) {
-  return (packetPiece->data.size);
+  return pieces_get_data_size(packetPiece);
 }
 
 /*---------------------------------------------------------------------*/
@@ -519,7 +519,7 @@ packet_push_bit_header(uint16_t bitSequenceSize, const uint8_t *bitSeq,
       memcpy(pieces_get_data_pointer(packetPiece), newBuff + newSizeInBYTES, packetOldTotalSize);
       return 0;
     }
-    packetPiece->data.size += newSizeInBYTES;
+    pieces_get_data_size(packetPiece) += newSizeInBYTES;
 #endif
     memcpy(pieces_get_data_pointer(packetPiece), newBuff, packetOldTotalSize + newSizeInBYTES);
   }
@@ -633,7 +633,7 @@ packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
     memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize);
     return 0;
   }
-  packetPiece->data.size += byteSequenceSize;
+  pieces_get_data_size(packetPiece) += byteSequenceSize;
 #endif
   memcpy(pieces_get_data_pointer(packetPiece),newBuff,packetOldTotalSize);
 
@@ -681,7 +681,7 @@ packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t 
   uint16_t i;
   int32_t pos;
   for(i=0;i<num;i++) {
-    pos = packetPiece->data.size -1 - packetPiece->lastHeaderSize;
+    pos = pieces_get_data_size(packetPiece) -1 - packetPiece->lastHeaderSize;
     if(pos < 0) {
       return FAILURE;
     }
@@ -1038,8 +1038,8 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
    */
 
   uint8_t finalHeader[5] = {0xFF};
-  uint8_t finalHdrSize;
-  finalHdrSize = 1;
+  // uint8_t finalHdrSize;
+  // finalHdrSize = 1;
 
   //First, try to apply the piggyback, if it exists
   if(0 < piggyback_apply(packet,freeSpace)) {
@@ -1048,7 +1048,7 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
   }
 
   //Apply the final header
-  packet_append_last_header(finalHdrSize, finalHeader, packet);
+  // packet_append_last_header(finalHdrSize, finalHeader, packet);
 }
 
 /*---------------------------------------------------------------------*/

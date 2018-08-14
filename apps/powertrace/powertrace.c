@@ -81,7 +81,7 @@ powertrace_print(char *str)
 
   static unsigned long seqno;
 
-  unsigned long time, all_time, radio, all_radio;
+  unsigned long radio, all_radio;
   
   struct powertrace_sniff_stats *s;
 
@@ -109,8 +109,8 @@ powertrace_print(char *str)
   last_idle_transmit = compower_idle_activity.transmit;
 
   radio = transmit + listen;
-  time = cpu + lpm;
-  all_time = all_cpu + all_lpm;
+  // time = cpu + lpm;
+  // all_time = all_cpu + all_lpm;
   all_radio = energest_type_time(ENERGEST_TYPE_LISTEN) +
     energest_type_time(ENERGEST_TYPE_TRANSMIT);
 

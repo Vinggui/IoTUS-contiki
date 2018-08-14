@@ -65,8 +65,8 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
-#define PRINTF(...)         printf(__VA_ARGS__)
-#define PRINTDEBUG(...)     printf(__VA_ARGS__)
+#define PRINTF(...)         SAFE_PRINTF_CLEAN(__VA_ARGS__)
+#define PRINTDEBUG(...)     SAFE_PRINTF_CLEAN(__VA_ARGS__)
 
 
 /* TX/RX cycles are synchronized with neighbor wake periods */
@@ -273,9 +273,6 @@ static struct compower_activity current_packet;
 static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
-
-//Timer for sending broadcasts
-static struct timer sendBC;
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -1012,8 +1009,8 @@ input_packet(iotus_packet_t *packet)
 
       if(!duplicate) {
         //Verify if we are working with piggybacks
-        if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-          // piggyback_unwrap();
+        if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+          piggyback_unwrap_payload(packet);
         }
         return RX_SEND_UP_STACK;
       }
@@ -1027,31 +1024,31 @@ input_packet(iotus_packet_t *packet)
     return RX_ERR_DROPPED;
   }
 }
-/*---------------------------------------------------------------------------*/
-static int
-turn_on(void)
-{
-  if(contikimac_is_on == 0) {
-    contikimac_is_on = 1;
-    contikimac_keep_radio_on = 0;
-    rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-  }
-  return 1;
-}
-/*---------------------------------------------------------------------------*/
-static int
-turn_off(int keep_radio_on)
-{
-  contikimac_is_on = 0;
-  contikimac_keep_radio_on = keep_radio_on;
-  if(keep_radio_on) {
-    radio_is_on = 1;
-    return active_radio_driver->on();
-  } else {
-    radio_is_on = 0;
-    return active_radio_driver->off();
-  }
-}
+// /*---------------------------------------------------------------------------*/
+// static int
+// turn_on(void)
+// {
+//   if(contikimac_is_on == 0) {
+//     contikimac_is_on = 1;
+//     contikimac_keep_radio_on = 0;
+//     rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+//   }
+//   return 1;
+// }
+// ---------------------------------------------------------------------------
+// static int
+// turn_off(int keep_radio_on)
+// {
+//   contikimac_is_on = 0;
+//   contikimac_keep_radio_on = keep_radio_on;
+//   if(keep_radio_on) {
+//     radio_is_on = 1;
+//     return active_radio_driver->on();
+//   } else {
+//     radio_is_on = 0;
+//     return active_radio_driver->off();
+//   }
+// }
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
@@ -1060,7 +1057,7 @@ init(void)
   PT_INIT(&pt);
 
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-  iotus_subscribe_for_chore(IOTUS_PRIORITY_RADIO, IOTUS_CHORE_APPLY_PIGGYBACK);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
 
   contikimac_is_on = 1;
 // #if WITH_PHASE_OPTIMIZATION
@@ -1070,11 +1067,11 @@ init(void)
   //iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
 /*---------------------------------------------------------------------------*/
-static unsigned short
-duty_cycle(void)
-{
-  return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
-}
+// static unsigned short
+// duty_cycle(void)
+// {
+//   return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
+// }
 /*---------------------------------------------------------------------------*/
 static void
 post_start(void)

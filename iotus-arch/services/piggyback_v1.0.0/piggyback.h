@@ -26,8 +26,17 @@
 #endif
 
 
+#define PIGGYBACK_MAX_FRAME_SIZE                  0x0FFF
+#define PIGGYBACK_SINGLE_HEADER_FRAME             0x000F
+#define PIGGYBACK_MAX_ATTACHED_PIECES_POWER       4//=16 Has to be a power of two
+
 typedef struct piggyback_piece {
-  COMMON_STRUCT_PIECES(struct piggyback_piece);
+  struct piggyback_piece *next;
+  struct mmem data;
+  iotus_layer_priority priority;
+  iotus_node_t *finalDestinationNode;
+  timestamp_t timeout;
+  uint8_t params;
   uint8_t extendedSize;
 } iotus_piggyback_t;
 
@@ -35,6 +44,10 @@ typedef struct piggyback_piece {
 #define IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST            0b00100000
 #define IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE         0b00010000
 #define IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK                  0b00001111
+
+
+
+#define IOTUS_PIGGYBACK_GENERAL_HDR_NUMBER_PIECES             0b00001111
 
 Boolean
 piggyback_destroy(iotus_piggyback_t *piece);
@@ -45,6 +58,10 @@ piggyback_clean_list(list_t list);
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,
     uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout);
+
+
+void
+piggyback_unwrap_payload(iotus_packet_t *packet);
 
 uint16_t
 piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace);

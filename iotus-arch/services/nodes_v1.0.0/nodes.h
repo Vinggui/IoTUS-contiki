@@ -29,9 +29,8 @@
 
 typedef struct nodes {
   struct nodes *next;
-  uint8_t params;
-  timestamp_t timestamp;//Supposed to be the last time heard
   LIST_STRUCT(additionalInfoList);
+  uint8_t params;
 } iotus_node_t;
 
 

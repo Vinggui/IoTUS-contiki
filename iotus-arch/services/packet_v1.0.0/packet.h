@@ -35,15 +35,20 @@
 //             Defines of this module                //
 ///////////////////////////////////////////////////////
 typedef struct packet_piece {
-  COMMON_STRUCT_PIECES(struct packet_piece);
+  struct packet_piece *next;
+  struct mmem data;
+  iotus_node_t *finalDestinationNode;
   iotus_node_t *nextDestinationNode;
   iotus_node_t *prevSourceNode;
   //uint8_t iotusHeader;
-  uint8_t type;
-  uint16_t firstHeaderBitSize;
-  uint16_t lastHeaderSize;
   LIST_STRUCT(additionalInfoList);
   LIST_STRUCT(attachedPiggyback);
+  timestamp_t timeout;
+  iotus_layer_priority priority;
+  uint16_t firstHeaderBitSize;
+  uint16_t lastHeaderSize;
+  uint8_t params;
+  uint8_t type;
 } iotus_packet_t;
 
 

@@ -113,9 +113,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             
   TIC();
 #if BROADCAST_EXAMPLE == 0
-            uint8_t dest[2];
-            dest[0] = nodeAddr;
-            dest[1] = 0;
+            // uint8_t dest[2];
+            // dest[0] = nodeAddr;
+            // dest[1] = 0;
             //iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
             if(rootNode != NULL) {
                 iotus_initiate_msg(

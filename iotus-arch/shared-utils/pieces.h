@@ -34,34 +34,26 @@
   #error Defining "IOTUS_USING_MALLOC=0|1" into platform-conf.h is necessary. 0 indicates that MMEM allocation will be used instead.
 #endif
 
-
-#define COMMON_STRUCT_PIECES(structName) \
-  structName *next;\
-  struct mmem data;\
-  uint8_t params;\
-  iotus_layer_priority priority;\
-  timestamp_t timeout;\
-  iotus_node_t *finalDestinationNode;
-
-#define COMMON_ADDITIONAL_INFO_HEADER(structName) \
-  structName *next;\
-  struct mmem data;\
-  uint8_t type;\
-  uint8_t isBuffered;
-
-
 typedef struct generic_piece {
-  COMMON_STRUCT_PIECES(struct generic_piece);
+  struct generic_piece *next;
+  struct mmem data;
+  iotus_layer_priority priority;
+  iotus_node_t *finalDestinationNode;
+  timestamp_t timeout;
+  uint8_t params;
 } iotus_generic_piece_t;
 
-typedef struct generic_additional_info {
-  COMMON_ADDITIONAL_INFO_HEADER(struct generic_additional_info);
+typedef struct __attribute__ ((__packed__)) generic_additional_info {
+  struct generic_additional_info *next;
+  struct mmem data;
+  uint8_t type;
+  uint8_t isBuffered;
 } iotus_additional_info_t;
 
 ///////////////////////////////////////////
 //             MACROS                    //
 ///////////////////////////////////////////
-#define pieces_get_data_size(piecePointer)    ((uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.size))
+#define pieces_get_data_size(piecePointer)    (((iotus_additional_info_t *)piecePointer)->data.size)
 #define pieces_get_data_pointer(piecePointer) ((uint8_t *)(((iotus_additional_info_t *)piecePointer)->data.ptr))
 
 //////////////////////////////////////////
