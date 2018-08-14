@@ -71,14 +71,14 @@
 
 #define POWER_TRACE_RATE                  10
 #define BROADCAST_EXAMPLE                 0
-#define USE_NEW_FEATURES                  1
+#define USE_NEW_FEATURES                  0
 #define ALOHA_STYLE                       0
-#define EXP_STAR_LIKE                     0
+#define EXP_STAR_LIKE                     1
 #define SINGLE_NODE_NULL                  0
 #define MSG_INTERVAL                      8//sec
 #define BACKOFF_TIME                      ((MSG_INTERVAL-1)*1000)
 #define TRANSMISSION_CHANCE               66//%
-#define KEEP_ALIVE_INTERVAL               15//sec
+#define KEEP_ALIVE_INTERVAL               8//sec
 #define ROUTING_PACKETS_TIMEOUT           BACKOFF_TIME//msec
 
 #if ALOHA_STYLE == 1

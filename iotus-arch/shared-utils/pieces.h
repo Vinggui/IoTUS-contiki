@@ -43,7 +43,7 @@ typedef struct generic_piece {
   uint8_t params;
 } iotus_generic_piece_t;
 
-typedef struct __attribute__ ((__packed__)) generic_additional_info {
+typedef struct generic_additional_info {
   struct generic_additional_info *next;
   struct mmem data;
   uint8_t type;
