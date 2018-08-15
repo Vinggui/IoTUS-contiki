@@ -49,7 +49,6 @@ PROCESS(hello_world_process, "Test process");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
-static struct ctimer sendMsgTimer;
 static uint8_t selfMsg[20];
 
 static linkaddr_t addrThis;

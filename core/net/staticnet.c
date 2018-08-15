@@ -3,15 +3,15 @@
  * @{
  */
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
 #define PRINTF(...)
 #endif
 
 
+#include <stdio.h>
 #include "contikimac.h"
 #include "dev/leds.h"
 #include "net/linkaddr.h"
@@ -95,16 +95,16 @@ packet_sent(void *ptr, int status, int num_tx)
 {
   switch(status) {
   case MAC_TX_COLLISION:
-    PRINTF("nullNet: collision after %d tx\n", num_tx);
+    PRINTF("staticnet: collision after %d tx\n", num_tx);
     break; 
   case MAC_TX_NOACK:
-    PRINTF("nullNet: noack after %d tx\n", num_tx);
+    PRINTF("staticnet: noack after %d tx\n", num_tx);
     break;
   case MAC_TX_OK:
-    PRINTF("nullNet: sent after %d tx\n", num_tx);
+    PRINTF("staticnet: sent after %d tx\n", num_tx);
     break;
   default:
-    PRINTF("nullNet: error %d after %d tx\n", status, num_tx);
+    PRINTF("staticnet: error %d after %d tx\n", status, num_tx);
   }
   up_msg_confirm(status,num_tx);
 }
@@ -190,7 +190,7 @@ send_keep_alive(void *ptr)
 static void
 init(void)
 {
-  PRINTF("nullnet started\n");
+  PRINTF("staticnet started\n");
   queuebuf_init();
   packetbuf_clear();
 
