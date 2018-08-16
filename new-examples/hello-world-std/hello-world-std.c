@@ -54,11 +54,11 @@ static uint8_t selfMsg[20];
 static linkaddr_t addrThis;
 
 void msg_confirm(int status, int num_tx) {
-    printf("message sent\n");
+    printf("message processed %u\n",status);
 }
 
 void msg_input(const linkaddr_t *source) {
-    printf("message received %u: %s\n",packetbuf_datalen(), (uint8_t *)packetbuf_dataptr());
+    printf("message received %u bytes: %s\n",packetbuf_datalen(), (uint8_t *)packetbuf_dataptr());
 }
 
 static void
@@ -138,6 +138,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           {
 #endif
 
+          printf("App sending to 1\n");
           send_msg(NULL);
           //uint8_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
           //ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
