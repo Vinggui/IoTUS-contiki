@@ -31,7 +31,7 @@
 #include "sys/ctimer.h"
 #include "timestamp.h"
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
@@ -73,6 +73,7 @@ piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
 
   //TODO Send confirmation to layer owner... They have to first register a function for that
 
+  printf("piggy clean1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   iotus_piggyback_t *h;
   iotus_piggyback_t *hOld;
   // while(NULL != (h =list_pop(list))) {
@@ -85,6 +86,7 @@ piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
     }
     hOld = h;
   }
+  printf("piggy clean2 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   SAFE_PRINTF_LOG_INFO("Piggy list clean");
 }
 
@@ -167,6 +169,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
     SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
     return NULL;
   }
+  printf("piggy create1 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(
                                                         &iotus_piggyback_mem,
                                                         sizeof(iotus_piggyback_t),
@@ -203,6 +206,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
 
   //Link the header into the list, sorting insertion
   pieces_insert_timeout_priority(gPiggybackFramesList,newPiece);
+  printf("piggy create2 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   update_piggy_timeout_timer();
 
   SAFE_PRINTF_LOG_INFO("Frame created\n");
@@ -270,6 +274,8 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
     piggyback_piece->packetAttached = packet_piece;
     list_remove(gPiggybackFramesList, piggyback_piece);
     list_push(gPiggybackFramesInsertedList, piggyback_piece);
+
+    printf("piggy insert1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
     //The callback will be done by the packet service,before destroying it.
     //
     //

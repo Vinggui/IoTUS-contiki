@@ -898,6 +898,7 @@ packet_send(iotus_packet_t *packetSelected)
     list_push(gPacketReadyList, packetSelected);
   } else {
     packet_destroy(packetSelected);
+    printf("destroyed! %u\n", returnAns);
   }
 }
 
@@ -1040,7 +1041,8 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
   uint8_t finalHeader[5] = {0xFF};
   // uint8_t finalHdrSize;
   // finalHdrSize = 1;
-
+  printf("packetServ list5 %u %u %u\n", list_length(gPacketBuildingList), list_length(gPacketReadyList), memb_numfree(&iotus_packet_struct_mem));
+  
   //First, try to apply the piggyback, if it exists
   if(0 < piggyback_apply(packet,freeSpace)) {
     //Piggyback was successfully applied
