@@ -69,7 +69,7 @@
 // #define BACKOFF_TIME                      1000
 
 
-#define POWER_TRACE_RATE                  10
+#define POWER_TRACE_RATE                  60
 #define BROADCAST_EXAMPLE                 0
 #define USE_NEW_FEATURES                  1
 #define ALOHA_STYLE                       0

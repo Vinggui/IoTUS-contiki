@@ -35,6 +35,7 @@ typedef struct piggyback_piece {
   struct mmem data;
   iotus_layer_priority priority;
   iotus_node_t *finalDestinationNode;
+  iotus_packet_t *packetAttached;
   timestamp_t timeout;
   uint8_t params;
   uint8_t extendedSize;
@@ -53,7 +54,7 @@ Boolean
 piggyback_destroy(iotus_piggyback_t *piece);
 
 void
-piggyback_clean_list(list_t list);
+piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status);
 
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t headerSize, const uint8_t* headerData,

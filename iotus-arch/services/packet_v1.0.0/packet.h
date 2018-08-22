@@ -42,7 +42,6 @@ typedef struct packet_piece {
   iotus_node_t *prevSourceNode;
   //uint8_t iotusHeader;
   LIST_STRUCT(additionalInfoList);
-  LIST_STRUCT(attachedPiggyback);
   timestamp_t timeout;
   iotus_layer_priority priority;
   uint16_t firstHeaderBitSize;

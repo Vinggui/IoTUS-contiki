@@ -63,7 +63,8 @@ packet_destroy(iotus_packet_t *piece) {
   list_remove(gPacketReadyList, piece);
   list_remove(gPacketBuildingList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
-  //destroy attacjed piggyback
+  //destroy attached piggyback
+
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
 
@@ -412,7 +413,6 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
 
   timestamp_delay(&(newMsg->timeout), timeout);
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
-  LIST_STRUCT_INIT(newMsg, attachedPiggyback);
   
   //this packet will go down the stack, towards the physical layer
   newMsg->firstHeaderBitSize = 0;

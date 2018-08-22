@@ -39,6 +39,7 @@
 
 MEMB(iotus_piggyback_mem, iotus_piggyback_t, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gPiggybackFramesList);
+LIST(gPiggybackFramesInsertedList);
 
 static struct ctimer piggyback_timeout_ctimer;
 
@@ -54,21 +55,35 @@ update_piggy_timeout_timer(void);
 Boolean
 piggyback_destroy(iotus_piggyback_t *piece) {
   list_remove(gPiggybackFramesList, piece);
-
+  list_remove(gPiggybackFramesInsertedList, piece);
   return pieces_destroy(&iotus_piggyback_mem, piece);
 }
 
 /*---------------------------------------------------------------------*/
 /**
  * \brief     Destroy the list of additional information that a piece may contain.
- * \param h   The pointer to this list.
+ * \param packet The pointer to the packet being confirmed.
  */
 void
-piggyback_clean_list(list_t list)
+piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
 {
+  if(packet == NULL) {
+    return;
+  }
+
+  //TODO Send confirmation to layer owner... They have to first register a function for that
+
   iotus_piggyback_t *h;
-  while(NULL != (h =list_pop(list))) {
-    piggyback_destroy(h);
+  iotus_piggyback_t *hOld;
+  // while(NULL != (h =list_pop(list))) {
+  h = list_head(gPiggybackFramesInsertedList);
+  hOld = h;
+  for(; h!=NULL; h=list_item_next(h)) {
+    if(h->packetAttached == packet) {
+      piggyback_destroy(h);
+      h = hOld;
+    }
+    hOld = h;
   }
   SAFE_PRINTF_LOG_INFO("Piggy list clean");
 }
@@ -252,8 +267,9 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
 
     //Operation success
     SAFE_PRINTF_LOG_INFO("Appended");
+    piggyback_piece->packetAttached = packet_piece;
     list_remove(gPiggybackFramesList, piggyback_piece);
-    list_push(packet_piece->attachedPiggyback, piggyback_piece);
+    list_push(gPiggybackFramesInsertedList, piggyback_piece);
     //The callback will be done by the packet service,before destroying it.
     //
     //
@@ -328,6 +344,7 @@ iotus_signal_handler_piggyback(iotus_service_signal signal, void *data)
   if(IOTUS_START_SERVICE == signal) {
     SAFE_PRINT("\tService Piggyback\n");
     list_init(gPiggybackFramesList);
+    list_init(gPiggybackFramesInsertedList);
   }
   //Verify if any piggyback frame is expiring
   // piggyback_check_timeout();
