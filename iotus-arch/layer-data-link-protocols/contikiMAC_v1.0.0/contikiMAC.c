@@ -723,6 +723,7 @@ send_packet(iotus_packet_t *packet)
     off();
     PRINTF("contikimac: collisions before sending\n");
     contikimac_is_on = contikimac_was_on;
+    printf("aquiiiii\n");
     return MAC_TX_COLLISION;
   }
 #endif /* RDC_CONF_HARDWARE_CSMA */
@@ -856,6 +857,10 @@ send_packet(iotus_packet_t *packet)
     ret = MAC_TX_OK;
   }
 
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+    piggyback_confirm_sent(packet, ret);
+  }
+
 #if WITH_PHASE_OPTIMIZATION
   if(is_known_receiver && got_strobe_ack) {
     SAFE_PRINTF_LOG_INFO("no miss %d wake-ups %d\n",
@@ -872,10 +877,7 @@ send_packet(iotus_packet_t *packet)
     }
   }
 #endif /* WITH_PHASE_OPTIMIZATION */
-  
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-    piggyback_confirm_sent(packet, ret);
-  }
+
   return ret;
 }
 /*---------------------------------------------------------------------------*/
