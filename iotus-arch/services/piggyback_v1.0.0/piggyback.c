@@ -80,7 +80,7 @@ piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
   h = list_head(gPiggybackFramesInsertedList);
   hOld = h;
   for(; h!=NULL; h=list_item_next(h)) {
-    if(h->packetAttached == packet) {
+    if(h->pktID == packet->pktID) {
       piggyback_destroy(h);
       h = hOld;
     }
@@ -271,7 +271,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
 
     //Operation success
     SAFE_PRINTF_LOG_INFO("Appended");
-    piggyback_piece->packetAttached = packet_piece;
+    piggyback_piece->pktID = packet_piece->pktID;
     list_remove(gPiggybackFramesList, piggyback_piece);
     list_push(gPiggybackFramesInsertedList, piggyback_piece);
 

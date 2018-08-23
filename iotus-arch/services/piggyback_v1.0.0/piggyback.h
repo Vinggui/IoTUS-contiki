@@ -35,9 +35,9 @@ typedef struct piggyback_piece {
   struct mmem data;
   iotus_layer_priority priority;
   iotus_node_t *finalDestinationNode;
-  iotus_packet_t *packetAttached;
   timestamp_t timeout;
   uint8_t params;
+  uint8_t pktID;
   uint8_t extendedSize;
 } iotus_piggyback_t;
 

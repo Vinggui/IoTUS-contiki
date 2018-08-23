@@ -46,7 +46,7 @@ LIST(gPacketReadyList);
 
 static packet_sent_cb gApplicationConfirmationCB;
 static packet_handler gApplicationPacketHandler;
-
+static uint16_t gPacketIDcounter;
 
 /*---------------------------------------------------------------------*/
 /*
@@ -406,10 +406,10 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     return NULL;
   }
   
-  if(priority != IOTUS_PRIORITY_RADIO) {
+  // if(priority != IOTUS_PRIORITY_RADIO) {
     // leds_on(LEDS_BLUE);
     // packetBuildingTime = RTIMER_NOW();
-  }
+  // }
 
   timestamp_delay(&(newMsg->timeout), timeout);
   LIST_STRUCT_INIT(newMsg, additionalInfoList);
@@ -419,6 +419,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   newMsg->lastHeaderSize = 0;
   newMsg->nextDestinationNode = NULL;
   newMsg->prevSourceNode = NULL;
+  newMsg->pktID = ++gPacketIDcounter;
   newMsg->params = 0;
   //newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
   newMsg->priority = priority;
@@ -1070,6 +1071,8 @@ iotus_signal_handler_packet(iotus_service_signal signal, void *data)
     
     // Initiate the lists of module
     list_init(gPacketBuildingList);
+
+    gPacketIDcounter = 0;
 
   } else if (IOTUS_END_SERVICE == signal){
 

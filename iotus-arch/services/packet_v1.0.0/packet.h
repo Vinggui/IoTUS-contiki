@@ -47,6 +47,7 @@ typedef struct packet_piece {
   uint16_t firstHeaderBitSize;
   uint16_t lastHeaderSize;
   uint8_t params;
+  uint16_t pktID;
   uint8_t type;
 } iotus_packet_t;
 
