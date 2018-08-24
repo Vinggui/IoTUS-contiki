@@ -4,7 +4,7 @@
 IOTUS_FOLDER_MAIN             =  iotus-arch
 IOTUS_FOLDER_SERVICE          =  services
 IOTUS_FOLDER_TRANSPORT        =  layer-transport-protocols
-IOTUS_FOLDER_ROUTING          =  layer-routing-protocols
+IOTUS_FOLDER_NETWORK          =  layer-network-protocols
 IOTUS_FOLDER_DATA_LINK        =  layer-data-link-protocols
 IOTUS_FOLDER_RADIO_DRIVERS    =  layer-radio-drivers
 IOTUS_FOLDER_SHARED_UTILS     =  shared-utils
@@ -14,13 +14,13 @@ IOTUS_FOLDER_DEV              =  dev
 IOTUS_FOLDER                  := $(CONTIKI)/$(IOTUS_FOLDER_MAIN)
 SERVICES_FOLDER               := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_SERVICE)
 TRANSPORT_FOLDER              := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_TRANSPORT)
-ROUTING_FOLDER                := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_ROUTING)
+NETWORK_FOLDER                := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_NETWORK)
 DATA_LINK_FOLDER              := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_DATA_LINK)
 RADIO_DRIVERS_FOLDER          := $(IOTUS_FOLDER)/$(IOTUS_FOLDER_RADIO_DRIVERS)
 
 RELATIVE_FOLDER_SERVICES      := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SERVICE)
 RELATIVE_FOLDER_TRANSPORT     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_TRANSPORT)
-RELATIVE_FOLDER_ROUTING       := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_ROUTING)
+RELATIVE_FOLDER_NETWORK       := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_NETWORK)
 RELATIVE_FOLDER_DATA_LINK     := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_DATA_LINK)
 RELATIVE_FOLDER_RADIO_DRIVERS := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_RADIO_DRIVERS)
 RELATIVE_FOLDER_SHARED_UTILS  := $(IOTUS_FOLDER_MAIN)/$(IOTUS_FOLDER_SHARED_UTILS)
@@ -68,10 +68,10 @@ ifndef IOTUS_CONF_USING_TRANSPORT
   $(error Application makefile must define IOTUS_CONF_USING_TRANSPORT equals to 0 or 1)
 endif
 CFLAGS+= -DIOTUS_CONF_USING_TRANSPORT=$(IOTUS_CONF_USING_TRANSPORT)
-ifndef IOTUS_CONF_USING_ROUTING
-  $(error Application makefile must define IOTUS_CONF_USING_ROUTING equals to 0 or 1)
+ifndef IOTUS_CONF_USING_NETWORK
+  $(error Application makefile must define IOTUS_CONF_USING_NETWORK equals to 0 or 1)
 endif
-CFLAGS+= -DIOTUS_CONF_USING_ROUTING=$(IOTUS_CONF_USING_ROUTING)
+CFLAGS+= -DIOTUS_CONF_USING_NETWORK=$(IOTUS_CONF_USING_NETWORK)
 ifndef IOTUS_CONF_USING_DATA_LINK
   $(error Application makefile must define IOTUS_CONF_USING_DATA_LINK equals to 0 or 1)
 endif
@@ -98,12 +98,12 @@ ifdef IOTUS_CONF_COMPILE_MODE
         TRANSPORT_PROTOCOLS_LIST=null_transport_v1.0.0
       endif
 
-      ifeq ($(IOTUS_CONF_USING_ROUTING),1)
-        ifndef ROUTING_PROTOCOLS_LIST
-          $(error In IoTUS dynamic mode, IOTUS_CONF_DYNAMIC_MODE_PROFILES or the list of ROUTING_PROTOCOLS_LIST protocols must be defined)
+      ifeq ($(IOTUS_CONF_USING_NETWORK),1)
+        ifndef NETWORK_PROTOCOLS_LIST
+          $(error In IoTUS dynamic mode, IOTUS_CONF_DYNAMIC_MODE_PROFILES or the list of NETWORK_PROTOCOLS_LIST protocols must be defined)
         endif
       else
-        ROUTING_PROTOCOLS_LIST=null_routing_v1.0.0
+        NETWORK_PROTOCOLS_LIST=null_network_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
@@ -129,13 +129,13 @@ ifdef IOTUS_CONF_COMPILE_MODE
       # Get the list of protocols to be compiled
       $(foreach profile, $(COMPILE_MODE_DYN_UPPERCASE), \
         $(eval TRANSPORT_PROTOCOLS_FULL_LIST += $$($(profile)_TRANSPORT)) \
-        $(eval ROUTING_PROTOCOLS_FULL_LIST += $$($(profile)_ROUTING)) \
+        $(eval NETWORK_PROTOCOLS_FULL_LIST += $$($(profile)_NETWORK)) \
         $(eval DATA_LINK_PROTOCOLS_FULL_LIST += $$($(profile)_DATA_LINK)) \
       )
 
       # Remove duplicates
       IOTUS_CONF_TRANSPORT_PROTOCOLS_LIST := $(sort $(TRANSPORT_PROTOCOLS_FULL_LIST))
-      IOTUS_CONF_ROUTING_PROTOCOLS_LIST := $(sort $(ROUTING_PROTOCOLS_FULL_LIST))
+      IOTUS_CONF_NETWORK_PROTOCOLS_LIST := $(sort $(NETWORK_PROTOCOLS_FULL_LIST))
       IOTUS_CONF_DATA_LINK_PROTOCOLS_LIST := $(sort $(DATA_LINK_PROTOCOLS_FULL_LIST))
     endif
 
@@ -176,9 +176,9 @@ ifdef IOTUS_CONF_COMPILE_MODE
     # Execute this for Transport
     $(call add_protocols_dependencies,TRANSPORT)
     endif
-    ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+    ifeq ($(IOTUS_CONF_USING_NETWORK),1)
     # Execute this for Routing
-    $(call add_protocols_dependencies,ROUTING)
+    $(call add_protocols_dependencies,NETWORK)
     endif
     ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
@@ -261,9 +261,9 @@ ifdef IOTUS_CONF_COMPILE_MODE
     # Execute this for Transport
     $(call add_protocols_makefile,TRANSPORT)
     #endif
-    #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+    #ifeq ($(IOTUS_CONF_USING_NETWORK),1)
     # Execute this for Routing
-    $(call add_protocols_makefile,ROUTING)
+    $(call add_protocols_makefile,NETWORK)
     #endif
     #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
@@ -272,7 +272,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
     #######################################################################################
 
     $(info Transport protocols used are: $(IOTUS_PROTOCOL_TRANSPORT_ENUM_OPTIONS))
-    $(info Routing protocols used are: $(IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS))
+    $(info Routing protocols used are: $(IOTUS_PROTOCOL_NETWORK_ENUM_OPTIONS))
     $(info Data link protocols used are: $(IOTUS_PROTOCOL_DATA_LINK_ENUM_OPTIONS))
     $(info Radio drivers used are: $(IOTUS_RADIO_DRIVERS_ENUM_OPTIONS))
     $(info Services used are: $(IOTUS_SERVICES_LIST))
@@ -307,9 +307,9 @@ ifdef IOTUS_CONF_COMPILE_MODE
     # Execute this for Transport
     $(call setup_protocol_defines_into_iotus_core,TRANSPORT)
     #endif
-    #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+    #ifeq ($(IOTUS_CONF_USING_NETWORK),1)
     # Execute this for Routing
-    $(call setup_protocol_defines_into_iotus_core,ROUTING)
+    $(call setup_protocol_defines_into_iotus_core,NETWORK)
     #endif
     #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
     # Execute this for Data link
@@ -342,12 +342,12 @@ ifdef IOTUS_CONF_COMPILE_MODE
         IOTUS_CONF_STATIC_TRANSPORT_LAYER=null_transport_v1.0.0
       endif
 
-      ifeq ($(IOTUS_CONF_USING_ROUTING),1)
-        ifndef IOTUS_CONF_STATIC_ROUTING_LAYER
-          $(error In IoTUS static mode, IOTUS_CONF_STATIC_ROUTING_LAYER protocol must be defined)
+      ifeq ($(IOTUS_CONF_USING_NETWORK),1)
+        ifndef IOTUS_CONF_STATIC_NETWORK_LAYER
+          $(error In IoTUS static mode, IOTUS_CONF_STATIC_NETWORK_LAYER protocol must be defined)
         endif
       else
-        IOTUS_CONF_STATIC_ROUTING_LAYER=null_routing_v1.0.0
+        IOTUS_CONF_STATIC_NETWORK_LAYER=null_network_v1.0.0
       endif
 
       ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
@@ -390,9 +390,9 @@ ifdef IOTUS_CONF_COMPILE_MODE
       # Execute this for Transport
       $(call add_protocols_dependencies,TRANSPORT)
       #endif
-      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+      #ifeq ($(IOTUS_CONF_USING_NETWORK),1)
       # Execute this for Routing
-      $(call add_protocols_dependencies,ROUTING)
+      $(call add_protocols_dependencies,NETWORK)
       #endif
       #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       # Execute this for Data link
@@ -454,9 +454,9 @@ ifdef IOTUS_CONF_COMPILE_MODE
       # Execute this for Transport
       $(call add_protocols_makefile,TRANSPORT)
       #endif
-      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
+      #ifeq ($(IOTUS_CONF_USING_NETWORK),1)
       # Execute this for Routing
-      $(call add_protocols_makefile,ROUTING)
+      $(call add_protocols_makefile,NETWORK)
       #endif
       #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       # Execute this for Data link
@@ -465,7 +465,7 @@ ifdef IOTUS_CONF_COMPILE_MODE
       #######################################################################################
 
       $(info Transport protocol used is: $(IOTUS_STATIC_PROTOCOL_TRANSPORT))
-      $(info Routing protocol used is: $(IOTUS_STATIC_PROTOCOL_ROUTING))
+      $(info Routing protocol used is: $(IOTUS_STATIC_PROTOCOL_NETWORK))
       $(info Data link protocol used is: $(IOTUS_STATIC_PROTOCOL_DATA_LINK))
       $(info Radio driver used is: $(IOTUS_STATIC_PROTOCOL_RADIO_DRIVER))
       $(info Services used are: $(IOTUS_SERVICES_LIST))
@@ -489,8 +489,8 @@ ifdef IOTUS_CONF_COMPILE_MODE
       #ifeq ($(IOTUS_CONF_USING_TRANSPORT),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_TRANSPORT=$(IOTUS_STATIC_PROTOCOL_TRANSPORT)
       #endif
-      #ifeq ($(IOTUS_CONF_USING_ROUTING),1)
-      CFLAGS += -DIOTUS_STATIC_PROTOCOL_ROUTING=$(IOTUS_STATIC_PROTOCOL_ROUTING)
+      #ifeq ($(IOTUS_CONF_USING_NETWORK),1)
+      CFLAGS += -DIOTUS_STATIC_PROTOCOL_NETWORK=$(IOTUS_STATIC_PROTOCOL_NETWORK)
       #endif
       #ifeq ($(IOTUS_CONF_USING_DATA_LINK),1)
       CFLAGS += -DIOTUS_STATIC_PROTOCOL_DATA_LINK=$(IOTUS_STATIC_PROTOCOL_DATA_LINK)

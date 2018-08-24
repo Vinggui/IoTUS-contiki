@@ -5,7 +5,7 @@
 NULL_TRANSPORT = null_transport_v1.0.0
 
 # Routing protocols
-NULL_ROUTING = null_routing_v1.0.0
+NULL_NETWORK = null_network_v1.0.0
 
 # Data link protocols
 NULL_DATA_LINK = null_MAC_v1.0.0
@@ -16,7 +16,7 @@ NULL_DATA_LINK = null_MAC_v1.0.0
 ENERGY_AWARE_TRANSPORT = 
 
 # Routing protocols
-ENERGY_AWARE_ROUTING = edytee_routing_v1.0.0
+ENERGY_AWARE_NETWORK = edytee_routing_v1.0.0
 
 # Data link protocols
 ENERGY_AWARE_DATA_LINK = \
@@ -31,7 +31,7 @@ ENERGY_AWARE_DATA_LINK = \
 LOW_LATENCY_TRANSPORT =
 
 #  Routing protocols
-LOW_LATENCY_ROUTING =
+LOW_LATENCY_NETWORK =
 
 # Data link protocols
 LOW_LATENCY_DATA_LINK =
@@ -42,7 +42,7 @@ LOW_LATENCY_DATA_LINK =
 HIGH_MOBILITY_TRANSPORT =
 
 # Routing protocols
-HIGH_MOBILITY_ROUTING =
+HIGH_MOBILITY_NETWORK =
 
 # Data link protocols
 HIGH_MOBILITY_DATA_LINK =
@@ -54,7 +54,7 @@ HIGH_MOBILITY_DATA_LINK =
 TEST_TRANSPORT = null_transport_v1.0.0
 
 # Routing protocols
-TEST_ROUTING = null_routing_v1.0.0
+TEST_NETWORK = null_network_v1.0.0
 
 # Data link protocols
 TEST_DATA_LINK = contikiMAC_v1.0.0
@@ -65,8 +65,8 @@ ALL_TRANSPORT = \
   null_transport_v1.0.0
 
 # Routing protocols
-ALL_ROUTING = \
-  null_routing_v1.0.0 \
+ALL_NETWORK = \
+  null_network_v1.0.0 \
   edytee_routing_v1.0.0
 
 # Data link protocols

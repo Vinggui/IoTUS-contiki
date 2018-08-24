@@ -1017,7 +1017,7 @@ input_packet(iotus_packet_t *packet)
         if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
           piggyback_unwrap_payload(packet);
         }
-        return RX_SEND_UP_STACK;
+        active_network_protocol->receive(packet);
       }
       return RX_PROCESSED;
     } else {

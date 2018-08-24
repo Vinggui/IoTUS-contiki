@@ -94,7 +94,6 @@ typedef enum IOTUS_NETSTACK_RETURN {
 
   //#######################################
 
-  RX_SEND_UP_STACK,
   RX_ERR_DROPPED,
   RX_PROCESSED
 } iotus_netstack_return;
@@ -107,7 +106,7 @@ typedef enum IOTUS_NETSTACK_RETURN {
     //typedef enum iotus_transport_protocols {IOTUS_NO_TRANSPORT_LAYER} iotus_transport_protocols;
   //#endif
   //#if IOTUS_CONF_USING_ROUTING == 1
-    typedef enum iotus_routing_protocols IOTUS_PROTOCOL_ROUTING_ENUM_OPTIONS iotus_routing_protocols;
+    typedef enum iotus_network_protocols IOTUS_PROTOCOL_NETWORK_ENUM_OPTIONS iotus_network_protocols;
   //#else
     //typedef enum iotus_routing_protocols {IOTUS_NO_ROUTING_LAYER} iotus_routing_protocols;
   //#endif
@@ -131,7 +130,7 @@ typedef void (* application_demanding_task)(void);
   extern struct iotus_transport_protocol_struct const *active_transport_protocol;
 //#endif
 //#if IOTUS_CONF_USING_ROUTING == 1
-  extern struct iotus_routing_protocol_struct const *active_routing_protocol;
+  extern struct iotus_network_protocol_struct const *active_network_protocol;
 //#endif
 //#if IOTUS_CONF_USING_DATA_LINK == 1
   extern struct iotus_data_link_protocol_struct const *active_data_link_protocol;

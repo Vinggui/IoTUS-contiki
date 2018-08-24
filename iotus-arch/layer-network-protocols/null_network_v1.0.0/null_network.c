@@ -125,18 +125,12 @@ input_packet(iotus_packet_t *packet)
 
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
     //This is for us...
-    return RX_SEND_UP_STACK;
+
+    return RX_PROCESSED;
   } else {
     iotus_packet_t *packetForward = NULL;
 
 
-    static uint8_t selfAddrValue;
-    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-
-    if(selfAddrValue == 1) {
-      SAFE_PRINTF_LOG_ERROR("failure\n");
-      return RX_SEND_UP_STACK;
-    }
     //search for the next node...
     uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
     uint8_t nextHop = routing_table[ourAddr][finalDestAddr];
@@ -157,7 +151,11 @@ input_packet(iotus_packet_t *packet)
           }
           packet_set_parameter(packetForward, packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK);
           SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
-          packet_send(packetForward);
+
+          // packet_send(packetForward);
+          if(active_network_protocol->build_to_send != NULL) {
+            active_network_protocol->build_to_send(packetForward);
+          }
         }
     }
     return RX_PROCESSED;
@@ -248,7 +246,7 @@ close(void)
   
 }
 
-struct iotus_routing_protocol_struct null_routing_protocol = {
+struct iotus_network_protocol_struct null_network_protocol = {
   start,
   post_start,
   close,

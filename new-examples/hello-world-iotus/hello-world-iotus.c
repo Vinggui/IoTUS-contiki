@@ -42,7 +42,7 @@
 #include "powertrace.h"
 #include "iotus-api.h"
 #include "random.h"
-#include "null_routing.h"
+#include "null_network.h"
 
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/

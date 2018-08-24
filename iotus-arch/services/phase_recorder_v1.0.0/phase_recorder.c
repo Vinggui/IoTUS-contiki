@@ -129,7 +129,11 @@ send_packet(void *ptr)
 {
   struct phase_queueitem *p = ptr;
   SAFE_PRINTF_LOG_INFO("sending phased pkt %u\n", packet_get_sequence_number(p->packetPhased));
-  packet_continue_deferred_packet(p->packetPhased);
+  
+  // packet_continue_deferred_packet(p->packetPhased);
+  // iotus_netstack_return returnAns;
+  active_data_link_protocol->send(p->packetPhased);
+
   memb_free(&phased_packets_memb, p);
 }
 /*---------------------------------------------------------------------------*/

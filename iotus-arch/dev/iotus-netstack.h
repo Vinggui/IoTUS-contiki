@@ -16,7 +16,7 @@
 
 #include "iotus-core.h"
 #include "iotus-transport.h"
-#include "iotus-routing.h"
+#include "iotus-network.h"
 #include "iotus-data-link.h"
 #include "iotus-radio.h"
 #include "packet.h"

@@ -25,7 +25,7 @@
 extern iotus_node_t *rootNode;
 extern iotus_node_t *fatherNode;
 
-extern struct iotus_routing_protocol_struct null_routing_protocol;
+extern struct iotus_network_protocol_struct null_network_protocol;
 
 
 #endif /* IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_NULL_ROUTING_V1_0_0_NULL_ROUTING_H_ */

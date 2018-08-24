@@ -44,16 +44,16 @@ struct iotus_transport_protocol_struct const *active_transport_protocol = NULL;
 
 
 
-struct iotus_routing_protocol_struct const *active_routing_protocol = NULL;
+struct iotus_network_protocol_struct const *active_network_protocol = NULL;
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-  static const struct iotus_routing_protocol_struct *available_routing_protocols_array[] =
-  IOTUS_PROTOCOL_ROUTING_LIST;
-  static const uint8_t iotus_routing_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
-  IOTUS_LAYER_ROUTING_SERVICE_ARRAY;
+  static const struct iotus_network_protocol_struct *available_network_protocols_array[] =
+  IOTUS_PROTOCOL_NETWORK_LIST;
+  static const uint8_t iotus_network_dependecies_table[][IOTUS_DEPENDENCIES_BUFFER_SIZE]=
+  IOTUS_LAYER_NETWORK_SERVICE_ARRAY;
 #else
-  active_routing_protocol = &IOTUS_STATIC_PROTOCOL_ROUTING;
+  active_network_protocol = &IOTUS_STATIC_PROTOCOL_NETWORK;
 #endif
-#define ACTIVE_ROUTING_PROTOCOL(func) if(active_routing_protocol->func)active_routing_protocol->func()
+#define active_network_protocol(func) if(active_network_protocol->func)active_network_protocol->func()
 
 
 struct iotus_data_link_protocol_struct const *active_data_link_protocol = NULL;
@@ -124,7 +124,10 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
   packet_set_parameter(packet,params);
   SAFE_PRINTF_LOG_INFO("Packet created");
 
-  packet_send(packet);
+  // packet_send(packet);
+  if(active_transport_protocol->build_to_send != NULL) {
+    active_transport_protocol->build_to_send(packet);
+  }
   return packet;
 }
 
@@ -154,7 +157,7 @@ void
 iotus_core_start_system (
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   iotus_transport_protocols transport,
-  iotus_routing_protocols routing,
+  iotus_network_protocols network,
   iotus_data_link_protocols data_link,
   iotus_radio_drivers radio_driver
   #else
@@ -188,13 +191,13 @@ iotus_core_start_system (
     }
     #endif /*IOTUS_CONF_USING_TRANSPORT == 1*/
 
-    #if IOTUS_CONF_USING_ROUTING == 1
+    #if IOTUS_CONF_USING_NETWORK == 1
     //PRINTF("Rou\n");
     for(i=0;i<IOTUS_DEPENDENCIES_BUFFER_SIZE;i++) {
-      iotus_services_installed[i] |= iotus_routing_dependecies_table[routing][i];
-      //PRINTF("v=%x",iotus_routing_dependecies_table[transport][i]);
+      iotus_services_installed[i] |= iotus_network_dependecies_table[network][i];
+      //PRINTF("v=%x",iotus_network_dependecies_table[transport][i]);
     }
-    #endif/*IOTUS_CONF_USING_ROUTING == 1*/
+    #endif/*IOTUS_CONF_USING_NETWORK == 1*/
 
     #if IOTUS_CONF_USING_DATA_LINK == 1
     //PRINTF("DATA\n ");
@@ -228,12 +231,12 @@ iotus_core_start_system (
     ACTIVE_TRANSPORT_PROTOCOL(start);
   //#endif /* IOTUS_CONF_USING_TRANSPORT == 1 */
 
-  //#if IOTUS_CONF_USING_ROUTING == 1
+  //#if IOTUS_CONF_USING_NETWORK == 1
     #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-    active_routing_protocol = available_routing_protocols_array[routing];
+    active_network_protocol = available_network_protocols_array[network];
     #endif /* ifdef IOTUS_COMPILE_MODE_DYNAMIC */
-    ACTIVE_ROUTING_PROTOCOL(start);
-  //#endif /* IOTUS_CONF_USING_ROUTING == 1 */
+    active_network_protocol(start);
+  //#endif /* IOTUS_CONF_USING_NETWORK == 1 */
 
   //#if IOTUS_CONF_USING_DATA_LINK == 1
     #ifdef IOTUS_COMPILE_MODE_DYNAMIC
@@ -251,8 +254,8 @@ iotus_core_start_system (
   #if IOTUS_CONF_USING_TRANSPORT == 1
   ACTIVE_TRANSPORT_PROTOCOL(post_start);
   #endif
-  #if IOTUS_CONF_USING_ROUTING == 1
-  ACTIVE_ROUTING_PROTOCOL(post_start);
+  #if IOTUS_CONF_USING_NETWORK == 1
+  active_network_protocol(post_start);
   #endif
   #if IOTUS_CONF_USING_DATA_LINK == 1
   ACTIVE_DATA_LINK_PROTOCOL(post_start);
@@ -317,11 +320,11 @@ iotus_set_demanding_task(uint16_t time_needed, application_demanding_task task)
   //   #else
   //     sleepGreenFlag = (1<<IOTUS_PRIORITY_DATA_LINK);
   //   #endif/*IOTUS_CONF_USING_DATA_LINK == 1*/
-  //   #if IOTUS_CONF_USING_ROUTING == 1
-  //     ACTIVE_ROUTING_PROTOCOL(run);
+  //   #if IOTUS_CONF_USING_NETWORK == 1
+  //     active_network_protocol(run);
   //   #else
-  //     sleepGreenFlag = (1<<IOTUS_PRIORITY_ROUTING);
-  //   #endif/*IOTUS_CONF_USING_ROUTING == 1*/
+  //     sleepGreenFlag = (1<<IOTUS_PRIORITY_NETWORK);
+  //   #endif/*IOTUS_CONF_USING_NETWORK == 1*/
   //   #if IOTUS_CONF_USING_TRANSPORT == 1
   //     ACTIVE_TRANSPORT_PROTOCOL(run);
   //   #else
@@ -334,7 +337,7 @@ iotus_set_demanding_task(uint16_t time_needed, application_demanding_task task)
       
   //   }
   //   if(allowSystemSleep &&
-  //     sleepGreenFlag == 0b00011110) {//radio=0, data_link=1, routing=2, transport=3, app=4
+  //     sleepGreenFlag == 0b00011110) {//radio=0, data_link=1, network=2, transport=3, app=4
   //     /* 
   //      * Time management is now necessary.
   //      * The stack will take as long as it needs to operate

@@ -29,10 +29,10 @@
 //////////////////////////////////////////////////////////////////////////
 /* Call this macro instead of the function iotus_core_start_system itself*/
 #ifdef IOTUS_COMPILE_MODE_DYNAMIC
-#define IOTUS_CORE_START(transport, routing, data_link, radio) \
-              iotus_core_start_system(transport, routing, data_link, radio)
+#define IOTUS_CORE_START(transport, packetForward, data_link, radio) \
+              iotus_core_start_system(transport, packetForward, data_link, radio)
 #else
-#define IOTUS_CORE_START(transport, routing, data_link, radio) \
+#define IOTUS_CORE_START(transport, packetForward, data_link, radio) \
               iotus_core_start_system()
 #endif
 
@@ -51,7 +51,7 @@ void
 iotus_core_start_system (
   #ifdef IOTUS_COMPILE_MODE_DYNAMIC
   iotus_transport_protocols transport,
-  iotus_routing_protocols routing,
+  iotus_network_protocols network,
   iotus_data_link_protocols data_link,
   iotus_radio_drivers radio_driver
   #else

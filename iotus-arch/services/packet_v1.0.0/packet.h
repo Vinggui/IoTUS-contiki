@@ -183,8 +183,8 @@ packet_parse(iotus_packet_t *packetPiece);
 Boolean
 packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
 
-void
-packet_send(iotus_packet_t *packetSelected);
+// void
+// packet_send(iotus_packet_t *packetSelected);
 
 // void
 // packet_poll_by_priority(uint8_t num);
@@ -192,11 +192,11 @@ packet_send(iotus_packet_t *packetSelected);
 // void
 // packet_poll_by_node(iotus_node_t *node, uint8_t num);
 
-void
-packet_continue_deferred_packet(iotus_packet_t *packet);
+// void
+// packet_continue_deferred_packet(iotus_packet_t *packet);
 
-void
-packet_deliver_upstack(iotus_packet_t *packet);
+// void
+// packet_deliver_upstack(iotus_packet_t *packet);
 
 void
 packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace);

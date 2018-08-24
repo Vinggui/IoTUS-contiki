@@ -27,7 +27,7 @@
 #include "platform-conf.h"
 
 
-struct iotus_routing_protocol_struct {
+struct iotus_network_protocol_struct {
   void (* start)(void);
   void (* post_start)(void);
   void (* close)(void);
