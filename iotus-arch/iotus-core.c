@@ -18,6 +18,7 @@
 #include "contiki.h"
 #include "iotus-netstack.h"
 #include "iotus-core.h"
+#include "iotus-api.h"
 /* This next include is given by the makefile of the iotus core,
  * just as the next lists ahead. Hence, don't try to go to their definition.
 */
@@ -92,10 +93,25 @@ Boolean allowSystemSleep;
 uint8_t sleepGreenFlag;
 uint16_t netstackFreeTime = 0;
 
+static packet_sent_cb gApplicationConfirmationCB;
+static packet_handler gApplicationPacketHandler;
 static application_demanding_task gApplicationDemandingTask;
 
 // PROCESS(iotus_core_process, "Core IoTUS Process");
 
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief Define the functions to handle packet flow with application
+ * \param packet_
+ * \param param Parameter to be verified
+ * \return Boolean.
+ */
+void
+iotus_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler) {
+  gApplicationConfirmationCB = confirmationFunc;
+  gApplicationPacketHandler = appHandler;
+}
 
 /*---------------------------------------------------------------------------*/
 iotus_packet_t *
@@ -125,9 +141,7 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
   SAFE_PRINTF_LOG_INFO("Packet created");
 
   // packet_send(packet);
-  if(active_transport_protocol->build_to_send != NULL) {
-    active_transport_protocol->build_to_send(packet);
-  }
+  active_transport_protocol->build_to_send(packet);
   return packet;
 }
 

@@ -982,6 +982,7 @@ PROCESS_THREAD(cc2420_process, ev, data)
     if(packet != NULL) {
       PRINTF("cc2420_process: calling receiver callback\n");
       active_data_link_protocol->receive(packet);
+      packet_destroy(packet);
       // packet_deliver_upstack(packet);
     }
   }

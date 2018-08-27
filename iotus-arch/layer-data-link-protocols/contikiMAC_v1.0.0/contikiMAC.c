@@ -723,7 +723,12 @@ send_packet(iotus_packet_t *packet)
     off();
     PRINTF("contikimac: collisions before sending\n");
     contikimac_is_on = contikimac_was_on;
-    printf("aquiiiii\n");
+    
+
+    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+      piggyback_confirm_sent(packet, MAC_TX_COLLISION);
+    }
+  
     return MAC_TX_COLLISION;
   }
 #endif /* RDC_CONF_HARDWARE_CSMA */

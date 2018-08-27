@@ -21,6 +21,14 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullTrans"
 #include "safe-printer.h"
 
+
+static iotus_netstack_return
+send(iotus_packet_t *packet)
+{
+  active_network_protocol->build_to_send(packet);
+  return TRANSPORT_TX_OK;
+}
+
 static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
@@ -42,7 +50,7 @@ const struct iotus_transport_protocol_struct null_transport_protocol = {
   start,
   NULL,
   close,
-  NULL,
+  send,
   send_cb,
   NULL
 };

@@ -36,9 +36,16 @@
               iotus_core_start_system()
 #endif
 
+
+typedef void (* packet_sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
+typedef void (* packet_handler)(iotus_packet_t *packet);
+
 //////////////////////////////////////////////////////////////////////////
 //                                Functions                             //
 //////////////////////////////////////////////////////////////////////////
+void
+iotus_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler);
+
 iotus_packet_t *
 iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination);

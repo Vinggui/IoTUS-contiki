@@ -131,8 +131,11 @@ send_packet(void *ptr)
   SAFE_PRINTF_LOG_INFO("sending phased pkt %u\n", packet_get_sequence_number(p->packetPhased));
   
   // packet_continue_deferred_packet(p->packetPhased);
-  // iotus_netstack_return returnAns;
-  active_data_link_protocol->send(p->packetPhased);
+  iotus_netstack_return returnAns;
+  returnAns = active_data_link_protocol->send(p->packetPhased);
+  if(returnAns == MAC_TX_OK) {
+    packet_destroy(p->packetPhased);
+  }
 
   memb_free(&phased_packets_memb, p);
 }

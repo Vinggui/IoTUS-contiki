@@ -44,9 +44,9 @@ MEMB(iotus_packet_struct_mem, iotus_packet_t, IOTUS_PACKET_LIST_SIZE);
 LIST(gPacketList);
 // LIST(gPacketReadyList);
 
-static packet_sent_cb gApplicationConfirmationCB;
-static packet_handler gApplicationPacketHandler;
 static uint16_t gPacketIDcounter;
+
+// process_event_t event_packet_service = process_alloc_event();
 
 /*---------------------------------------------------------------------*/
 /*
@@ -66,20 +66,6 @@ packet_destroy(iotus_packet_t *piece) {
   //destroy attached piggyback
 
   return pieces_destroy(&iotus_packet_struct_mem, piece);
-}
-
-
-/*---------------------------------------------------------------------*/
-/*
- * \brief Define the functions to handle packet flow with application
- * \param packet_
- * \param param Parameter to be verified
- * \return Boolean.
- */
-void
-packet_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler) {
-  gApplicationConfirmationCB = confirmationFunc;
-  gApplicationPacketHandler = appHandler;
 }
 
 /*---------------------------------------------------------------------*/
