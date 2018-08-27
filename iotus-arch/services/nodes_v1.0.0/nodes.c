@@ -171,7 +171,6 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
 
     if(NULL == h) {
       SAFE_PRINT("Aloc node");
-      printf("deu merda!!!!\n");
       return NULL;
     }
     //Only new nodes need to update the address

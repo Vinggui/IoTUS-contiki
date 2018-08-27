@@ -55,6 +55,7 @@ static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     printf("message processed %u\n", returnAns);
+    packet_destroy(packet);
 }
 
 static void
@@ -75,7 +76,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
     IOTUS_CORE_START(0,0,0,0);//contikiMAC,0);
-    packet_set_interface_functions(app_packet_confirm,app_packet_handler);
+    iotus_set_interface_functions(app_packet_confirm,app_packet_handler);
 
     static uint8_t selfAddrValue;
     selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];

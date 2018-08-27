@@ -96,41 +96,6 @@ static application_demanding_task gApplicationDemandingTask;
 
 // PROCESS(iotus_core_process, "Core IoTUS Process");
 
-
-/*---------------------------------------------------------------------------*/
-iotus_packet_t *
-iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
-    iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination)
-{
-  iotus_packet_t *packet;
-
-  if(payloadSize == 0 || payload == NULL ||
-    finalDestination == NULL) {
-    SAFE_PRINTF_LOG_ERROR("Packet input");
-    return NULL;
-  }
-
-  packet = packet_create_msg(
-                payloadSize,
-                payload,
-                priority,
-                timeout,
-                TRUE,
-                finalDestination);
-
-  if(NULL == packet) {
-    return NULL;
-  }
-  packet_set_parameter(packet,params);
-  SAFE_PRINTF_LOG_INFO("Packet created");
-
-  // packet_send(packet);
-  if(active_transport_protocol->build_to_send != NULL) {
-    active_transport_protocol->build_to_send(packet);
-  }
-  return packet;
-}
-
 /*---------------------------------------------------------------------------*/
 static void
 send_signal_to_services(iotus_service_signal signal, void *data)

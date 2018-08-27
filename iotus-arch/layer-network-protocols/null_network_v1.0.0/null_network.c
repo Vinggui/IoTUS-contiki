@@ -21,7 +21,7 @@
 #include "sys/ctimer.h"
 #include "random.h"
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 
@@ -106,9 +106,16 @@ send(iotus_packet_t *packet)
     packet_push_bit_header(8, bitSequence, packet);
   }
 
+  return active_data_link_protocol->send(packet);
+}
 
-  //active_data_link_protocol->send(packet);
-  return ROUTING_TX_OK;
+
+static void
+send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
+{
+  SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
+  printf("vtc!!\n");
+  packet_destroy(packet);
 }
 
 static iotus_netstack_return
@@ -150,24 +157,21 @@ input_packet(iotus_packet_t *packet)
             return RX_ERR_DROPPED;
           }
           packet_set_parameter(packetForward, packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK);
+          packet_set_confirmation_cb(packet, send_cb);
           SAFE_PRINTF_LOG_INFO("Packet %p forwarded into %p", packet, packetForward);
 
-          // packet_send(packetForward);
-          if(active_network_protocol->build_to_send != NULL) {
-            active_network_protocol->build_to_send(packetForward);
+          
+          iotus_netstack_return status = send(packetForward);
+            printf("uhhhhhaaaaa?! %p \n",packet->confirm_cb);
+          if (!(MAC_TX_OK == status ||
+              MAC_TX_DEFERRED == status)) {
+            packet_destroy(packet);
           }
         }
     }
     return RX_PROCESSED;
   }
 
-}
-
-
-static void
-send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
-{
-  SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
 }
 
 
@@ -189,13 +193,35 @@ send_keep_alive(void *ptr)
 #else
     SAFE_PRINTF_LOG_INFO("Create KA alone\n");
     if(rootNode != NULL) {
-        iotus_initiate_msg(
-                12,
-                private_keep_alive,
-                PACKET_PARAMETERS_WAIT_FOR_ACK,
-                IOTUS_PRIORITY_APPLICATION,
-                5000,
-                rootNode);
+        // iotus_initiate_msg(
+        //         12,
+        //         private_keep_alive,
+        //         PACKET_PARAMETERS_WAIT_FOR_ACK,
+        //         IOTUS_PRIORITY_APPLICATION,
+        //         5000,
+        //         rootNode);
+
+
+        packet = packet_create_msg(
+                      12,
+                      private_keep_alive,
+                      IOTUS_PRIORITY_APPLICATION,
+                      5000,
+                      TRUE,
+                      rootNode);
+
+        if(NULL == packet) {
+          return NULL;
+        }
+        packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
+        packet_set_confirmation_cb(packet, send_cb);
+
+        iotus_netstack_return status = send(packet);
+        if (!(MAC_TX_OK ==  status||
+            MAC_TX_DEFERRED == status)) {
+          printf("FAILED NET?!\n");
+          packet_destroy(packet);
+        }
       }
 #endif
   }

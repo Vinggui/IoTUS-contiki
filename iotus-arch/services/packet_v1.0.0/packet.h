@@ -31,6 +31,7 @@
   #error IOTUS_PACKET_LIST_SIZE not defined! Define it into your platform-conf.h
 #endif
 
+
 ///////////////////////////////////////////////////////
 //             Defines of this module                //
 ///////////////////////////////////////////////////////
@@ -40,6 +41,7 @@ typedef struct packet_piece {
   iotus_node_t *finalDestinationNode;
   iotus_node_t *nextDestinationNode;
   iotus_node_t *prevSourceNode;
+  void (*confirm_cb)(struct packet_piece *packet, iotus_netstack_return returnAns);
   //uint8_t iotusHeader;
   LIST_STRUCT(additionalInfoList);
   timestamp_t timeout;
@@ -51,6 +53,9 @@ typedef struct packet_piece {
   uint8_t type;
 } iotus_packet_t;
 
+
+typedef void (* packet_sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
+typedef void (* packet_handler)(iotus_packet_t *packet);
 
 /*
  * The address type is defined as a single byte (0 to 255 values).
@@ -77,9 +82,6 @@ enum packet_types {
 #define IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN     (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_ROUTING_ADDR_TYPE_BEGIN)
 #define IOTUS_PACKET_TYPE_APPLICATION_ADDR_TYPE_BEGIN   (IOTUS_PACKET_TYPE_RANGE_PER_LAYER+IOTUS_PACKET_TYPE_TRANSPORT_ADDR_TYPE_BEGIN)
 
-typedef void (* packet_sent_cb)(iotus_packet_t *packet, iotus_netstack_return returnAns);
-typedef void (* packet_handler)(iotus_packet_t *packet);
-
 /////////////////////////////////////////////////////
 //                     MACROS                      //
 /////////////////////////////////////////////////////
@@ -89,9 +91,6 @@ typedef void (* packet_handler)(iotus_packet_t *packet);
 //////////////////////////////////////////////////////////////////////////
 //                      Functions of this service                       //
 //////////////////////////////////////////////////////////////////////////
-void
-packet_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler);
-
 uint8_t
 packet_get_parameter(iotus_packet_t *packet_piece, uint8_t param);
 
@@ -200,6 +199,12 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
 
 void
 packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace);
+
+void
+packet_set_confirmation_cb(iotus_packet_t *packet, packet_sent_cb func_cb);
+
+void
+packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status);
 
 /* This function provides the core access to basic operations into this service */
 void

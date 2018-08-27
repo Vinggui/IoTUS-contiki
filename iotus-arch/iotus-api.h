@@ -44,6 +44,9 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination);
 
 void
+iotus_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler);
+
+void
 iotus_set_demanding_task(uint16_t time_needed, application_demanding_task task);
 
 /* Do not call this function below directly. Use the macro IOTUS_CORE_START instead. */
