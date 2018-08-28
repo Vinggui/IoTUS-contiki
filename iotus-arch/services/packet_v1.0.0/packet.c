@@ -22,6 +22,7 @@
 #include "iotus-netstack.h"
 #include "packet-defs.h"
 #include "piggyback.h"
+#include "layer-packet-manager.h"
 #include "lib/memb.h"
 #include "list.h"
 #include "packet.h"
@@ -34,7 +35,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -61,6 +62,7 @@ packet_destroy(iotus_packet_t *piece) {
   }
   //Try to remove in every list...
   // list_remove(gPacketReadyList, piece);
+  SAFE_PRINTF_LOG_INFO("Del pkt %u", piece->pktID);
   list_remove(gPacketList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
   //destroy attached piggyback
@@ -405,6 +407,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   newMsg->lastHeaderSize = 0;
   newMsg->nextDestinationNode = NULL;
   newMsg->prevSourceNode = NULL;
+  newMsg->confirm_cb = NULL;
   newMsg->pktID = ++gPacketIDcounter;
   newMsg->params = 0;
   //newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;
@@ -827,69 +830,6 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space)
 }
 
 /*---------------------------------------------------------------------*/
-// static void
-// return_packet_on_layers(iotus_packet_t *packetSelected, iotus_netstack_return returnAns)
-// {
-//   //Call the return functions of each layer
-//   if(packetSelected->priority >= IOTUS_PRIORITY_ROUTING &&
-//      returnAns < ROUTING_TX_OK) {
-//     if(active_routing_protocol->sent_cb != NULL) {
-//       active_routing_protocol->sent_cb(packetSelected, returnAns);
-//     }
-//   }
-//   if(packetSelected->priority >= IOTUS_PRIORITY_TRANSPORT &&
-//      returnAns < TRANSPORT_TX_OK) {
-//     if(active_transport_protocol->sent_cb != NULL) {
-//       active_transport_protocol->sent_cb(packetSelected, returnAns);
-//     }
-//   }
-//   if(packetSelected->priority >= IOTUS_PRIORITY_APPLICATION) {
-//     if(gApplicationConfirmationCB != NULL) {
-//       gApplicationConfirmationCB(packetSelected, returnAns);
-//     }
-//   }
-// }
-/*---------------------------------------------------------------------*/
-// void
-// packet_send(iotus_packet_t *packetSelected)
-// {
-//   /*
-//    * Call the building packet of each layer.
-//    * 
-//    * This sequence of If and Else has to follow the exactly priority per layer,
-//    * that is, when the routing layer creates a frame (with routing priority),
-//    * only the lower layers have to process it's frame. If Data link create a frame,
-//    * it can send tha packet right away.
-//   */
-//   iotus_netstack_return returnAns = TRANSPORT_TX_OK;
-//   if(active_transport_protocol->build_to_send != NULL &&
-//      packetSelected->priority >= IOTUS_PRIORITY_TRANSPORT) {
-//     returnAns = active_transport_protocol->build_to_send(packetSelected);
-//   }
-//   if(TRANSPORT_TX_OK == returnAns) {
-//     returnAns = ROUTING_TX_OK;
-//     if(active_routing_protocol->build_to_send != NULL &&
-//        packetSelected->priority >= IOTUS_PRIORITY_ROUTING) {
-//       returnAns = active_routing_protocol->build_to_send(packetSelected);
-//     }
-//     if(ROUTING_TX_OK == returnAns) {
-//       returnAns = active_data_link_protocol->send(packetSelected);
-//     }
-//   }
-
-//   return_packet_on_layers(packetSelected, returnAns);
-
-//   //If it was deferred, then save it into the rdy list
-//   if(MAC_TX_DEFERRED == returnAns) {
-//     list_remove(gPacketList, packetSelected);
-//     list_push(gPacketReadyList, packetSelected);
-//   } else {
-//     packet_destroy(packetSelected);
-//     printf("destroyed! %u\n", returnAns);
-//   }
-// }
-
-/*---------------------------------------------------------------------*/
 /**
  * \brief   Select one packet and initiate the stack signaling of packet to be sent.
  * \param num   The number of packets to be polled and ready to transmit.
@@ -1038,6 +978,32 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
 
   //Apply the final header
   // packet_append_last_header(finalHdrSize, finalHeader, packet);
+}
+
+/*---------------------------------------------------------------------*/
+void
+packet_set_confirmation_cb(iotus_packet_t *packet, packet_sent_cb func_cb)
+{
+  if(packet != NULL && func_cb != NULL) {
+    packet->confirm_cb = func_cb;
+  }
+}
+
+/*---------------------------------------------------------------------*/
+void
+packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status)
+{
+      printf("PINTO %p %p\n", packet, packet->confirm_cb);
+  if(packet != NULL) {
+    if (packet->confirm_cb != NULL) {
+      printf("BUCETA\n");
+      (packet->confirm_cb)(packet, status);
+    }
+  } else if (!(MAC_TX_OK == status ||
+      MAC_TX_DEFERRED == status)) {
+    printf("phase del %u\n", packet->pktID);
+    packet_destroy(packet);
+  }
 }
 
 /*---------------------------------------------------------------------*/

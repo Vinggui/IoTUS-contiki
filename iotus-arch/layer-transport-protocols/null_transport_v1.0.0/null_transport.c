@@ -25,8 +25,7 @@
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
-  active_network_protocol->build_to_send(packet);
-  return TRANSPORT_TX_OK;
+  return active_network_protocol->build_to_send(packet);
 }
 
 static void

@@ -55,6 +55,8 @@ static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     printf("message processed %u\n", returnAns);
+    printf("packet %u\n", packet->pktID);
+    packet_destroy(packet);
 }
 
 static void

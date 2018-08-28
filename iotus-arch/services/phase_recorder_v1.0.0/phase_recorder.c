@@ -133,12 +133,11 @@ send_packet(void *ptr)
   // packet_continue_deferred_packet(p->packetPhased);
   iotus_netstack_return returnAns;
   returnAns = active_data_link_protocol->send(p->packetPhased);
-  if(returnAns == MAC_TX_OK) {
-    packet_destroy(p->packetPhased);
-  }
+  packet_confirm_transmission(p->packetPhased, returnAns);
 
   memb_free(&phased_packets_memb, p);
 }
+
 /*---------------------------------------------------------------------------*/
 phase_recorder_status_t
 phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
