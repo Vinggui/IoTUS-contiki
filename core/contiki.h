@@ -78,7 +78,7 @@
 #define MSG_INTERVAL                      8//sec
 #define BACKOFF_TIME                      ((MSG_INTERVAL-1)*1000)
 #define TRANSMISSION_CHANCE               100//%
-#define KEEP_ALIVE_INTERVAL               8//sec
+#define KEEP_ALIVE_INTERVAL               9//sec
 #define ROUTING_PACKETS_TIMEOUT           BACKOFF_TIME//msec
 
 #if ALOHA_STYLE == 1

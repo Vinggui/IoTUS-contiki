@@ -61,7 +61,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -551,7 +551,7 @@ broadcast_rate_drop(void)
 //	    struct rdc_buf_list *buf_list,
 //            int is_receiver_awake)
 static int8_t
-send_packet(iotus_packet_t *packet)
+send_packet_handler(iotus_packet_t *packet)
 {
   rtimer_clock_t t0;
 #if WITH_PHASE_OPTIMIZATION
@@ -724,9 +724,6 @@ send_packet(iotus_packet_t *packet)
     PRINTF("contikimac: collisions before sending\n");
     contikimac_is_on = contikimac_was_on;
 
-    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-      piggyback_confirm_sent(packet, MAC_TX_COLLISION);
-    }
     return MAC_TX_COLLISION;
   }
 #endif /* RDC_CONF_HARDWARE_CSMA */
@@ -877,11 +874,19 @@ send_packet(iotus_packet_t *packet)
   }
 #endif /* WITH_PHASE_OPTIMIZATION */
 
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-    piggyback_confirm_sent(packet, ret);
-  }
   return ret;
 }
+/*---------------------------------------------------------------------------*/
+static int8_t
+send_packet(iotus_packet_t *packet)
+{
+  int8_t result = send_packet_handler(packet);
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+    piggyback_confirm_sent(packet, result);
+  }
+  return result;
+}
+
 /*---------------------------------------------------------------------------*/
 /* Timer callback triggered when receiving a burst, after having
    waited for a next packet for a too long time. Turns the radio off
@@ -1002,12 +1007,12 @@ input_packet(iotus_packet_t *packet)
           if(NULL != ackPkt) {
             packet_set_type(ackPkt, IOTUS_PACKET_TYPE_IEEE802154_ACK);
             active_radio_driver->send(ackPkt);
-            printf("Ack sent\n");
+            SAFE_PRINTF_LOG_INFO("Ack sent\n");
 
             /* If packet has no callback function. Destroy it... */
             packet_destroy(ackPkt);
           } else {
-            printf("No ack sent\n");
+            SAFE_PRINTF_LOG_INFO("No ack sent\n");
           }
           we_are_sending = 0;
         }

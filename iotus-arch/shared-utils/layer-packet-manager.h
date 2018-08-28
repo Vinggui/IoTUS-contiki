@@ -19,6 +19,9 @@
 #include "iotus-core.h"
 #include "packet.h"
 
+iotus_packet_t * iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+    iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination,
+    packet_sent_cb func_cb);
 
 #endif /* IOTUS_ARCH_SHARED_UTILS_LAYER_PACKET_MANAGER_H_*/
 

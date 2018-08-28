@@ -61,9 +61,19 @@ packet_send(iotus_packet_t *packetSelected)
 }
 
 /*---------------------------------------------------------------------------*/
-iotus_packet_t *
-iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
-    iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination)
+/*
+ * \brief It is used for every other layer in the system
+ * \param payloadSize       Size for this payload
+ * \param payload           Payload buffer itself
+ * \param param             Parameter to be verified
+ * \param priority          Layer creating this payload
+ * \param timeout           How long this packet can wait to be transmitted
+ * \param finalDestination  The last node to be transmitted
+ * \return Pointer to the packet created, NULL is fails.
+ */
+iotus_packet_t * iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+    iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination,
+    packet_sent_cb func_cb)
 {
   iotus_packet_t *packet;
 
@@ -85,10 +95,33 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     return NULL;
   }
 
-  packet_set_parameter(packet,params);
-  packet_set_confirmation_cb(packet, gApplicationConfirmationCB);
+  packet_set_parameter(packet, params);
+  packet_set_confirmation_cb(packet, func_cb);
+  
   SAFE_PRINTF_LOG_INFO("Packet created %u", packet->pktID);
+  return packet;
+}
 
+/*---------------------------------------------------------------------------*/
+/*
+ * \brief It is used for the application API
+ * \param payloadSize       Size for this payload
+ * \param payload           Payload buffer itself
+ * \param param             Parameter to be verified
+ * \param priority          Layer creating this payload
+ * \param timeout           How long this packet can wait to be transmitted
+ * \param finalDestination  The last node to be transmitted
+ * \return Pointer to the packet created, NULL is fails.
+ */
+iotus_packet_t * iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+                                    uint16_t timeout, iotus_node_t *finalDestination)
+{
+  iotus_packet_t *packet = iotus_initiate_packet(payloadSize, payload, params,
+    IOTUS_PRIORITY_APPLICATION, timeout, finalDestination,
+    gApplicationConfirmationCB);
+
+
+  SAFE_PRINTF_LOG_INFO("Packet App %u \n", packet->pktID);
   iotus_netstack_return status = packet_send(packet);
   if (MAC_TX_DEFERRED == status) {
     return packet;

@@ -35,7 +35,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -968,7 +968,8 @@ packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
   uint8_t finalHeader[5] = {0xFF};
   // uint8_t finalHdrSize;
   // finalHdrSize = 1;
-  printf("packetServ list5 %u %u\n", list_length(gPacketList), memb_numfree(&iotus_packet_struct_mem));
+
+  // printf("PacketServ %u - %u %u\n", packet->pktID, list_length(gPacketList), memb_numfree(&iotus_packet_struct_mem));
   
   //First, try to apply the piggyback, if it exists
   if(0 < piggyback_apply(packet,freeSpace)) {
@@ -993,17 +994,15 @@ packet_set_confirmation_cb(iotus_packet_t *packet, packet_sent_cb func_cb)
 void
 packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status)
 {
-      printf("PINTO %p %p\n", packet, packet->confirm_cb);
   if(packet != NULL) {
     if (packet->confirm_cb != NULL) {
-      printf("BUCETA\n");
       (packet->confirm_cb)(packet, status);
+      return;
     }
-  } else if (!(MAC_TX_OK == status ||
-      MAC_TX_DEFERRED == status)) {
-    printf("phase del %u\n", packet->pktID);
-    packet_destroy(packet);
   }
+  // printf("Packet phase del %u\n", packet->pktID);
+  packet_destroy(packet);
+  
 }
 
 /*---------------------------------------------------------------------*/

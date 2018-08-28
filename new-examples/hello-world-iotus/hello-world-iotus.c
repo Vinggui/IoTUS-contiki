@@ -55,7 +55,7 @@ static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     printf("message processed %u\n", returnAns);
-    printf("packet %u\n", packet->pktID);
+    // printf("Packet App del %u\n", packet->pktID);
     packet_destroy(packet);
 }
 
@@ -104,13 +104,14 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         
 #if SINGLE_NODE_NULL == 0
         if(selfAddrValue != 1 &&
-           random_rand()%100 > (100-TRANSMISSION_CHANCE)) {
+           random_rand()%100 > (100-TRANSMISSION_CHANCE))
+        {
 #else
         {
 #endif
             n++;
-            uint8_t nodeAddr = 1;//n%7 + 2;
-            printf("App sending to %u\n", nodeAddr);
+            // uint8_t nodeAddr = 1;//n%7 + 2;
+            // printf("App sending to %u\n", nodeAddr);
 
             
   TIC();
@@ -124,7 +125,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
                         20,
                         selfMsg,
                         PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                        IOTUS_PRIORITY_APPLICATION,
                         5000,
                         rootNode);
             }
@@ -133,7 +133,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
                     20,
                     selfMsg,
                     0,
-                    IOTUS_PRIORITY_APPLICATION,
                     5000,
                     NODES_BROADCAST);
 #endif

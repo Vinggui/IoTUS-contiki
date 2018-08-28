@@ -17,10 +17,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "layer-packet-manager.h"
 #include "lib/memb.h"
 #include "list.h"
 #include "iotus-api.h"
-#include "iotus-core.h"
+#include "iotus-netstack.h"
 #include "global-functions.h"
 #include "global-parameters.h"
 #include "packet.h"
@@ -31,7 +32,7 @@
 #include "sys/ctimer.h"
 #include "timestamp.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
@@ -61,8 +62,8 @@ piggyback_destroy(iotus_piggyback_t *piece) {
 
 /*---------------------------------------------------------------------*/
 /**
- * \brief     Destroy the list of additional information that a piece may contain.
- * \param packet The pointer to the packet being confirmed.
+ * \brief         Destroy the list of additional information that a piece may contain.
+ * \param packet  The pointer to the packet being confirmed.
  */
 void
 piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
@@ -70,23 +71,23 @@ piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
   if(packet == NULL) {
     return;
   }
-
   //TODO Send confirmation to layer owner... They have to first register a function for that
 
-  printf("piggy clean1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
+  // printf("piggy clean1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   iotus_piggyback_t *h;
   iotus_piggyback_t *hOld;
   // while(NULL != (h =list_pop(list))) {
   h = list_head(gPiggybackFramesInsertedList);
   hOld = h;
   for(; h!=NULL; h=list_item_next(h)) {
+    // printf("confirm %u read %u\n", packet->pktID, h->pktID);
     if(h->pktID == packet->pktID) {
       piggyback_destroy(h);
       h = hOld;
     }
     hOld = h;
   }
-  printf("piggy clean2 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
+  // printf("piggy clean2 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   SAFE_PRINTF_LOG_INFO("Piggy list clean");
 }
 
@@ -97,22 +98,44 @@ static void
 piggyback_timeout_handler(void *ptr) {
   //Get the first of the list
   iotus_piggyback_t *h;
-  h = list_pop(gPiggybackFramesList);
+  h = list_head(gPiggybackFramesList);
 
   if(h == NULL) {
     return;
   }
-  // printf("aeeeeeee %u %u %s\n", (uint8_t)h->priority, pieces_get_data_size(h), pieces_get_data_pointer(h));
 
-  iotus_initiate_msg(
-                pieces_get_data_size(h),
-                pieces_get_data_pointer(h),
-                PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                h->priority,
-                0,
-                h->finalDestinationNode);
+  // iotus_initiate_msg(
+  //               pieces_get_data_size(h),
+  //               pieces_get_data_pointer(h),
+  //               PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+  //               h->priority,
+  //               0,
+  //               h->finalDestinationNode);
 
+  iotus_packet_t *packet = iotus_initiate_packet(
+                            pieces_get_data_size(h),
+                            pieces_get_data_pointer(h),
+                            PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                            h->priority,
+                            5000,
+                            h->finalDestinationNode,
+                            NULL);
+
+  if(NULL == packet) {
+    SAFE_PRINTF_LOG_INFO("Packet failed");
+    return;
+  }
   piggyback_destroy(h);
+
+  SAFE_PRINTF_LOG_INFO("Packet piggy %u \n", packet->pktID);
+  iotus_netstack_return status = active_transport_protocol->build_to_send(packet);
+  // if (!(MAC_TX_OK == status ||
+  //     MAC_TX_DEFERRED == status)) {
+  if (MAC_TX_DEFERRED != status) {
+
+    // printf("Packet piggy del %u\n", packet->pktID);
+    packet_destroy(packet);
+  }
 
   update_piggy_timeout_timer();
 }
@@ -169,7 +192,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
     SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
     return NULL;
   }
-  printf("piggy create1 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
+  // printf("piggy create1 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   iotus_piggyback_t *newPiece = (iotus_piggyback_t *)pieces_malloc(
                                                         &iotus_piggyback_mem,
                                                         sizeof(iotus_piggyback_t),
@@ -206,7 +229,7 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
 
   //Link the header into the list, sorting insertion
   pieces_insert_timeout_priority(gPiggybackFramesList,newPiece);
-  printf("piggy create2 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
+  // printf("piggy create2 %u %u\n", list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
   update_piggy_timeout_timer();
 
   SAFE_PRINTF_LOG_INFO("Frame created\n");
@@ -275,7 +298,7 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
     list_remove(gPiggybackFramesList, piggyback_piece);
     list_push(gPiggybackFramesInsertedList, piggyback_piece);
 
-    printf("piggy insert1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
+    // printf("piggy insert1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));
     //The callback will be done by the packet service,before destroying it.
     //
     //

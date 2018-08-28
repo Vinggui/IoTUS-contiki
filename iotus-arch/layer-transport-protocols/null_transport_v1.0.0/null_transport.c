@@ -37,7 +37,7 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 static void
 start(void)
 {
-  printf("Starting null transport\n");
+  SAFE_PRINT("Starting null transport\n");
 }
 
 static void

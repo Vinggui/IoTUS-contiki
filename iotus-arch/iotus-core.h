@@ -143,6 +143,19 @@ extern struct iotus_radio_driver_struct const *active_radio_driver;
 void
 iotus_core_netstack_idle_for(iotus_layer_priority layer, uint16_t maxDuration);
 
+/* Do not call this function below directly. Use the macro IOTUS_CORE_START instead. */
+void
+iotus_core_start_system (
+  #ifdef IOTUS_COMPILE_MODE_DYNAMIC
+  iotus_transport_protocols transport,
+  iotus_network_protocols network,
+  iotus_data_link_protocols data_link,
+  iotus_radio_drivers radio_driver
+  #else
+  void
+  #endif
+);
+
 #endif /* IOTUS_ARCH_IOTUS_CORE_H_ */
 /* The following stuff ends the \defgroup block at the beginning of
    the file: */

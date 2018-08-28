@@ -17,11 +17,12 @@
 #include "contiki.h"
 #include "iotus-api.h"
 #include "iotus-netstack.h"
+#include "layer-packet-manager.h"
 #include "piggyback.h"
 #include "sys/ctimer.h"
 #include "random.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 
@@ -88,7 +89,7 @@ send(iotus_packet_t *packet)
       return ROUTING_TX_ERR;
     }
 
-    SAFE_PRINTF_LOG_INFO("Final %u next %u\n",finalDestLastAddress[0],nextHop);
+    SAFE_PRINTF_LOG_INFO("Final %u next %u ID:%u\n",finalDestLastAddress[0],nextHop,packet->pktID);
 
     // uint8_t addressNext[2] = {nextHop,0};
     // nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
@@ -114,7 +115,6 @@ static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
-  printf("vtc!!\n");
   packet_destroy(packet);
 }
 
@@ -144,28 +144,27 @@ input_packet(iotus_packet_t *packet)
 
     if(nextHop != 0) {
         if(rootNode != NULL) {
-          packetForward = packet_create_msg(
-                            packet_get_payload_size(packet),
-                            packet_get_payload_data(packet),
-                            IOTUS_PRIORITY_ROUTING,
-                            ROUTING_PACKETS_TIMEOUT,
-                            TRUE,
-                            rootNode);
+          packetForward = iotus_initiate_packet(
+                              packet_get_payload_size(packet),
+                              packet_get_payload_data(packet),
+                              packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              IOTUS_PRIORITY_ROUTING,
+                              ROUTING_PACKETS_TIMEOUT,
+                              rootNode,
+                              send_cb);
 
           if(NULL == packetForward) {
             SAFE_PRINTF_LOG_INFO("Packet failed");
             return RX_ERR_DROPPED;
           }
-          packet_set_parameter(packetForward, packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK);
-          packet_set_confirmation_cb(packetForward, send_cb);
 
           iotus_netstack_return status = send(packetForward);
+          SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
+          // if (!(MAC_TX_OK == status ||
+          //     MAC_TX_DEFERRED == status)) {
+          if (MAC_TX_DEFERRED != status) {
 
-          SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u, stat", packet->pktID, packetForward->pktID, status);
-          if (!(MAC_TX_OK == status ||
-              MAC_TX_DEFERRED == status)) {
-
-            printf("packet fwd del %u\n", packetForward->pktID);
+            // printf("Packet fwd del %u\n", packetForward->pktID);
             packet_destroy(packetForward);
           }
         }
@@ -197,32 +196,33 @@ send_keep_alive(void *ptr)
         //         12,
         //         private_keep_alive,
         //         PACKET_PARAMETERS_WAIT_FOR_ACK,
-        //         IOTUS_PRIORITY_APPLICATION,
+        //         IOTUS_PRIORITY_ROUTING,
         //         5000,
-        //         rootNode);
+        //         rootNode,
+        //         send_cb);
 
-
-        packet = packet_create_msg(
-                      12,
-                      private_keep_alive,
-                      IOTUS_PRIORITY_ROUTING,
-                      5000,
-                      TRUE,
-                      rootNode);
+        iotus_packet_t *packet = iotus_initiate_packet(
+                                  12,
+                                  private_keep_alive,
+                                  PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                  IOTUS_PRIORITY_ROUTING,
+                                  5000,
+                                  rootNode,
+                                  send_cb);
 
         if(NULL == packet) {
-          return NULL;
+          SAFE_PRINTF_LOG_INFO("Packet failed");
+          return;
         }
-        packet_set_parameter(packet,PACKET_PARAMETERS_WAIT_FOR_ACK);
-        packet_set_confirmation_cb(packet, send_cb);
 
-        SAFE_PRINTF_LOG_INFO("Create KA alone %u\n", packet->pktID);
+        SAFE_PRINTF_LOG_INFO("Packet KA %u \n", packet->pktID);
+        iotus_netstack_return status = send(packetForward);
+        // if (!(MAC_TX_OK == status ||
+        //     MAC_TX_DEFERRED == status)) {
+        if (MAC_TX_DEFERRED != status) {
 
-        iotus_netstack_return status = send(packet);
-        if (!(MAC_TX_OK == status||
-            MAC_TX_DEFERRED == status)) {
-          printf("keepAl del %u\n", packet->pktID);
-          packet_destroy(packet);
+          // printf("Packet KA del %u\n", packetForward->pktID);
+          packet_destroy(packetForward);
         }
       }
 #endif
