@@ -133,6 +133,12 @@ iotus_packet_t * iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload
 
 
 /*---------------------------------------------------------------------*/
+void
+return_packet_to_application(iotus_packet_t *packet)
+{
+  gApplicationPacketHandler(packet);
+}
+/*---------------------------------------------------------------------*/
 // static void
 // return_packet_on_layers(iotus_packet_t *packetSelected, iotus_netstack_return returnAns)
 // {

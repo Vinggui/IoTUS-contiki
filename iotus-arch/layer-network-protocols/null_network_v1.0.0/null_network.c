@@ -132,7 +132,7 @@ input_packet(iotus_packet_t *packet)
 
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
     //This is for us...
-
+    active_transport_protocol->receive(packet);
     return RX_PROCESSED;
   } else {
     iotus_packet_t *packetForward = NULL;
