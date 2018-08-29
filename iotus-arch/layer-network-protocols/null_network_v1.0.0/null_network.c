@@ -216,13 +216,13 @@ send_keep_alive(void *ptr)
         }
 
         SAFE_PRINTF_LOG_INFO("Packet KA %u \n", packet->pktID);
-        iotus_netstack_return status = send(packetForward);
+        iotus_netstack_return status = send(packet);
         // if (!(MAC_TX_OK == status ||
         //     MAC_TX_DEFERRED == status)) {
         if (MAC_TX_DEFERRED != status) {
 
-          // printf("Packet KA del %u\n", packetForward->pktID);
-          packet_destroy(packetForward);
+          // printf("Packet KA del %u\n", packet->pktID);
+          packet_destroy(packet);
         }
       }
 #endif
