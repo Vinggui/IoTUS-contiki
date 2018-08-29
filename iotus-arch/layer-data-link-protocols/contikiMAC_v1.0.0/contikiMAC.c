@@ -46,7 +46,6 @@
 #include "dev/watchdog.h"
 #include "iotus-netstack.h"
 #include "iotus-frame802154.h"
-#include "lib/random.h"
 #include "phase_recorder.h"
 #include "piggyback.h"
 #include "seqnum.h"
