@@ -13,10 +13,12 @@
  *      Author: vinicius
  */
 
+#include "contiki.h"
 #include "iotus-core.h"
 #include "iotus-netstack.h"
 #include "layer-packet-manager.h"
 #include "platform-conf.h"
+#include "random.h"
 
 #define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "pktMng"
@@ -25,6 +27,7 @@
 
 static packet_sent_cb gApplicationConfirmationCB;
 static packet_handler gApplicationPacketHandler;
+static struct ctimer RTxTimer;
 
 /*---------------------------------------------------------------------*/
 /*
@@ -71,7 +74,8 @@ packet_send(iotus_packet_t *packetSelected)
  * \param finalDestination  The last node to be transmitted
  * \return Pointer to the packet created, NULL is fails.
  */
-iotus_packet_t * iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+iotus_packet_t *
+iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     iotus_layer_priority priority, uint16_t timeout, iotus_node_t *finalDestination,
     packet_sent_cb func_cb)
 {
@@ -113,7 +117,8 @@ iotus_packet_t * iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payl
  * \param finalDestination  The last node to be transmitted
  * \return Pointer to the packet created, NULL is fails.
  */
-iotus_packet_t * iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
+iotus_packet_t *
+iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
                                     uint16_t timeout, iotus_node_t *finalDestination)
 {
   iotus_packet_t *packet = iotus_initiate_packet(payloadSize, payload, params,
@@ -131,6 +136,35 @@ iotus_packet_t * iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload
   return packet;
 }
 
+/*---------------------------------------------------------------------------*/
+static void
+retransmit_msg(void *ptr)
+{
+  iotus_packet_t *packet = (iotus_packet_t *)ptr;
+  SAFE_PRINTF_LOG_INFO("Packet R-Tx App %u \n", packet->pktID);
+  iotus_netstack_return status = active_data_link_protocol->send(packet);
+  if (MAC_TX_DEFERRED == status) {
+    return;
+  } else {
+    (packet->confirm_cb)(packet, status);
+  }
+  return;
+}
+
+/*---------------------------------------------------------------------------*/
+/*
+ * \brief It is used for the application API
+ * \param payloadSize       Size for this payload
+ * \param payload           Payload buffer itself
+ * \param finalDestination  The last node to be transmitted
+ * \return Pointer to the packet created, NULL is fails.
+ */
+void
+iotus_retransmit_msg(iotus_packet_t *packet)
+{
+  clock_time_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+  ctimer_set(&RTxTimer, backoff, retransmit_msg, packet);
+}
 
 /*---------------------------------------------------------------------*/
 void

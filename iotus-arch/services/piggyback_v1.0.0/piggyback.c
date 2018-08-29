@@ -349,6 +349,7 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
                                              toFinalDestination,
                                              availableSpace)) {
         piggyPiecesInserted++;
+        break;
       }
     }
     h = nextH;

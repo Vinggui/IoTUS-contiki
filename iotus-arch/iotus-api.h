@@ -48,6 +48,9 @@ iotus_packet_t * iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload
     uint16_t timeout, iotus_node_t *finalDestination);
 
 void
+iotus_retransmit_msg(iotus_packet_t *packet);
+
+void
 iotus_set_interface_functions(packet_sent_cb confirmationFunc, packet_handler appHandler);
 
 void

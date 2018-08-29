@@ -67,6 +67,10 @@ static uint8_t private_keep_alive[12];
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
+  if(packet_get_parameter(packet, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
+    return active_data_link_protocol->send(packet);
+  }
+
   if(NODES_BROADCAST == packet->finalDestinationNode) {
     packet->nextDestinationNode = NODES_BROADCAST;
   } else {
@@ -115,7 +119,11 @@ static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
-  packet_destroy(packet);
+  if(returnAns != MAC_TX_OK) {
+      iotus_retransmit_msg(packet);
+  } else {
+      packet_destroy(packet);
+  }
 }
 
 static iotus_netstack_return
@@ -163,9 +171,9 @@ input_packet(iotus_packet_t *packet)
           // if (!(MAC_TX_OK == status ||
           //     MAC_TX_DEFERRED == status)) {
           if (MAC_TX_DEFERRED != status) {
-
+            send_cb(packetForward, status);
             // printf("Packet fwd del %u\n", packetForward->pktID);
-            packet_destroy(packetForward);
+            // packet_destroy(packetForward);
           }
         }
     }
@@ -220,9 +228,9 @@ send_keep_alive(void *ptr)
         // if (!(MAC_TX_OK == status ||
         //     MAC_TX_DEFERRED == status)) {
         if (MAC_TX_DEFERRED != status) {
-
+          send_cb(packetForward, status);
           // printf("Packet KA del %u\n", packet->pktID);
-          packet_destroy(packet);
+          // packet_destroy(packet);
         }
       }
 #endif

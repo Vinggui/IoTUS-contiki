@@ -56,7 +56,12 @@ app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     printf("message processed %u\n", returnAns);
     // printf("Packet App del %u\n", packet->pktID);
-    packet_destroy(packet);
+    if(returnAns != MAC_TX_OK) {
+        iotus_retransmit_msg(packet);
+    } else {
+        packet_destroy(packet);
+    }
+    
 }
 
 static void
