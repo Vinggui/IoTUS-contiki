@@ -95,14 +95,15 @@ send(iotus_packet_t *packet)
 
     SAFE_PRINTF_LOG_INFO("Final %u next %u ID:%u\n",finalDestLastAddress[0],nextHop,packet->pktID);
 
-    // uint8_t addressNext[2] = {nextHop,0};
-    // nextHopNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, addressNext);
-
-    // if(NULL == nextHopNode) {
-      // SAFE_PRINTF_LOG_ERROR("No next hop");
-      // return ROUTING_TX_ERR;
-    // }
-
+    uint8_t rootValue = 0;
+#if EXP_STAR_LIKE == 0
+    rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][1];
+#else
+    rootValue = 1;
+#endif
+  
+    uint8_t address[2] = {rootValue,0};
+    fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
 
     packet->nextDestinationNode = fatherNode;
 
@@ -120,7 +121,7 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
   if(returnAns != MAC_TX_OK) {
-      iotus_retransmit_msg(packet);
+      iotus_retransmit_msg(packet, 2000);
   } else {
       packet_destroy(packet);
   }
@@ -244,19 +245,6 @@ start(void)
   SAFE_PRINTF_LOG_INFO("Starting null routing\n");
 
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
-
-  uint8_t rootValue = 0;
-#if EXP_STAR_LIKE == 0
-  rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][1];
-#else
-  rootValue = 1;
-#endif
-
-  uint8_t address[2] = {rootValue,0};
-  fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
-
-  uint8_t address2[2] = {1,0};
-  rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
 
   uint8_t selfAddrValue;
   selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];

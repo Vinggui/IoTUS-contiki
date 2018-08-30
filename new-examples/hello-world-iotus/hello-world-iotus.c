@@ -54,10 +54,10 @@ AUTOSTART_PROCESSES(&hello_world_process);
 static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
-    printf("message processed %u\n", returnAns);
+    // printf("message processed %u\n", returnAns);
     // printf("Packet App del %u\n", packet->pktID);
     if(returnAns != MAC_TX_OK) {
-        iotus_retransmit_msg(packet);
+        iotus_retransmit_msg(packet, BACKOFF_TIME);
     } else {
         packet_destroy(packet);
     }
@@ -118,6 +118,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             // uint8_t nodeAddr = 1;//n%7 + 2;
             // printf("App sending to %u\n", nodeAddr);
 
+            uint8_t address2[2] = {1,0};
+            rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
             
   TIC();
 #if BROADCAST_EXAMPLE == 0

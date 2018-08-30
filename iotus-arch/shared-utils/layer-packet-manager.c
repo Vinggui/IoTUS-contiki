@@ -125,6 +125,9 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
     IOTUS_PRIORITY_APPLICATION, timeout, finalDestination,
     gApplicationConfirmationCB);
 
+  if(packet == NULL) {
+    return NULL;
+  }
 
   SAFE_PRINTF_LOG_INFO("Packet App %u \n", packet->pktID);
   iotus_netstack_return status = packet_send(packet);
@@ -141,6 +144,7 @@ static void
 retransmit_msg(void *ptr)
 {
   iotus_packet_t *packet = (iotus_packet_t *)ptr;
+
   SAFE_PRINTF_LOG_INFO("Packet R-Tx App %u \n", packet->pktID);
   iotus_netstack_return status = active_data_link_protocol->send(packet);
   if (MAC_TX_DEFERRED == status) {
@@ -160,10 +164,10 @@ retransmit_msg(void *ptr)
  * \return Pointer to the packet created, NULL is fails.
  */
 void
-iotus_retransmit_msg(iotus_packet_t *packet)
+iotus_retransmit_msg(iotus_packet_t *packet, uint16_t backoff)
 {
-  clock_time_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-  ctimer_set(&RTxTimer, backoff, retransmit_msg, packet);
+  clock_time_t backoff_clock = (CLOCK_SECOND*(random_rand()%backoff))/1000;//ms
+  ctimer_set(&RTxTimer, backoff_clock, retransmit_msg, packet);
 }
 
 /*---------------------------------------------------------------------*/

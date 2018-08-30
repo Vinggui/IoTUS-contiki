@@ -71,6 +71,10 @@ piggyback_confirm_sent(iotus_packet_t *packet, uint8_t status)
   if(packet == NULL) {
     return;
   }
+
+  if(status != MAC_TX_OK) {
+    return;
+  }
   //TODO Send confirmation to layer owner... They have to first register a function for that
 
   // printf("piggy clean1 %u %u %u\n", list_length(gPiggybackFramesInsertedList), list_length(gPiggybackFramesList), memb_numfree(&iotus_piggyback_mem));

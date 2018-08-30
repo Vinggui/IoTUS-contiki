@@ -637,10 +637,11 @@ send_packet_handler(iotus_packet_t *packet)
     packet_optimize_build(packet, freeSpace);
 
     if(contikimac_framer.create(packet) < 0) {
-      PRINTF("contikimac: framer failed\n");
+      SAFE_PRINTF_LOG_ERROR("framer failed %u\n", packet->pktID);
       return MAC_TX_ERR_FATAL;
     }
     
+    packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
     TOC();
   }
 

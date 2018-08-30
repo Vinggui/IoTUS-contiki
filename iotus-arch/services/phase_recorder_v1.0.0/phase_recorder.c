@@ -37,9 +37,9 @@
 
 #define PHASE_DEFER_THRESHOLD 1
 
-#define MAX_NOACKS            16
+#define MAX_NOACKS            4
 
-#define MAX_NOACKS_TIME       CLOCK_SECOND * 30
+#define MAX_NOACKS_TIME       CLOCK_SECOND * 60
 
 #define PHASE_QUEUESIZE       8
 
@@ -54,13 +54,15 @@ struct phase_queueitem {
  */
 typedef struct __attribute__ ((__packed__)) phase_recorder_t {
   rtimer_clock_t ptr;
+  struct timer noacks_timer;
+  uint8_t noAcks;
 } phase_recorder_t;
 
 MEMB(phased_packets_memb, struct phase_queueitem, PHASE_QUEUESIZE);
 
 /*---------------------------------------------------------------------------*/
 void
-phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
+phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
              int mac_status)
 {
   if(neighbor == NULL) {
@@ -88,20 +90,20 @@ phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
     /* If the neighbor didn't reply to us, it may have switched
        phase (rebooted). We try a number of transmissions to it
        before we drop it from the phase list. */
-    // if(mac_status == MAC_TX_NOACK) {
-    //   SAFE_PRINTF_LOG_ERROR("noacks %d\n", e->noacks);
-    //   e->noacks++;
-    //   if(e->noacks == 1) {
-    //     timer_set(&e->noacks_timer, MAX_NOACKS_TIME);
-    //   }
-    //   if(e->noacks >= MAX_NOACKS || timer_expired(&e->noacks_timer)) {
-    //     PRINTF("drop %d\n", neighbor->u8[0]);
-    //     nbr_table_remove(nbr_phase, e);
-    //     return;
-    //   }
-    // } else if(mac_status == MAC_TX_OK) {
-    //   e->noacks = 0;
-    // }
+    if(mac_status == MAC_TX_NOACK) {
+      SAFE_PRINTF_LOG_ERROR("noacks %d\n", phasePointer->noAcks);
+      phasePointer->noAcks++;
+      if(phasePointer->noAcks == 1) {
+        timer_set(&phasePointer->noacks_timer, MAX_NOACKS_TIME);
+      }
+      if(phasePointer->noAcks >= MAX_NOACKS || timer_expired(&phasePointer->noacks_timer)) {
+        SAFE_PRINTF_LOG_INFO("dropped\n");
+        nodes_destroy(neighbor);
+        return;
+      }
+    } else if(mac_status == MAC_TX_OK) {
+      phasePointer->noAcks = 0;
+    }
   } else {
     /* No matching phase was found, so we allocate a new one. */
     if(mac_status == MAC_TX_OK && phasePointer == NULL) {
@@ -117,6 +119,7 @@ phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
       }
 
       phasePointer->ptr = time;
+      phasePointer->noAcks = 0;
       
       SAFE_PRINTF_LOG_INFO("Saved time %u\n", phasePointer->ptr);
       //e = nbr_table_add_lladdr(nbr_phase, neighbor, NBR_TABLE_REASON_MAC, NULL);
@@ -133,6 +136,7 @@ send_packet(void *ptr)
   // packet_continue_deferred_packet(p->packetPhased);
   iotus_netstack_return returnAns;
   returnAns = active_data_link_protocol->send(p->packetPhased);
+  packet_clear_parameter(p->packetPhased, PACKET_PARAMETERS_WAS_DEFFERED);
   packet_confirm_transmission(p->packetPhased, returnAns);
 
   memb_free(&phased_packets_memb, p);
@@ -214,7 +218,6 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
           SAFE_PRINTF_LOG_INFO("saved for later!\n");
           ctimer_set(&p->timer, ctimewait, send_packet, p);
           packet_set_parameter(packet,PACKET_PARAMETERS_WAS_DEFFERED);
-          packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
           return PHASE_DEFERRED;
         } else {
           SAFE_PRINTF_LOG_INFO("Error allocating!\n");

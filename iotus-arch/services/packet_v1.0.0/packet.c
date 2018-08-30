@@ -108,6 +108,24 @@ packet_set_parameter(iotus_packet_t *packetPiece, uint8_t param) {
 
 /*---------------------------------------------------------------------*/
 /*
+ * \brief Allow other services to clear a parameter into a msg
+ * \param packetPiece Packet to be set.
+ * \param param Parameter to be written
+ * \return Boolean.
+ */
+void
+packet_clear_parameter(iotus_packet_t *packetPiece, uint8_t param) {
+  if(NULL == packetPiece) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return;
+  }
+
+  /* Encode parameters */
+  packetPiece->params &= ~param;
+}
+
+/*---------------------------------------------------------------------*/
+/*
  * Return the pointer to the node of final destination
  * \param packetPiece       The pointer to the packet to be searched.
  * \return                The pointer to the node of the final destination.
@@ -1000,7 +1018,7 @@ packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status
       return;
     }
   }
-  // printf("Packet phase del %u\n", packet->pktID);
+  printf("Packet phase del %u\n", packet->pktID);
   packet_destroy(packet);
   
 }

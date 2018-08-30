@@ -29,7 +29,7 @@ typedef enum {
 
 
 void
-phase_recorder_update(const iotus_node_t *neighbor, rtimer_clock_t time,
+phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
              int mac_status);
 
 phase_recorder_status_t

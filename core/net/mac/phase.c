@@ -70,9 +70,9 @@ struct phase_queueitem {
 #define PHASE_DEFER_THRESHOLD 1
 #define PHASE_QUEUESIZE       8
 
-#define MAX_NOACKS            16
+#define MAX_NOACKS            4
 
-#define MAX_NOACKS_TIME       CLOCK_SECOND * 30
+#define MAX_NOACKS_TIME       CLOCK_SECOND * 60
 
 MEMB(queued_packets_memb, struct phase_queueitem, PHASE_QUEUESIZE);
 NBR_TABLE(struct phase, nbr_phase);

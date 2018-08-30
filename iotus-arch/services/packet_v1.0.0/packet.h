@@ -97,6 +97,9 @@ packet_get_parameter(iotus_packet_t *packet_piece, uint8_t param);
 void
 packet_set_parameter(iotus_packet_t *packet_piece, uint8_t param);
 
+void
+packet_clear_parameter(iotus_packet_t *packet_piece, uint8_t param);
+
 iotus_node_t *
 packet_get_final_destination(iotus_packet_t *packet_piece);
 
