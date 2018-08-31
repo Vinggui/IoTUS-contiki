@@ -163,8 +163,9 @@ retransmit_msg(void *ptr)
 void
 iotus_retransmit_msg(iotus_packet_t *packet, uint16_t backoff)
 {
-  clock_time_t backoff_clock = (CLOCK_SECOND*(random_rand()%backoff))/1000;//ms
-  ctimer_set(&RTxTimer, backoff_clock, retransmit_msg, packet);
+  // clock_time_t backoff_clock = (CLOCK_SECOND*(random_rand()%backoff))/1000;//ms
+  // ctimer_set(&RTxTimer, backoff_clock, retransmit_msg, packet);
+  packet_destroy(packet);
 }
 
 /*---------------------------------------------------------------------*/

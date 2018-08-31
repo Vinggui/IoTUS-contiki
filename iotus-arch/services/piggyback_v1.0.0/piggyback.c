@@ -119,7 +119,7 @@ piggyback_timeout_handler(void *ptr) {
   iotus_packet_t *packet = iotus_initiate_packet(
                             pieces_get_data_size(h),
                             pieces_get_data_pointer(h),
-                            PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                            PACKET_PARAMETERS_WAIT_FOR_ACK,
                             h->priority,
                             5000,
                             h->finalDestinationNode,
@@ -204,7 +204,8 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
                                                         piggyPayloadSize);
   
   if(NULL == newPiece) {
-    SAFE_PRINTF_LOG_ERROR("Alloc failed.");
+    printf("Alloc failed.\n");
+    // SAFE_PRINTF_LOG_ERROR("Alloc failed.");
     return NULL;
   }
   memcpy(pieces_get_data_pointer(newPiece),piggyPayload,piggyPayloadSize);

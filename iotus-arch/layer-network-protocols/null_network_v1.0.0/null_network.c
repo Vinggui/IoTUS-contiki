@@ -231,7 +231,7 @@ send_keep_alive(void *ptr)
         // if (!(MAC_TX_OK == status ||
         //     MAC_TX_DEFERRED == status)) {
         if (MAC_TX_DEFERRED != status) {
-          send_cb(packetForward, status);
+          send_cb(packet, status);
           // printf("Packet KA del %u\n", packet->pktID);
           // packet_destroy(packet);
         }

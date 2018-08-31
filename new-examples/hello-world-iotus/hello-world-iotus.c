@@ -49,13 +49,16 @@
 
 PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);
+
+
+static uint8_t selfMsg[20];
 /*---------------------------------------------------------------------------*/
 
 static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     // printf("message processed %u\n", returnAns);
-    printf("Packet %u App del %u\n", packet->pktID, returnAns);
+    // printf("Packet %u App del %u\n", packet->pktID, returnAns);
     if(returnAns != MAC_TX_OK) {
         iotus_retransmit_msg(packet, BACKOFF_TIME);
     } else {
@@ -64,12 +67,44 @@ app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
     
 }
 
+/*---------------------------------------------------------------------------*/
 static void
 app_packet_handler(iotus_packet_t *packet)
 {
     printf("message received %u bytes: %s\n", packet_get_payload_size(packet), packet_get_payload_data(packet));
 }
 
+/*---------------------------------------------------------------------------*/
+static void
+send_app_msg(void *ptr) {
+    uint8_t address2[2] = {1,0};
+    rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
+    
+TIC();
+#if BROADCAST_EXAMPLE == 0
+    // uint8_t dest[2];
+    // dest[0] = nodeAddr;
+    // dest[1] = 0;
+    //iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
+    if(rootNode != NULL) {
+        iotus_initiate_msg(
+                20,
+                selfMsg,
+                PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                5000,
+                rootNode);
+    }
+#else
+    iotus_initiate_msg(
+            20,
+            selfMsg,
+            0,
+            5000,
+            NODES_BROADCAST);
+#endif
+}
+
+/*---------------------------------------------------------------------------*/
 PROCESS_THREAD(hello_world_process, ev, data) {
     PROCESS_BEGIN();
 
@@ -77,6 +112,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     //leds_off(LEDS_ALL);
 
 
+    static struct ctimer sendTimer;
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
@@ -86,7 +122,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     static uint8_t selfAddrValue;
     selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-    static uint8_t selfMsg[20];
 
     sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
                                                                selfAddrValue,
@@ -98,7 +133,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     /* Start powertracing, once every two seconds. */
     powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
 
-    static uint8_t n = 0;
     for(;;) {
         PROCESS_WAIT_EVENT();
 
@@ -114,35 +148,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 #else
         {
 #endif
-            n++;
-            // uint8_t nodeAddr = 1;//n%7 + 2;
-            // printf("App sending to %u\n", nodeAddr);
-
-            uint8_t address2[2] = {1,0};
-            rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
-            
-  TIC();
-#if BROADCAST_EXAMPLE == 0
-            // uint8_t dest[2];
-            // dest[0] = nodeAddr;
-            // dest[1] = 0;
-            //iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
-            if(rootNode != NULL) {
-                iotus_initiate_msg(
-                        20,
-                        selfMsg,
-                        PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                        5000,
-                        rootNode);
-            }
-#else
-            iotus_initiate_msg(
-                    20,
-                    selfMsg,
-                    0,
-                    5000,
-                    NODES_BROADCAST);
-#endif
+            clock_time_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+            ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
         }
 
         etimer_reset(&timer);
