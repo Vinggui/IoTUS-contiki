@@ -152,6 +152,8 @@ input_packet(iotus_packet_t *packet)
     uint8_t nextHop = routing_table[ourAddr][finalDestAddr];
 
     if(nextHop != 0) {
+        uint8_t address2[2] = {1,0};
+        rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
         if(rootNode != NULL) {
           packetForward = iotus_initiate_packet(
                               packet_get_payload_size(packet),

@@ -55,7 +55,7 @@ static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
     // printf("message processed %u\n", returnAns);
-    // printf("Packet App del %u\n", packet->pktID);
+    printf("Packet %u App del %u\n", packet->pktID, returnAns);
     if(returnAns != MAC_TX_OK) {
         iotus_retransmit_msg(packet, BACKOFF_TIME);
     } else {

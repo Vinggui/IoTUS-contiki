@@ -145,22 +145,19 @@ retransmit_msg(void *ptr)
 {
   iotus_packet_t *packet = (iotus_packet_t *)ptr;
 
-  SAFE_PRINTF_LOG_INFO("Packet R-Tx App %u \n", packet->pktID);
+  printf("Packet R-Tx App %u \n", packet->pktID);
   iotus_netstack_return status = active_data_link_protocol->send(packet);
-  if (MAC_TX_DEFERRED == status) {
-    return;
-  } else {
+  if (MAC_TX_DEFERRED != status) {
+    printf("confirming back %u\n", packet->pktID);
     (packet->confirm_cb)(packet, status);
   }
-  return;
 }
 
 /*---------------------------------------------------------------------------*/
 /*
  * \brief It is used for the application API
- * \param payloadSize       Size for this payload
- * \param payload           Payload buffer itself
- * \param finalDestination  The last node to be transmitted
+ * \param packet            Packet to be retransmitted
+ * \param backoff           The backoff time requested
  * \return Pointer to the packet created, NULL is fails.
  */
 void

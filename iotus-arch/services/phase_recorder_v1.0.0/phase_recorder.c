@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "iotus-core.h"
 #include "iotus-netstack.h"
 #include "nodes.h"
@@ -53,8 +54,8 @@ struct phase_queueitem {
  * This struct is necessary to work with additionalInfo system
  */
 typedef struct __attribute__ ((__packed__)) phase_recorder_t {
-  rtimer_clock_t ptr;
   struct timer noacks_timer;
+  rtimer_clock_t time_recorded;
   uint8_t noAcks;
 } phase_recorder_t;
 
@@ -69,6 +70,8 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
     return;
   }
 
+  struct timer tempTimer;
+
   /* If we have an entry for this neighbor already, we renew it. */
   //e = nbr_table_get_from_lladdr(nbr_phase, neighbor);
   phase_recorder_t *phasePointer = pieces_get_additional_info_var(
@@ -80,8 +83,8 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
 #if PHASE_DRIFT_CORRECT
       //e->drift = time - e->time;
 #endif
-      phasePointer->ptr = time;
-      SAFE_PRINTF_LOG_INFO("Saved time again %u\n", *phasePointer);
+      memcpy(&(phasePointer->time_recorded),&time,sizeof(time));
+      SAFE_PRINTF_LOG_INFO("Saved time again %u\n", time);
     }
     /**
      * The ack update and timing update to remove a neighbor is
@@ -94,9 +97,11 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
       SAFE_PRINTF_LOG_ERROR("noacks %d\n", phasePointer->noAcks);
       phasePointer->noAcks++;
       if(phasePointer->noAcks == 1) {
-        timer_set(&phasePointer->noacks_timer, MAX_NOACKS_TIME);
+        timer_set(&tempTimer, MAX_NOACKS_TIME);
+        memcpy(&(phasePointer->noacks_timer),&tempTimer,sizeof(struct timer));
       }
-      if(phasePointer->noAcks >= MAX_NOACKS || timer_expired(&phasePointer->noacks_timer)) {
+      memcpy(&tempTimer, &(phasePointer->noacks_timer), sizeof(struct timer));
+      if(phasePointer->noAcks >= MAX_NOACKS || timer_expired(&tempTimer)) {
         SAFE_PRINTF_LOG_INFO("dropped\n");
         nodes_destroy(neighbor);
         return;
@@ -111,17 +116,19 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
       phasePointer = pieces_modify_additional_info_var(
                           neighbor->additionalInfoList,
                           IOTUS_NODES_ADD_INFO_TYPE_WAKEUP_PHASE,
-                          sizeof(rtimer_clock_t),
+                          sizeof(phase_recorder_t),
                           TRUE);
       if(NULL == phasePointer) {
         SAFE_PRINTF_LOG_ERROR("Set");
         return;
       }
 
-      phasePointer->ptr = time;
-      phasePointer->noAcks = 0;
+      phase_recorder_t temPhase;
+      temPhase.time_recorded = time;
+      temPhase.noAcks = 0;
+      memcpy(phasePointer, &temPhase, sizeof(phase_recorder_t));
       
-      SAFE_PRINTF_LOG_INFO("Saved time %u\n", phasePointer->ptr);
+      SAFE_PRINTF_LOG_INFO("Saved time %u\n", phasePointer->time_recorded);
       //e = nbr_table_add_lladdr(nbr_phase, neighbor, NBR_TABLE_REASON_MAC, NULL);
     }
   }
@@ -159,7 +166,7 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
 
 
   if(phasePointer != NULL) {
-    SAFE_PRINTF_LOG_INFO("recovered %u\n", phasePointer->ptr);
+    SAFE_PRINTF_LOG_INFO("recovered %u\n", phasePointer->time_recorded);
     rtimer_clock_t wait, now, expected, sync;
     clock_time_t ctimewait;
     
@@ -179,7 +186,7 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
     
     now = RTIMER_NOW();
 
-    sync = (phasePointer == NULL) ? now : phasePointer->ptr;
+    sync = (phasePointer == NULL) ? now : phasePointer->time_recorded;
 
 #if PHASE_DRIFT_CORRECT
     {

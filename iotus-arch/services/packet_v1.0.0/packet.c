@@ -1018,9 +1018,7 @@ packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status
       return;
     }
   }
-  printf("Packet phase del %u\n", packet->pktID);
   packet_destroy(packet);
-  
 }
 
 /*---------------------------------------------------------------------*/
