@@ -255,6 +255,9 @@ static volatile uint8_t contikimac_keep_radio_on = 0;
 static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
+uint16_t gPkt_tx_successful = 0;
+uint16_t gpkt_tx_attemps = 0;
+
 
 #if CONTIKIMAC_CONF_COMPOWER
 static struct compower_activity current_packet;
@@ -880,7 +883,11 @@ send_packet_handler(iotus_packet_t *packet)
 static int8_t
 send_packet(iotus_packet_t *packet)
 {
+  gpkt_tx_attemps++;
   int8_t result = send_packet_handler(packet);
+  if(result == MAC_TX_OK) {
+    gPkt_tx_successful++;
+  }
   if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
     piggyback_confirm_sent(packet, result);
   }

@@ -54,7 +54,7 @@ static uint8_t selfMsg[20];
 static linkaddr_t addrThis;
 
 void msg_confirm(int status, int num_tx) {
-    printf("message processed %u\n",status);
+    // printf("message processed %u\n",status);
 }
 
 void msg_input(const linkaddr_t *source) {
@@ -121,6 +121,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     /* Start powertracing, once every two seconds. */
     powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
     
+    static struct ctimer sendMsgTimer;
     static struct etimer timer;
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
@@ -138,10 +139,10 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           {
 #endif
 
-          printf("App sending to 1\n");
-          send_msg(NULL);
-          //uint8_t backoff = (CLOCK_SECOND*(random_rand()%500))/1000;//ms
-          //ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
+          // printf("App sending to 1\n");
+          // send_msg(NULL);
+          uint8_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+          ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
           
         }
         

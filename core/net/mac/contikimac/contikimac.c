@@ -243,6 +243,9 @@ static volatile uint8_t contikimac_keep_radio_on = 0;
 static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
+uint16_t gPkt_tx_successful = 0;
+uint16_t gpkt_tx_attemps = 0;
+
 #define DEBUG 0
 #if DEBUG
 #include <stdio.h>
@@ -840,7 +843,11 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 static void
 qsend_packet(mac_callback_t sent, void *ptr)
 {
+  gpkt_tx_attemps++;
   int ret = send_packet(sent, ptr, NULL, 0);
+  if(MAC_TX_OK == ret) {
+    gPkt_tx_successful++;
+  }
   if(ret != MAC_TX_DEFERRED) {
     mac_call_sent_callback(sent, ptr, ret, 1);
   }
