@@ -23,6 +23,8 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullMac"
 #include "safe-printer.h"
 
+uint16_t gPkt_tx_successful = 0;
+uint16_t gpkt_tx_attemps = 0;
 
 /*---------------------------------------------------------------------------*/
 //send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
@@ -36,7 +38,6 @@ send_packet(iotus_packet_t *packet)
     printf("contikimac: framer failed\n");
     return MAC_TX_ERR_FATAL;
   }
-  printf("test %u %u\n",packet_get_size(packet), packet_get_payload_size(packet));
   active_radio_driver->prepare(packet);
   active_radio_driver->transmit(packet);
   return MAC_TX_OK;
@@ -45,7 +46,8 @@ send_packet(iotus_packet_t *packet)
 static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
 {
-  return RX_SEND_UP_STACK;
+  active_network_protocol->receive(packet);
+  return RX_PROCESSED;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -62,11 +64,6 @@ post_start(void)
   // }
 }
 /*---------------------------------------------------------------------------*/
-static void
-run(void)
-{ 
-  packet_poll_by_priority(1);
-}
 
 const struct iotus_data_link_protocol_struct null_MAC_protocol = {
   "nullMAC",

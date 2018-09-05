@@ -45,8 +45,6 @@
 
 #include "global-functions.h"
 /*---------------------------------------------------------------------------*/
-#define MSG_INTERVAL                      8//sec
-
 PROCESS(hello_world_process, "Test");
 AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
@@ -54,7 +52,13 @@ AUTOSTART_PROCESSES(&hello_world_process);
 static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
-    printf("message processed %u\n", returnAns);
+    // printf("message processed %u\n", returnAns);
+    // printf("Packet %u App del %u\n", packet->pktID, returnAns);
+    if(returnAns != MAC_TX_OK) {
+        iotus_retransmit_msg(packet, BACKOFF_TIME);
+    } else {
+        packet_destroy(packet);
+    }   
 }
 
 static void
@@ -75,7 +79,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
     IOTUS_CORE_START(0,0,0,0);//contikiMAC,0);
-    packet_set_interface_functions(app_packet_confirm,app_packet_handler);
+    iotus_set_interface_functions(app_packet_confirm,app_packet_handler);
 
     static uint8_t selfAddrValue;
     selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
@@ -122,42 +126,40 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         
 #if SINGLE_NODE_NULL == 0
         if(selfAddrValue != 1 &&
-           random_rand()%100 > 66) {
+           random_rand()%100 > (100-TRANSMISSION_CHANCE))
+        {
 #else
         {
 #endif
             n++;
-            uint8_t nodeAddr = 1;//n%7 + 2;
-            printf("App sending to %u\n", nodeAddr);
-
+            uint8_t nodeAddr = 2;//n%7 + 2;
+            // printf("App sending to %u\n", nodeAddr);
 
 #if BROADCAST_EXAMPLE == 0
             uint8_t dest[2];
             dest[0] = nodeAddr;
             dest[1] = 0;
-            iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
-            if(destNode != NULL) {
-                iotus_initiate_msg(
-                        20,
-                        selfMsg,
-                        PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                        IOTUS_PRIORITY_APPLICATION,
-                        5000,
-                        destNode);
+            iotus_node_t *rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
+            TIC();
+            if(rootNode != NULL) {
+              iotus_initiate_msg(
+                      20,
+                      selfMsg,
+                      PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                      5000,
+                      rootNode);
             }
 #else
-            iotus_initiate_msg(
-                    20,
-                    selfMsg,
-                    0,
-                    IOTUS_PRIORITY_APPLICATION,
-                    5000,
-                    NODES_BROADCAST);
+    iotus_initiate_msg(
+            20,
+            selfMsg,
+            0,
+            5000,
+            NODES_BROADCAST);
 #endif
         }
 
         etimer_reset(&timer);
-        iotus_allow_sleep(TRUE);
     }
 
 
