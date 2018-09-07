@@ -74,8 +74,8 @@
 #define USE_NEW_FEATURES                  0
 #define ALOHA_STYLE                       0
 #define EXP_STAR_LIKE                     0
-#define SINGLE_NODE_NULL                  0
-#define DOUBLE_NODE_NULL                  0
+#define SINGLE_NODE_NULL                  1
+#define DOUBLE_NODE_NULL                  1
 #define MSG_INTERVAL                      30//sec
 #define BACKOFF_TIME                      15000
 #define TRANSMISSION_CHANCE               100//%
@@ -86,13 +86,14 @@
 extern uint16_t gPkt_tx_successful;
 extern uint16_t gpkt_tx_attemps;
 
+#if DOUBLE_NODE_NULL == 1
+    #if SINGLE_NODE_NULL != 1
+        #error For DOUBLE_NODE_NULL, SINGLE_NODE_NULL has to be 1!
+    #endif
+#endif
 #if ALOHA_STYLE == 1
     #if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 1
         #error CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION is ON!
-    #endif
-#elif DOUBLE_NODE_NULL == 1
-    #if SINGLE_NODE_NULL != 1
-        #error For DOUBLE_NODE_NULL, SINGLE_NODE_NULL has to be 1!
     #endif
 #elif SINGLE_NODE_NULL == 1
     #if CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION == 1
