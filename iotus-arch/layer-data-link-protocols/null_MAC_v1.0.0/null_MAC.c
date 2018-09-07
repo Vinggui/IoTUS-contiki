@@ -33,13 +33,16 @@ uint16_t gpkt_tx_attemps = 0;
 static int8_t
 send_packet(iotus_packet_t *packet)
 {
-
+  gpkt_tx_attemps++;
   if(contikimac_framer.create(packet) < 0) {
     printf("contikimac: framer failed\n");
     return MAC_TX_ERR_FATAL;
   }
   active_radio_driver->prepare(packet);
-  active_radio_driver->transmit(packet);
+  if (RADIO_TX_OK == active_radio_driver->transmit(packet)) {
+    gPkt_tx_successful++;
+  }
+
   return MAC_TX_OK;
 }
 /*---------------------------------------------------------------------------*/
@@ -53,6 +56,11 @@ input_packet(iotus_packet_t *packet)
 static void
 init(void)
 {
+#if DOUBLE_NODE_NULL == 1
+  if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+    active_radio_driver->on();
+  }
+#endif
 }
 
 /*---------------------------------------------------------------------------*/

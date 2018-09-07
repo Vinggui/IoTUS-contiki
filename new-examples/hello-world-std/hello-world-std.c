@@ -141,8 +141,18 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
           // printf("App sending to 1\n");
           // send_msg(NULL);
-          uint8_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-          ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
+          #if SINGLE_NODE_NULL == 1
+            #if DOUBLE_NODE_NULL == 1
+              if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+                send_msg(NULL);
+              }
+            #else
+              send_msg(NULL);
+            #endif
+          #else
+            uint8_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+            ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
+          #endif
           
         }
         

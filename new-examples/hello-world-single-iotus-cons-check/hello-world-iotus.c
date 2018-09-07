@@ -132,8 +132,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         {
 #endif
             n++;
-            uint8_t nodeAddr = 2;//n%7 + 2;
+#if DOUBLE_NODE_NULL == 1
+            uint8_t nodeAddr = 1;//n%7 + 2;
             // printf("App sending to %u\n", nodeAddr);
+#else
+            uint8_t nodeAddr = 2;
+#endif
+            
 
 #if BROADCAST_EXAMPLE == 0
             uint8_t dest[2];

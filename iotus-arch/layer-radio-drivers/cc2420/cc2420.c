@@ -794,46 +794,6 @@ cc2420_prepare(iotus_packet_t *packet)
 
   /* Write packet to TX FIFO. */
   strobe(CC2420_SFLUSHTX);
-  
-  // if(packet->params & PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM) {
-  //   g_expect_new_iotus_packet_hdr = TRUE;
-  //   /* verify if any layer is inserting the address... */
-  //   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-  //                                   IOTUS_CHORE_INSERT_PKT_PREV_SRC_ADDRESS)) {
-  //     if(0 == packet_append_last_header(
-  //                 ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-  //                 addresses_self_get_pointer(g_used_address_type),
-  //                 packet)) {
-  //       PRINTF("Failed to insert source address.\n");
-  //       return -1;
-  //     }
-  //     //PRINTF("Prev addr inserted\n");
-  //   }
-  //   //In cases where broadcast is sent, only the source addr is necessary,
-  //   //because the bit of broadcast in the iotus dynamic header is already set
-  //   if(!(packet->iotusHeader & PACKET_IOTUS_HDR_IS_BROADCAST)) {
-  //     //If this is not a broadcast, then we can try to insert send to a specific node.
-  //     if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
-  //                                     IOTUS_CHORE_INSERT_PKT_NEXT_DST_ADDRESS)) {
-  //       if(0 == packet_append_last_header(
-  //                   ADDRESSES_GET_TYPE_SIZE(g_used_address_type),
-  //                   nodes_get_address(g_used_address_type,packet->nextDestinationNode),
-  //                   packet)) {
-  //         PRINTF("Failed to insert destination address.");
-  //         return -1;
-  //       }
-  //       //PRINTF("Next addr inserted\n");
-  //     }
-  //   }
-
-
-  //   if(0 == packet_push_bit_header(PACKET_IOTUS_HDR_FIRST_BIT_POS,
-  //                                 &(packet->iotusHeader),
-  //                                 packet)) {
-  //     PRINTF("Failed insert iotus dyn hdr.");
-  //     return -1;
-  //   }
-  // }
 
   if(IOTUS_PRIORITY_RADIO == iotus_get_layer_assigned_for(
                                 IOTUS_CHORE_PKT_CHECKSUM)) {

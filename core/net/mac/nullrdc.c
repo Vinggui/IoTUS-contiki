@@ -81,7 +81,7 @@
 #ifdef NULLRDC_CONF_802154_AUTOACK_HW
 #define NULLRDC_802154_AUTOACK_HW NULLRDC_CONF_802154_AUTOACK_HW
 #else
-#define NULLRDC_802154_AUTOACK_HW 0
+#define NULLRDC_802154_AUTOACK_HW 1
 #endif /* NULLRDC_CONF_802154_AUTOACK_HW */
 #endif /* NULLRDC_802154_AUTOACK_HW */
 
@@ -125,6 +125,7 @@ send_one_packet(mac_callback_t sent, void *ptr)
   packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
 #endif /* NULLRDC_802154_AUTOACK || NULLRDC_802154_AUTOACK_HW */
 
+  packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
   if(NETSTACK_FRAMER.create() < 0) {
     /* Failed to allocate space for headers */
     PRINTF("nullrdc: send failed, too large header\n");
