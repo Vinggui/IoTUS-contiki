@@ -156,7 +156,7 @@ send_one_packet(mac_callback_t sent, void *ptr)
       if(!is_broadcast) {
         RIMESTATS_ADD(reliabletx);
       }
-
+      NETSTACK_RADIO.on();
       switch(NETSTACK_RADIO.transmit(packetbuf_totlen())) {
       case RADIO_TX_OK:
         if(is_broadcast) {
@@ -240,6 +240,8 @@ send_one_packet(mac_callback_t sent, void *ptr)
   if(ret == MAC_TX_OK) {
     last_sent_ok = 1;
   }
+
+  NETSTACK_RADIO.off();
   mac_call_sent_callback(sent, ptr, ret, 1);
   return last_sent_ok;
 }
