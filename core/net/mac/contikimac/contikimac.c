@@ -288,7 +288,15 @@ off(void)
 {
   if(contikimac_is_on && radio_is_on != 0 &&
      contikimac_keep_radio_on == 0) {
-#if ALOHA_STYLE == 0
+#if DOUBLE_NODE_NULL == 1
+  linkaddr_t addrThis;
+  addrThis.u8[0] = 1;
+  addrThis.u8[1] = 0;
+  if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+    radio_is_on = 0;
+    NETSTACK_RADIO.off();
+  }
+#elif ALOHA_STYLE == 0
     radio_is_on = 0;
     NETSTACK_RADIO.off();
 #endif

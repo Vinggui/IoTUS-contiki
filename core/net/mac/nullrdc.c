@@ -241,7 +241,16 @@ send_one_packet(mac_callback_t sent, void *ptr)
     last_sent_ok = 1;
   }
 
+#if DOUBLE_NODE_NULL == 1
+  linkaddr_t addrThis;
+  addrThis.u8[0] = 1;
+  addrThis.u8[1] = 0;
+  if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+    NETSTACK_RADIO.off();
+  }
+#else
   NETSTACK_RADIO.off();
+#endif
   mac_call_sent_callback(sent, ptr, ret, 1);
   return last_sent_ok;
 }

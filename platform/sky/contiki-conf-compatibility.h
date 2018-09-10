@@ -7,8 +7,8 @@
 #endif /* NETSTACK_CONF_MAC */
 
 #ifndef NETSTACK_CONF_RDC
-// #define NETSTACK_CONF_RDC     contikimac_driver
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RDC     contikimac_driver
+// #define NETSTACK_CONF_RDC     nullrdc_driver
 // #define NULLRDC_CONF_802154_AUTOACK_HW     1
 #endif /* NETSTACK_CONF_RDC */
 

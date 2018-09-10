@@ -137,20 +137,7 @@ staticnet_output(void)
 #endif
 
   packetbuf_compact();
-  NETSTACK_RDC.on();
   NETSTACK_LLSEC.send(packet_sent, NULL);
-#if DOUBLE_NODE_NULL == 1
-  linkaddr_t addrThis;
-  addrThis.u8[0] = 1;
-  addrThis.u8[1] = 0;
-  if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-    NETSTACK_RDC.off(1);
-  } else {
-    NETSTACK_RDC.off(0);
-  }
-#else
-  NETSTACK_RDC.off(0);
-#endif
   return 1;
 }
 

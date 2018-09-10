@@ -71,11 +71,11 @@
 
 #define POWER_TRACE_RATE                  60
 #define BROADCAST_EXAMPLE                 0
-#define USE_NEW_FEATURES                  0
+#define USE_NEW_FEATURES                  1
 #define ALOHA_STYLE                       0
 #define EXP_STAR_LIKE                     0
-#define SINGLE_NODE_NULL                  1
-#define DOUBLE_NODE_NULL                  1
+#define SINGLE_NODE_NULL                  0
+#define DOUBLE_NODE_NULL                  0
 #define MSG_INTERVAL                      30//sec
 #define BACKOFF_TIME                      15000
 #define TRANSMISSION_CHANCE               100//%
