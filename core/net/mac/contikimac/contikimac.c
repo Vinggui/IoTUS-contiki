@@ -742,6 +742,8 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #if WITH_PHASE_OPTIMIZATION
       rtimer_clock_t txtime = RTIMER_NOW();
 #endif
+
+      gpkt_tx_attemps++;
 #if RDC_CONF_HARDWARE_ACK
       int ret = NETSTACK_RADIO.transmit(transmit_len);
 #else
@@ -851,7 +853,6 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 static void
 qsend_packet(mac_callback_t sent, void *ptr)
 {
-  gpkt_tx_attemps++;
   int ret = send_packet(sent, ptr, NULL, 0);
   if(MAC_TX_OK == ret) {
     gPkt_tx_successful++;
