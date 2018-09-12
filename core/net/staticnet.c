@@ -202,8 +202,8 @@ init(void)
 #if BROADCAST_EXAMPLE == 0
   #if DOUBLE_NODE_NULL == 0
     if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-      clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
-      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+      // clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+      // ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
     }
   #endif
 #if DOUBLE_NODE_NULL == 1

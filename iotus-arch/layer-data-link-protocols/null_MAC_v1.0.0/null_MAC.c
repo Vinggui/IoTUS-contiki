@@ -52,6 +52,7 @@
 
 uint16_t gPkt_tx_successful = 0;
 uint16_t gpkt_tx_attemps = 0;
+uint16_t gpkt_tx_first_attemps = 0;
 
 /*---------------------------------------------------------------------------*/
 //send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
@@ -89,6 +90,11 @@ send_packet(iotus_packet_t *packet)
     uint8_t status;
     active_radio_driver->on();
     status = active_radio_driver->transmit(packet);
+
+    if(0 == gpkt_tx_first_attemps) {
+      gpkt_tx_first_attemps = gpkt_tx_attemps;
+      gpkt_tx_attemps = 0;
+    }
     if (RADIO_TX_OK == status) {
       gPkt_tx_successful++;
     }

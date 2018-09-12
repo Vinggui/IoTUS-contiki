@@ -245,6 +245,7 @@ static volatile unsigned char radio_is_on = 0;
 
 uint16_t gPkt_tx_successful = 0;
 uint16_t gpkt_tx_attemps = 0;
+uint8_t gpkt_tx_first_attemps = 0;
 
 #define DEBUG 0
 #if DEBUG
@@ -854,6 +855,12 @@ static void
 qsend_packet(mac_callback_t sent, void *ptr)
 {
   int ret = send_packet(sent, ptr, NULL, 0);
+
+  if(0 == gpkt_tx_first_attemps) {
+    gpkt_tx_first_attemps = gpkt_tx_attemps;
+    gpkt_tx_attemps = 0;
+    printf("First burst attempt: %u\n",gpkt_tx_first_attemps);
+  }
   if(MAC_TX_OK == ret) {
     gPkt_tx_successful++;
   }
