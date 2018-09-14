@@ -244,8 +244,9 @@ static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
 uint16_t gPkt_tx_successful = 0;
-uint16_t gpkt_tx_attemps = 0;
-uint8_t gpkt_tx_first_attemps = 0;
+uint16_t gPkt_tx_attemps = 0;
+uint8_t gPkt_tx_first_attemps = 0;
+uint16_t gPkt_rx_successful = 0;
 
 #define DEBUG 0
 #if DEBUG
@@ -744,7 +745,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       rtimer_clock_t txtime = RTIMER_NOW();
 #endif
 
-      gpkt_tx_attemps++;
+      gPkt_tx_attemps++;
 #if RDC_CONF_HARDWARE_ACK
       int ret = NETSTACK_RADIO.transmit(transmit_len);
 #else
@@ -856,10 +857,10 @@ qsend_packet(mac_callback_t sent, void *ptr)
 {
   int ret = send_packet(sent, ptr, NULL, 0);
 
-  if(0 == gpkt_tx_first_attemps) {
-    gpkt_tx_first_attemps = gpkt_tx_attemps;
-    gpkt_tx_attemps = 0;
-    printf("First burst attempt: %u\n",gpkt_tx_first_attemps);
+  if(0 == gPkt_tx_first_attemps) {
+    gPkt_tx_first_attemps = gPkt_tx_attemps;
+    gPkt_tx_attemps = 0;
+    printf("First burst attempt: %u\n",gPkt_tx_first_attemps);
   }
   if(MAC_TX_OK == ret) {
     gPkt_tx_successful++;
@@ -1052,6 +1053,7 @@ input_packet(void)
 #endif /* CONTIKIMAC_SEND_SW_ACK */
 
       if(!duplicate) {
+        gPkt_rx_successful++;
         NETSTACK_MAC.input();
       }
       return;

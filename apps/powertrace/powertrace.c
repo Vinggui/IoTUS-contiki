@@ -114,13 +114,14 @@ powertrace_print(char *str)
   all_radio = energest_type_time(ENERGEST_TYPE_LISTEN) +
     energest_type_time(ENERGEST_TYPE_TRANSMIT);
 
-  printf("%s %lu P %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %u %u %u\n",
+  printf("%s %lu P %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %u %u %u %u\n",
          str,
          clock_time(), seqno,
          all_cpu, all_lpm, all_transmit, all_listen, all_idle_transmit, all_idle_listen,
          cpu, lpm, transmit, listen, idle_transmit, idle_listen,
          gPkt_tx_successful,
-         gpkt_tx_attemps);
+         gPkt_tx_attemps,
+         gPkt_rx_successful);
 
   for(s = list_head(stats_list); s != NULL; s = list_item_next(s)) {
 

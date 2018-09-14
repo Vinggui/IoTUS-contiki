@@ -84,7 +84,8 @@
 
 
 extern uint16_t gPkt_tx_successful;
-extern uint16_t gpkt_tx_attemps;
+extern uint16_t gPkt_tx_attemps;
+extern uint16_t gPkt_rx_successful;
 
 #if DOUBLE_NODE_NULL == 1
     #if SINGLE_NODE_NULL != 1
