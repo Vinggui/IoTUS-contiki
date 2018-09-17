@@ -56,6 +56,8 @@
 
 //#define RDC_WITH_DUPLICATE_DETECTION            1
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION   1
+#define CSMA_CONF_MAX_NEIGHBOR_QUEUES             10
+#define CSMA_CONF_MAX_PACKET_PER_NEIGHBOR         8
 
 /*
  * Definitions below are dictated by the hardware and not really

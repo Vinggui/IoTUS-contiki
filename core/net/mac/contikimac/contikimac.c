@@ -244,8 +244,8 @@ static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
 uint16_t gPkt_tx_successful = 0;
-uint16_t gPkt_tx_attemps = 0;
-uint8_t gPkt_tx_first_attemps = 0;
+uint16_t gPkt_tx_attempts = 0;
+uint8_t gPkt_tx_first_attempts = 0;
 uint16_t gPkt_rx_successful = 0;
 
 #define DEBUG 0
@@ -745,7 +745,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       rtimer_clock_t txtime = RTIMER_NOW();
 #endif
 
-      gPkt_tx_attemps++;
+      gPkt_tx_attempts++;
 #if RDC_CONF_HARDWARE_ACK
       int ret = NETSTACK_RADIO.transmit(transmit_len);
 #else
@@ -857,10 +857,10 @@ qsend_packet(mac_callback_t sent, void *ptr)
 {
   int ret = send_packet(sent, ptr, NULL, 0);
 
-  if(0 == gPkt_tx_first_attemps) {
-    gPkt_tx_first_attemps = gPkt_tx_attemps;
-    gPkt_tx_attemps = 0;
-    printf("First burst attempt: %u\n",gPkt_tx_first_attemps);
+  if(0 == gPkt_tx_first_attempts) {
+    gPkt_tx_first_attempts = gPkt_tx_attempts;
+    gPkt_tx_attempts = 0;
+    printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
   }
   if(MAC_TX_OK == ret) {
     gPkt_tx_successful++;
@@ -931,6 +931,15 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
 
     /* Send the current packet */
     ret = send_packet(sent, ptr, curr, is_receiver_awake);
+    
+    if(0 == gPkt_tx_first_attempts) {
+      gPkt_tx_first_attempts = gPkt_tx_attempts;
+      gPkt_tx_attempts = 0;
+      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+    }
+    if(MAC_TX_OK == ret) {
+      gPkt_tx_successful++;
+    }
     if(ret != MAC_TX_DEFERRED) {
       mac_call_sent_callback(sent, ptr, ret, 1);
     }

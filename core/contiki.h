@@ -80,11 +80,11 @@
 #define BACKOFF_TIME                      15000
 #define TRANSMISSION_CHANCE               100//%
 #define KEEP_ALIVE_INTERVAL               30//sec
-#define ROUTING_PACKETS_TIMEOUT           30000//msec
+#define ROUTING_PACKETS_TIMEOUT           15000//msec
 
 
 extern uint16_t gPkt_tx_successful;
-extern uint16_t gPkt_tx_attemps;
+extern uint16_t gPkt_tx_attempts;
 extern uint16_t gPkt_rx_successful;
 
 #if DOUBLE_NODE_NULL == 1

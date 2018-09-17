@@ -120,7 +120,7 @@ powertrace_print(char *str)
          all_cpu, all_lpm, all_transmit, all_listen, all_idle_transmit, all_idle_listen,
          cpu, lpm, transmit, listen, idle_transmit, idle_listen,
          gPkt_tx_successful,
-         gPkt_tx_attemps,
+         gPkt_tx_attempts,
          gPkt_rx_successful);
 
   for(s = list_head(stats_list); s != NULL; s = list_item_next(s)) {

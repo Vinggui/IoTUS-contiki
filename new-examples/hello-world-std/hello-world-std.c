@@ -139,7 +139,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           {
 #endif
 
-          // printf("App sending to 1\n");
+          printf("App sending to 1\n");
           // send_msg(NULL);
           #if SINGLE_NODE_NULL == 1
             #if DOUBLE_NODE_NULL == 1
