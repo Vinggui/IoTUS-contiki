@@ -126,9 +126,9 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
+
     static uint8_t n = 0;
     for(;;) {
-        PROCESS_WAIT_EVENT();
         n++;
         //uint8_t nodeToSend = n%7 + 2;
 
@@ -156,7 +156,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           
         }
         
-
+        
+        PROCESS_WAIT_EVENT();
         etimer_reset(&timer);
     }
 
