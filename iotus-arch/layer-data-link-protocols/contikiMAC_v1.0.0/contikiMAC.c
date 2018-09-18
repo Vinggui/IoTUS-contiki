@@ -256,7 +256,9 @@ static volatile unsigned char we_are_sending = 0;
 static volatile unsigned char radio_is_on = 0;
 
 uint16_t gPkt_tx_successful = 0;
-uint16_t gpkt_tx_attemps = 0;
+uint16_t gPkt_tx_attempts = 0;
+uint8_t gPkt_tx_first_attempts = 0;
+uint16_t gPkt_rx_successful = 0;
 
 
 #if CONTIKIMAC_CONF_COMPOWER
@@ -762,6 +764,8 @@ send_packet_handler(iotus_packet_t *packet)
 #if WITH_PHASE_OPTIMIZATION
       rtimer_clock_t txtime = RTIMER_NOW();
 #endif
+
+      gPkt_tx_attempts++;
 #if RDC_CONF_HARDWARE_ACK
       int ret = active_radio_driver->transmit(packet);
 #else
@@ -883,11 +887,17 @@ send_packet_handler(iotus_packet_t *packet)
 static int8_t
 send_packet(iotus_packet_t *packet)
 {
-  gpkt_tx_attemps++;
   int8_t result = send_packet_handler(packet);
-  if(result == MAC_TX_OK) {
+  
+  if(0 == gPkt_tx_first_attempts) {
+    gPkt_tx_first_attempts = gPkt_tx_attempts;
+    gPkt_tx_attempts = 0;
+    printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+  }
+  if(MAC_TX_OK == result) {
     gPkt_tx_successful++;
   }
+
   if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
     piggyback_confirm_sent(packet, result);
   }
@@ -1031,6 +1041,8 @@ input_packet(iotus_packet_t *packet)
         if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
           piggyback_unwrap_payload(packet);
         }
+
+        gPkt_rx_successful++;
         active_network_protocol->receive(packet);
       }
       return RX_PROCESSED;

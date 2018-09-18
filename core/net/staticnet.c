@@ -83,7 +83,7 @@ int routing_table[13][13] =
 static struct ctimer sendNDTimer;
 rtimer_clock_t packetBuildingTime;
 uint8_t ticTocFlag = 0;
-static clock_time_t keepAliveMSG;
+static clock_time_t backOffDifference;
 
 static uint8_t private_keep_alive[12];
 
@@ -174,9 +174,9 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 static void
 send_keep_alive(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - keepAliveMSG;//ms
-  keepAliveMSG = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
-  backoff += keepAliveMSG;
+  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
+  backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 
   // packetbuf_copyfrom("123456789012345678901234567890", 30);
@@ -207,8 +207,8 @@ init(void)
 #if BROADCAST_EXAMPLE == 0
   #if DOUBLE_NODE_NULL == 0
     if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-      keepAliveMSG = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
-      clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + keepAliveMSG;//ms
+      backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
+      clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
       ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
     }
   #endif

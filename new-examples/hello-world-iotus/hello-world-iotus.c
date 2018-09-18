@@ -80,6 +80,8 @@ send_app_msg(void *ptr) {
     uint8_t address2[2] = {1,0};
     rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
     
+
+    printf("App sending to 1\n");
 TIC();
 #if BROADCAST_EXAMPLE == 0
     // uint8_t dest[2];
@@ -134,8 +136,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
 
     for(;;) {
-        PROCESS_WAIT_EVENT();
-
         //leds_toggle(LEDS_ALL);
         //if(linkaddr_node_addr.u8[0] == 1) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
@@ -152,6 +152,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
         }
 
+
+        PROCESS_WAIT_EVENT();
         etimer_reset(&timer);
     }
 

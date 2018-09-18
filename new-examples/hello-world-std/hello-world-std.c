@@ -64,6 +64,7 @@ void msg_input(const linkaddr_t *source) {
 static void
 send_msg(void *ptr)
 {
+  printf("App sending to 1\n");
   TIC();
   packetbuf_copyfrom(selfMsg, 20);
   //addr.u8[0] = nodeToSend;
@@ -139,7 +140,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           {
 #endif
 
-          printf("App sending to 1\n");
           // send_msg(NULL);
           #if SINGLE_NODE_NULL == 1
             #if DOUBLE_NODE_NULL == 1
