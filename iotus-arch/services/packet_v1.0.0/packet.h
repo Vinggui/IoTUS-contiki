@@ -38,6 +38,7 @@
 typedef struct packet_piece {
   struct packet_piece *next;
   struct mmem data;
+  struct ctimer transmit_timer;
   iotus_node_t *finalDestinationNode;
   iotus_node_t *nextDestinationNode;
   iotus_node_t *prevSourceNode;
@@ -51,6 +52,8 @@ typedef struct packet_piece {
   uint8_t params;
   uint8_t pktID;
   uint8_t type;
+  uint8_t collisions;
+  uint8_t transmissions;
 } iotus_packet_t;
 
 
