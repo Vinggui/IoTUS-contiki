@@ -112,10 +112,7 @@ struct neighbor_queue {
 
 
 #define MAX_QUEUED_PACKETS QUEUEBUF_NUM
-MEMB(neighbor_memb, struct neighbor_queue, CSMA_MAX_NEIGHBOR_QUEUES);
-MEMB(packet_memb, struct rdc_buf_list, MAX_QUEUED_PACKETS);
 MEMB(metadata_memb, struct qbuf_metadata, MAX_QUEUED_PACKETS);
-LIST(neighbor_list);
 
 static void packet_sent(void *ptr, int status, int num_transmissions);
 static void transmit_packet_list(void *ptr);
@@ -349,8 +346,8 @@ packet_sent(void *ptr, int status, int num_transmissions)
   }
 }
 /*---------------------------------------------------------------------------*/
-static void
-send_packet(mac_callback_t sent, void *ptr)
+static int8_t
+send_packet(iotus_packet_t *packet)
 {
   struct rdc_buf_list *q;
   struct neighbor_queue *n;
@@ -369,7 +366,8 @@ send_packet(mac_callback_t sent, void *ptr)
        in framer-802154.c. */
     seqno++;
   }
-  packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, seqno++);
+  // packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, seqno++);
+  packet_set_sequence_number(packet, seqno++);
 
   /* Look for the neighbor entry */
   n = neighbor_queue_from_addr(addr);
@@ -446,49 +444,4 @@ send_packet(mac_callback_t sent, void *ptr)
   }
   mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
 }
-/*---------------------------------------------------------------------------*/
-static void
-input_packet(void)
-{
-  NETSTACK_LLSEC.input();
-}
-/*---------------------------------------------------------------------------*/
-static int
-on(void)
-{
-  return NETSTACK_RDC.on();
-}
-/*---------------------------------------------------------------------------*/
-static int
-off(int keep_radio_on)
-{
-  return NETSTACK_RDC.off(keep_radio_on);
-}
-/*---------------------------------------------------------------------------*/
-static unsigned short
-channel_check_interval(void)
-{
-  if(NETSTACK_RDC.channel_check_interval) {
-    return NETSTACK_RDC.channel_check_interval();
-  }
-  return 0;
-}
-/*---------------------------------------------------------------------------*/
-static void
-init(void)
-{
-  memb_init(&packet_memb);
-  memb_init(&metadata_memb);
-  memb_init(&neighbor_memb);
-}
-/*---------------------------------------------------------------------------*/
-const struct mac_driver csma_driver = {
-  "CSMA",
-  init,
-  send_packet,
-  input_packet,
-  on,
-  off,
-  channel_check_interval,
-};
 /*---------------------------------------------------------------------------*/
