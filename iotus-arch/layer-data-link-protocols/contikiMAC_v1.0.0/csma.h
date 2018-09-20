@@ -46,6 +46,7 @@
 
 extern const struct mac_driver csma_driver;
 
-const struct mac_driver *csma_init(const struct mac_driver *r);
+void
+csma_packet_sent(void *ptr, int status, int num_transmissions);
 
 #endif /* CSMA_H_ */

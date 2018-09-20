@@ -115,7 +115,7 @@ backoff_period(void)
   clock_time_t time;
   /* The retransmission time must be proportional to the channel
      check interval of the underlying radio duty cycling layer. */
-  time = NETSTACK_RDC.channel_check_interval();
+  time = active_data_link_protocol.channel_check_interval();
 
   /* If the radio duty cycle has no channel check interval, we use
    * the default in IEEE 802.15.4: aUnitBackoffPeriod which is

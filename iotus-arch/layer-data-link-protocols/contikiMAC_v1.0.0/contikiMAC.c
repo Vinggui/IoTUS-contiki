@@ -1112,6 +1112,14 @@ post_start(void)
   // }
 }
 
+/*---------------------------------------------------------------------------*/
+static unsigned short
+duty_cycle(void)
+{
+  return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
+}
+
+/*---------------------------------------------------------------------------*/
 const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   "ContikiMAC",
   init,
@@ -1119,6 +1127,7 @@ const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   NULL,
   send_packet,
   NULL,
-  input_packet
+  input_packet,
+  duty_cycle
 };
 /*---------------------------------------------------------------------------*/
