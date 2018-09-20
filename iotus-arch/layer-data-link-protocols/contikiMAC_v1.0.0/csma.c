@@ -283,48 +283,27 @@ tx_ok(struct rdc_buf_list *q, struct neighbor_queue *n, int num_transmissions)
 }
 /*---------------------------------------------------------------------------*/
 void
-csma_packet_sent(void *ptr, int status, int num_transmissions)
+csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
 {
-  struct neighbor_queue *n;
-  struct rdc_buf_list *q;
-
-  n = ptr;
-  if(n == NULL) {
-    return;
-  }
-
-  /* Find out what packet this callback refers to */
-  for(q = list_head(n->queued_packet_list);
-      q != NULL; q = list_item_next(q)) {
-    if(queuebuf_attr(q->buf, PACKETBUF_ATTR_MAC_SEQNO) ==
-       packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO)) {
-      break;
-    }
-  }
-
-  if(q == NULL) {
-    PRINTF("csma: seqno %d not found\n",
-           packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO));
-    return;
-  } else if(q->ptr == NULL) {
-    PRINTF("csma: no metadata\n");
+  if(packet == NULL) {
+    PRINTF("csma: seqno not found\n");
     return;
   }
 
   switch(status) {
   case MAC_TX_OK:
-    tx_ok(q, n, num_transmissions);
+    tx_ok(packet, n, num_transmissions);
     break;
   case MAC_TX_NOACK:
-    noack(q, n, num_transmissions);
+    noack(packet, n, num_transmissions);
     break;
   case MAC_TX_COLLISION:
-    collision(q, n, num_transmissions);
+    collision(packet, n, num_transmissions);
     break;
   case MAC_TX_DEFERRED:
     break;
   default:
-    tx_done(status, q, n);
+    tx_done(status, packet, n);
     break;
   }
 }
