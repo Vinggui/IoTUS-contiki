@@ -216,6 +216,9 @@ packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status
 uint8_t
 packet_queue_size_by_node(iotus_node_t *node);
 
+iotus_packet_t *
+packet_get_queue_by_node(iotus_node_t *node, iotus_packet_t *from);
+
 /* This function provides the core access to basic operations into this service */
 void
 iotus_signal_handler_packet(iotus_service_signal signal, void *data);

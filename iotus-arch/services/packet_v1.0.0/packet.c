@@ -1030,21 +1030,50 @@ packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status
 uint8_t
 packet_queue_size_by_node(iotus_node_t *node)
 {
-  iotus_packet_t *packet, *packetSelected;
+  iotus_packet_t *packet;
   uint8_t counter = 0;
 
   if(node == NULL) {
-    return;
+    return 0;
   }
 
-  packetSelected = list_head(gPacketList);
-  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+  packet = list_head(gPacketList);
+  for(; packet != NULL; packet = list_item_next(packet)) {
     if(packet_get_next_destination(packet) == node) {
       counter++;
     }
   }
 
   return counter;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief   Return the first packet after "from" of the list with target equal to node.
+ * \param node Node to be searched.
+ * \param from The packet at which it should start from.
+ */
+iotus_packet_t *
+packet_get_queue_by_node(iotus_node_t *node, iotus_packet_t *from)
+{
+  iotus_packet_t *packet;
+
+  if(node == NULL) {
+    return 0;
+  }
+
+  if(from == NULL) {
+    packet = list_head(gPacketList);
+  } else {
+    packet = list_item_next(from);
+  }
+  for(; packet != NULL; packet = list_item_next(packet)) {
+    if(packet_get_next_destination(packet) == node) {
+      return packet;
+    }
+  }
+
+  return NULL;
 }
 
 /*---------------------------------------------------------------------*/

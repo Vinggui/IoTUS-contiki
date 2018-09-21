@@ -556,7 +556,7 @@ broadcast_rate_drop(void)
 //	    struct rdc_buf_list *buf_list,
 //            int is_receiver_awake)
 static int8_t
-send_packet_handler(iotus_packet_t *packet)
+send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake)
 {
   rtimer_clock_t t0;
 #if WITH_PHASE_OPTIMIZATION
@@ -572,7 +572,6 @@ send_packet_handler(iotus_packet_t *packet)
 #if !RDC_CONF_HARDWARE_ACK
   uint8_t seqno;
 #endif
-  uint8_t is_receiver_awake = 0;
 
   /* Exit if RDC and radio were explicitly turned off */
    if(!contikimac_is_on && !contikimac_keep_radio_on) {
@@ -888,7 +887,7 @@ send_packet_handler(iotus_packet_t *packet)
 int8_t
 contikimac_send_packet(iotus_packet_t *packet)
 {
-  int8_t result = send_packet_handler(packet);
+  int8_t result = send_packet_handler(packet, 0);
   
   if(0 == gPkt_tx_first_attempts) {
     gPkt_tx_first_attempts = gPkt_tx_attempts;
@@ -903,6 +902,93 @@ contikimac_send_packet(iotus_packet_t *packet)
     piggyback_confirm_sent(packet, result);
   }
   return result;
+}
+
+/*---------------------------------------------------------------------------*/
+int8_t
+contikimac_send_list(iotus_node_t *node, uint8_t amount)
+{
+  iotus_packet_t *curr;
+  iotus_packet_t *next;
+  int ret;
+  int is_receiver_awake;
+  int pending;
+
+  /* Do not send during reception of a burst */
+  if(we_are_receiving_burst) {
+    /* Return COLLISION so the MAC may try again later */
+    return MAC_TX_COLLISION;
+  }
+
+  /* Create and secure frames in advance */
+  curr = packet_get_queue_by_node(node, NULL);
+  printf("Amount %u\n", amount);
+  do {
+    next = packet_get_queue_by_node(node, curr);
+    if(!packet_get_parameter(curr, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
+      if(next != NULL) {
+        packet_set_parameter(curr, PACKET_PARAMETERS_PACKET_PENDING);
+      }
+      
+      packet_set_parameter(curr,PACKET_PARAMETERS_WAIT_FOR_ACK);
+
+
+      //TODO: Verify if this is supposed to apply piggyback
+      uint16_t freeSpace = get_safe_pdu_for_layer(IOTUS_PRIORITY_DATA_LINK);
+      freeSpace -= contikimac_framer.length(curr);
+      freeSpace -= packet_get_size(curr);
+      packet_optimize_build(curr, freeSpace);
+
+      if(contikimac_framer.create(curr) < 0) {
+        SAFE_PRINTF_LOG_ERROR("framer failed %u\n", curr->pktID);
+        return MAC_TX_ERR_FATAL;
+      }
+      
+      packet_set_parameter(curr,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
+    }
+
+    curr = next;
+  } while(next != NULL);
+  
+  /* The receiver needs to be awoken before we send */
+  is_receiver_awake = 0;
+  curr = packet_get_queue_by_node(node, NULL);
+  do { /* A loop sending a burst of packets from buf_list */
+    next = packet_get_queue_by_node(node, curr);
+
+    pending = packet_get_parameter(curr, PACKET_PARAMETERS_PACKET_PENDING);
+
+    /* Send the current packet */
+    int8_t ret = send_packet_handler(curr, is_receiver_awake);
+    
+    if(0 == gPkt_tx_first_attempts) {
+      gPkt_tx_first_attempts = gPkt_tx_attempts;
+      gPkt_tx_attempts = 0;
+      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+    }
+    if(MAC_TX_OK == ret) {
+      gPkt_tx_successful++;
+    }
+
+    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+      piggyback_confirm_sent(curr, ret);
+    }
+
+    if(ret != MAC_TX_DEFERRED) {
+      csma_packet_sent(curr, ret, 1);
+    }
+
+    if(ret == MAC_TX_OK) {
+      if(next != NULL) {
+        /* We're in a burst, no need to wake the receiver up again */
+        is_receiver_awake = 1;
+        curr = next;
+      }
+    } else {
+      /* The transmission failed, we stop the burst */
+      next = NULL;
+    }
+  } while((next != NULL) && pending);
 }
 
 /*---------------------------------------------------------------------------*/

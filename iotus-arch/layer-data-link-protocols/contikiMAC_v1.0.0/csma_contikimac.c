@@ -38,6 +38,7 @@
  */
 
 // #include "csma.h"
+#include "contikiMAC.h"
 #include "iotus-netstack.h"
 #include "sys/ctimer.h"
 #include "sys/clock.h"
@@ -86,8 +87,6 @@
 #define CSMA_MAX_MAX_FRAME_RETRIES 7
 #endif
 
-static void packet_sent(void *ptr, int status, int num_transmissions);
-static void transmit_packet_list(void *ptr);
 // /*---------------------------------------------------------------------------*/
 // static struct neighbor_queue *
 // neighbor_queue_from_addr(const linkaddr_t *addr)
@@ -122,20 +121,12 @@ backoff_period(void)
 static void
 transmit_packet_list(void *ptr)
 {
-  printf("trying to transmit\n");
   iotus_packet_t *packet = ptr;
   if(packet) {
-    
-    //TOODDDDDDDOOOOOO Search in packet queue
-    // struct rdc_buf_list *q = list_head(packet->queued_packet_list);
-    // if(q != NULL) {
-      // PRINTF("csma: preparing number %d %p, queue len %d\n", packet->transmissions, q,
-          // list_length(n->queued_packet_list));
-      /* Send packets in the neighbor's list */
-
-      //TOODDDDDDDOOOOOO work on the list right here
-      // NETSTACK_RDC.send_list(packet_sent, n, q);
-    // }
+    uint8_t waitingList = packet_queue_size_by_node(packet_get_next_destination(packet));
+      PRINTF("csma: preparing number %d, queue len %u\n", packet->transmissions, waitingList);
+    /* Send packets in the neighbor's list */
+    contikimac_send_list(packet_get_next_destination(packet), waitingList);
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -153,7 +144,6 @@ schedule_transmission(iotus_packet_t *packet)
     /* Pick a time for next transmission */
     delay = random_rand() % delay;
   }
-
   PRINTF("csma: scheduling transmission in %u ticks, NB=%u, BE=%u\n",
       (unsigned)delay, packet->collisions, backoff_exponent);
   ctimer_set(&packet->transmit_timer, delay, transmit_packet_list, packet);
@@ -290,6 +280,7 @@ csma_send_packet(iotus_packet_t *packet)
 
   schedule_transmission(packet);
 
+  return MAC_TX_DEFERRED;
   // mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
 }
 /*---------------------------------------------------------------------------*/
