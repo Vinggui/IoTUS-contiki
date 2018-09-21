@@ -49,7 +49,7 @@ struct iotus_data_link_protocol_struct {
   void (* sent_cb)(iotus_packet_t *packetk);
   iotus_netstack_return (* receive)(iotus_packet_t *packet); 
   /** Returns the channel check interval, expressed in clock_time_t ticks. */
-  uint8_t (* channel_check_interval)(void);
+  uint16_t (* channel_check_interval)(void);
 };
 
 #endif /* IOTUS_DEV_DATA_LINK_H_ */

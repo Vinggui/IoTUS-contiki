@@ -21,6 +21,7 @@
 #include "nodes.h"
 #include "packet-default-additional-info.h"
 #include "chores.h"
+#include "sys/ctimer.h"
 
 #ifndef IOTUS_RADIO_FULL_ADDRESS
   #error Please define IOTUS_RADIO_FULL_ADDRESS into platform-conf.h
@@ -211,6 +212,9 @@ packet_set_confirmation_cb(iotus_packet_t *packet, packet_sent_cb func_cb);
 
 void
 packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status);
+
+uint8_t
+packet_queue_size_by_node(iotus_node_t *node);
 
 /* This function provides the core access to basic operations into this service */
 void

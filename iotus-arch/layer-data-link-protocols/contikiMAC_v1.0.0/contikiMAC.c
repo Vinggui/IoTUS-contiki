@@ -42,6 +42,7 @@
 #include "contiki-conf.h"
 #include "contikiMAC.h"
 #include "contikimac-framer.h"
+#include "csma_contikimac.h"
 #include "dev/leds.h"
 #include "dev/watchdog.h"
 #include "iotus-netstack.h"
@@ -884,8 +885,8 @@ send_packet_handler(iotus_packet_t *packet)
   return ret;
 }
 /*---------------------------------------------------------------------------*/
-static int8_t
-send_packet(iotus_packet_t *packet)
+int8_t
+contikimac_send_packet(iotus_packet_t *packet)
 {
   int8_t result = send_packet_handler(packet);
   
@@ -1113,7 +1114,7 @@ post_start(void)
 }
 
 /*---------------------------------------------------------------------------*/
-static unsigned short
+static uint16_t
 duty_cycle(void)
 {
   return (1ul * CLOCK_SECOND * CYCLE_TIME) / RTIMER_ARCH_SECOND;
@@ -1125,7 +1126,11 @@ const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   init,
   post_start,
   NULL,
-  send_packet,
+#if USE_CSMA_MODULE == 1
+  csma_send_packet,
+#else
+  contikimac_send_packet,
+#endif
   NULL,
   input_packet,
   duty_cycle

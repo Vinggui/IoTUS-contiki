@@ -37,19 +37,12 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
-#include "net/mac/csma.h"
-#include "net/packetbuf.h"
-#include "net/queuebuf.h"
-
+// #include "csma.h"
+#include "iotus-netstack.h"
 #include "sys/ctimer.h"
 #include "sys/clock.h"
 
 #include "lib/random.h"
-
-#include "net/netstack.h"
-
-#include "lib/list.h"
-#include "lib/memb.h"
 
 #include <string.h>
 
@@ -115,7 +108,7 @@ backoff_period(void)
   clock_time_t time;
   /* The retransmission time must be proportional to the channel
      check interval of the underlying radio duty cycling layer. */
-  time = active_data_link_protocol.channel_check_interval();
+  time = active_data_link_protocol->channel_check_interval();
 
   /* If the radio duty cycle has no channel check interval, we use
    * the default in IEEE 802.15.4: aUnitBackoffPeriod which is
@@ -132,6 +125,7 @@ transmit_packet_list(void *ptr)
   printf("trying to transmit\n");
   iotus_packet_t *packet = ptr;
   if(packet) {
+    
     //TOODDDDDDDOOOOOO Search in packet queue
     // struct rdc_buf_list *q = list_head(packet->queued_packet_list);
     // if(q != NULL) {
@@ -166,120 +160,85 @@ schedule_transmission(iotus_packet_t *packet)
 }
 /*---------------------------------------------------------------------------*/
 static void
-free_packet(struct neighbor_queue *n, struct rdc_buf_list *p, int status)
+free_packet(iotus_packet_t *packet, int status)
 {
-  if(p != NULL) {
-    /* Remove packet from list and deallocate */
-    list_remove(n->queued_packet_list, p);
-
-    queuebuf_free(p->buf);
-    memb_free(&metadata_memb, p->ptr);
-    memb_free(&packet_memb, p);
-    PRINTF("csma: free_queued_packet, queue length %d, free packets %d\n",
-           list_length(n->queued_packet_list), memb_numfree(&packet_memb));
-    if(list_head(n->queued_packet_list) != NULL) {
-      /* There is a next packet. We reset current tx information */
-      n->transmissions = 0;
-      n->collisions = CSMA_MIN_BE;
-      /* Schedule next transmissions */
-      schedule_transmission(n);
-    } else {
-      /* This was the last packet in the queue, we free the neighbor */
-      ctimer_stop(&n->transmit_timer);
-      list_remove(neighbor_list, n);
-      memb_free(&neighbor_memb, n);
-    }
+  if(packet != NULL) {
+      // n->transmissions = 0;
+      // n->collisions = CSMA_MIN_BE;
+      //  Schedule next transmissions 
+      // schedule_transmission(n);
   }
 }
 /*---------------------------------------------------------------------------*/
 static void
-tx_done(int status, struct rdc_buf_list *q, struct neighbor_queue *n)
+tx_done(int status, iotus_packet_t *packet)
 {
-  mac_callback_t sent;
-  struct qbuf_metadata *metadata;
-  void *cptr;
-  uint8_t ntx;
-
-  metadata = (struct qbuf_metadata *)q->ptr;
-  sent = metadata->sent;
-  cptr = metadata->cptr;
-  ntx = n->transmissions;
-
   switch(status) {
   case MAC_TX_OK:
-    PRINTF("csma: rexmit ok %d\n", n->transmissions);
+    PRINTF("csma: rexmit ok %d\n", packet->transmissions);
     break;
   case MAC_TX_COLLISION:
   case MAC_TX_NOACK:
     PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
-                 status, n->transmissions, n->collisions);
+                 status, packet->transmissions, packet->collisions);
     break;
   default:
-    PRINTF("csma: rexmit failed %d: %d\n", n->transmissions, status);
+    PRINTF("csma: rexmit failed %d: %d\n", packet->transmissions, status);
     break;
   }
 
-  free_packet(n, q, status);
-  mac_call_sent_callback(sent, cptr, status, ntx);
+  free_packet(packet, status);
+  // mac_call_sent_callback(sent, cptr, status, ntx);
 }
 /*---------------------------------------------------------------------------*/
 static void
-rexmit(struct rdc_buf_list *q, struct neighbor_queue *n)
+rexmit(iotus_packet_t *packet)
 {
-  schedule_transmission(n);
+  schedule_transmission(packet);
   /* This is needed to correctly attribute energy that we spent
      transmitting this packet. */
-  queuebuf_update_attr_from_packetbuf(q->buf);
+  // queuebuf_update_attr_from_packetbuf(q->buf);
 }
 /*---------------------------------------------------------------------------*/
 static void
-collision(struct rdc_buf_list *q, struct neighbor_queue *n,
-          int num_transmissions)
+collision(iotus_packet_t *packet, int num_transmissions)
 {
-  struct qbuf_metadata *metadata;
+  packet->collisions += num_transmissions;
 
-  metadata = (struct qbuf_metadata *)q->ptr;
-
-  n->collisions += num_transmissions;
-
-  if(n->collisions > CSMA_MAX_BACKOFF) {
-    n->collisions = CSMA_MIN_BE;
+  if(packet->collisions > CSMA_MAX_BACKOFF) {
+    packet->collisions = CSMA_MIN_BE;
     /* Increment to indicate a next retry */
-    n->transmissions++;
+    packet->transmissions++;
   }
 
-  if(n->transmissions >= metadata->max_transmissions) {
-    tx_done(MAC_TX_COLLISION, q, n);
+  if(packet->transmissions >= CSMA_MAX_MAX_FRAME_RETRIES + 1) {
+    tx_done(MAC_TX_COLLISION, packet);
   } else {
-    PRINTF("csma: rexmit collision %d\n", n->transmissions);
-    rexmit(q, n);
+    PRINTF("csma: rexmit collision %d\n", packet->transmissions);
+    rexmit(packet);
   }
 }
 /*---------------------------------------------------------------------------*/
 static void
-noack(struct rdc_buf_list *q, struct neighbor_queue *n, int num_transmissions)
+noack(iotus_packet_t *packet, int num_transmissions)
 {
-  struct qbuf_metadata *metadata;
+  packet->collisions = CSMA_MIN_BE;
+  packet->transmissions += num_transmissions;
 
-  metadata = (struct qbuf_metadata *)q->ptr;
-
-  n->collisions = CSMA_MIN_BE;
-  n->transmissions += num_transmissions;
-
-  if(n->transmissions >= metadata->max_transmissions) {
-    tx_done(MAC_TX_NOACK, q, n);
+  if(packet->transmissions >= CSMA_MAX_MAX_FRAME_RETRIES + 1) {
+    tx_done(MAC_TX_NOACK, packet);
   } else {
-    PRINTF("csma: rexmit noack %d\n", n->transmissions);
-    rexmit(q, n);
+    PRINTF("csma: rexmit noack %d\n", packet->transmissions);
+    rexmit(packet);
   }
 }
 /*---------------------------------------------------------------------------*/
 static void
-tx_ok(struct rdc_buf_list *q, struct neighbor_queue *n, int num_transmissions)
+tx_ok(iotus_packet_t *packet, int num_transmissions)
 {
-  n->collisions = CSMA_MIN_BE;
-  n->transmissions += num_transmissions;
-  tx_done(MAC_TX_OK, q, n);
+  packet->collisions = CSMA_MIN_BE;
+  packet->transmissions += num_transmissions;
+  tx_done(MAC_TX_OK, packet);
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -292,24 +251,24 @@ csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
 
   switch(status) {
   case MAC_TX_OK:
-    tx_ok(packet, n, num_transmissions);
+    tx_ok(packet, num_transmissions);
     break;
   case MAC_TX_NOACK:
-    noack(packet, n, num_transmissions);
+    noack(packet, num_transmissions);
     break;
   case MAC_TX_COLLISION:
-    collision(packet, n, num_transmissions);
+    collision(packet, num_transmissions);
     break;
   case MAC_TX_DEFERRED:
     break;
   default:
-    tx_done(status, packet, n);
+    tx_done(status, packet);
     break;
   }
 }
 /*---------------------------------------------------------------------------*/
-static int8_t
-send_packet(iotus_packet_t *packet)
+int8_t
+csma_send_packet(iotus_packet_t *packet)
 {
   static uint8_t initialized = 0;
   static uint16_t seqno;

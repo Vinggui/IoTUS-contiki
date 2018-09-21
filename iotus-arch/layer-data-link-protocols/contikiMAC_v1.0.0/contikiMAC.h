@@ -40,7 +40,13 @@
 #ifndef CONTIKIMAC_H
 #define CONTIKIMAC_H
 
+#include "iotus-netstack.h"
 #include "sys/rtimer.h"
+
+#define USE_CSMA_MODULE     1
+
+int8_t
+contikimac_send_packet(iotus_packet_t *packet);
 
 const struct iotus_data_link_protocol_struct contikiMAC_protocol;
 

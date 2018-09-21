@@ -38,15 +38,15 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
-#ifndef CSMA_H_
-#define CSMA_H_
+#ifndef CSMA_CONTIKIMAC_H_
+#define CSMA_CONTIKIMAC_H_
 
-#include "net/mac/mac.h"
-#include "dev/radio.h"
-
-extern const struct mac_driver csma_driver;
+#include "iotus-netstack.h"
 
 void
-csma_packet_sent(void *ptr, int status, int num_transmissions);
+csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions);
 
-#endif /* CSMA_H_ */
+int8_t
+csma_send_packet(iotus_packet_t *packet);
+
+#endif /* CSMA_CONTIKIMAC_H_ */

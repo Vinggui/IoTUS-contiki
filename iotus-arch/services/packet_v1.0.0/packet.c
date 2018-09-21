@@ -1021,6 +1021,32 @@ packet_confirm_transmission(iotus_packet_t *packet, iotus_netstack_return status
   packet_destroy(packet);
 }
 
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief   Count the number of packets on the queue to be sent to a certain node.
+ * \param node Node to be searched.
+ */
+uint8_t
+packet_queue_size_by_node(iotus_node_t *node)
+{
+  iotus_packet_t *packet, *packetSelected;
+  uint8_t counter = 0;
+
+  if(node == NULL) {
+    return;
+  }
+
+  packetSelected = list_head(gPacketList);
+  for(packet = packetSelected; packet != NULL; packet = list_item_next(packet)) {
+    if(packet_get_next_destination(packet) == node) {
+      counter++;
+    }
+  }
+
+  return counter;
+}
+
 /*---------------------------------------------------------------------*/
 /*
  * \brief Default function required from IoTUS, to initialize, run and finish this service
