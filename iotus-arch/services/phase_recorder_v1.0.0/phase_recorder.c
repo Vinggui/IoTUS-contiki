@@ -47,6 +47,7 @@
 
 struct phase_queueitem {
   struct ctimer timer;
+  uint8_t pkt_queue_size;
   iotus_packet_t *packetPhased;
 };
 
@@ -142,7 +143,11 @@ send_packet(void *ptr)
   
   // packet_continue_deferred_packet(p->packetPhased);
   iotus_netstack_return returnAns;
-  returnAns = active_data_link_protocol->send(p->packetPhased);
+  if(p->pkt_queue_size > 1) {
+    returnAns = active_data_link_protocol->send_list(p->packetPhased, p->pkt_queue_size);
+  } else {
+    returnAns = active_data_link_protocol->send(p->packetPhased);
+  }
   packet_clear_parameter(p->packetPhased, PACKET_PARAMETERS_WAS_DEFFERED);
   packet_confirm_transmission(p->packetPhased, returnAns);
 
@@ -152,7 +157,7 @@ send_packet(void *ptr)
 /*---------------------------------------------------------------------------*/
 phase_recorder_status_t
 phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
-           rtimer_clock_t guard_time, iotus_packet_t *packet)
+           rtimer_clock_t guard_time, iotus_packet_t *packet, uint8_t pkt_queue_size)
 {
   //  const linkaddr_t *neighbor = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
   /* We go through the list of phases to find if we have recorded a
@@ -222,6 +227,7 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
         p = memb_alloc(&phased_packets_memb);
         if(p != NULL) {
           p->packetPhased = packet;
+          p->pkt_queue_size = pkt_queue_size;
           SAFE_PRINTF_LOG_INFO("saved for later!\n");
           ctimer_set(&p->timer, ctimewait, send_packet, p);
           packet_set_parameter(packet,PACKET_PARAMETERS_WAS_DEFFERED);

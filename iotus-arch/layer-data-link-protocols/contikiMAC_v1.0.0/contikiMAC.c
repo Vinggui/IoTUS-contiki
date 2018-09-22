@@ -61,7 +61,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -556,7 +556,7 @@ broadcast_rate_drop(void)
 //	    struct rdc_buf_list *buf_list,
 //            int is_receiver_awake)
 static int8_t
-send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake)
+send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t amount_to_send)
 {
   rtimer_clock_t t0;
 #if WITH_PHASE_OPTIMIZATION
@@ -655,7 +655,7 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake)
 #if WITH_PHASE_OPTIMIZATION
   if(!is_broadcast && !is_receiver_awake) {
       ret = phase_recorder_wait(packet_get_next_destination(packet),
-                               CYCLE_TIME, GUARD_TIME, packet);
+                               CYCLE_TIME, GUARD_TIME, packet, amount_to_send);
     if(ret == PHASE_DEFERRED) {
       return MAC_TX_DEFERRED;
     }
@@ -887,7 +887,7 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake)
 int8_t
 contikimac_send_packet(iotus_packet_t *packet)
 {
-  int8_t result = send_packet_handler(packet, 0);
+  int8_t result = send_packet_handler(packet, 0, 1);
   
   if(0 == gPkt_tx_first_attempts) {
     gPkt_tx_first_attempts = gPkt_tx_attempts;
@@ -906,11 +906,10 @@ contikimac_send_packet(iotus_packet_t *packet)
 
 /*---------------------------------------------------------------------------*/
 int8_t
-contikimac_send_list(iotus_node_t *node, uint8_t amount)
+contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
 {
   iotus_packet_t *curr;
   iotus_packet_t *next;
-  int ret;
   int is_receiver_awake;
   int pending;
 
@@ -921,7 +920,8 @@ contikimac_send_list(iotus_node_t *node, uint8_t amount)
   }
 
   /* Create and secure frames in advance */
-  curr = packet_get_queue_by_node(node, NULL);
+  iotus_node_t *node = packet_get_next_destination(packet);
+  curr = packet_get_queue_by_node(node, packet);
   printf("Amount %u\n", amount);
   do {
     next = packet_get_queue_by_node(node, curr);
@@ -948,6 +948,7 @@ contikimac_send_list(iotus_node_t *node, uint8_t amount)
     }
 
     curr = next;
+    if(curr == NULL) printf("foi nulo!!\n");
   } while(next != NULL);
   
   /* The receiver needs to be awoken before we send */
@@ -959,7 +960,7 @@ contikimac_send_list(iotus_node_t *node, uint8_t amount)
     pending = packet_get_parameter(curr, PACKET_PARAMETERS_PACKET_PENDING);
 
     /* Send the current packet */
-    int8_t ret = send_packet_handler(curr, is_receiver_awake);
+    int8_t ret = send_packet_handler(curr, is_receiver_awake, amount);
     
     if(0 == gPkt_tx_first_attempts) {
       gPkt_tx_first_attempts = gPkt_tx_attempts;
@@ -1217,6 +1218,7 @@ const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
 #else
   contikimac_send_packet,
 #endif
+  contikimac_send_list,
   NULL,
   input_packet,
   duty_cycle

@@ -121,11 +121,9 @@ static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
-  if(returnAns != MAC_TX_OK) {
-      iotus_retransmit_msg(packet, 2000);
-  } else {
-      packet_destroy(packet);
-  }
+  // if(returnAns == MAC_TX_OK) {
+    packet_destroy(packet);
+  // }
 }
 
 static iotus_netstack_return

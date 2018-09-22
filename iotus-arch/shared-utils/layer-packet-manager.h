@@ -24,9 +24,6 @@ iotus_packet_t * iotus_initiate_packet(uint16_t payloadSize, const uint8_t* payl
     packet_sent_cb func_cb);
 
 void
-iotus_retransmit_msg(iotus_packet_t *packet, uint16_t backoff);
-
-void
 return_packet_to_application(iotus_packet_t *packetSelected);
 
 #endif /* IOTUS_ARCH_SHARED_UTILS_LAYER_PACKET_MANAGER_H_*/

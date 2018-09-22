@@ -34,7 +34,7 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
 
 phase_recorder_status_t
 phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
-           rtimer_clock_t guard_time, iotus_packet_t *packet);
+           rtimer_clock_t guard_time, iotus_packet_t *packet, uint8_t pkt_queue_size);
 
 void
 iotus_signal_handler_phase_recorder(iotus_service_signal signal, void *data);

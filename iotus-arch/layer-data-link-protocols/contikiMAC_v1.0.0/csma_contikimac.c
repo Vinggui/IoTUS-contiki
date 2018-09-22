@@ -126,7 +126,7 @@ transmit_packet_list(void *ptr)
     uint8_t waitingList = packet_queue_size_by_node(packet_get_next_destination(packet));
       PRINTF("csma: preparing number %d, queue len %u\n", packet->transmissions, waitingList);
     /* Send packets in the neighbor's list */
-    contikimac_send_list(packet_get_next_destination(packet), waitingList);
+    active_data_link_protocol->send_list(packet, waitingList);
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -150,17 +150,6 @@ schedule_transmission(iotus_packet_t *packet)
 }
 /*---------------------------------------------------------------------------*/
 static void
-free_packet(iotus_packet_t *packet, int status)
-{
-  if(packet != NULL) {
-      // n->transmissions = 0;
-      // n->collisions = CSMA_MIN_BE;
-      //  Schedule next transmissions 
-      // schedule_transmission(n);
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void
 tx_done(int status, iotus_packet_t *packet)
 {
   switch(status) {
@@ -177,8 +166,7 @@ tx_done(int status, iotus_packet_t *packet)
     break;
   }
 
-  free_packet(packet, status);
-  // mac_call_sent_callback(sent, cptr, status, ntx);
+  packet_confirm_transmission(packet, status);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -238,7 +226,7 @@ csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
     PRINTF("csma: seqno not found\n");
     return;
   }
-
+printf("vltou %u\n", status);
   switch(status) {
   case MAC_TX_OK:
     tx_ok(packet, num_transmissions);

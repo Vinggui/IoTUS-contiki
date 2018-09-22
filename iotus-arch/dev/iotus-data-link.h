@@ -46,6 +46,7 @@ struct iotus_data_link_protocol_struct {
   void (* post_start)(void);
   void (* close)(void);
   int8_t (* send)(iotus_packet_t *packet);
+  int8_t (* send_list)(iotus_packet_t *packet, uint8_t amount);
   void (* sent_cb)(iotus_packet_t *packetk);
   iotus_netstack_return (* receive)(iotus_packet_t *packet); 
   /** Returns the channel check interval, expressed in clock_time_t ticks. */

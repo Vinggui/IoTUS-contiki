@@ -48,9 +48,6 @@
 int8_t
 contikimac_send_packet(iotus_packet_t *packet);
 
-int8_t
-contikimac_send_list(iotus_node_t *node, uint8_t amount);
-
 const struct iotus_data_link_protocol_struct contikiMAC_protocol;
 
 #endif /* CONTIKIMAC_H */
