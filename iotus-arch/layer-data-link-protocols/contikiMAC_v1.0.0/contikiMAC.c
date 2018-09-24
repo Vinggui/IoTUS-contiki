@@ -940,7 +940,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       packet_optimize_build(curr, freeSpace);
 
       if(contikimac_framer.create(curr) < 0) {
-        SAFE_PRINTF_LOG_ERROR("framer failed %u\n", curr->pktID);
+        SAFE_PRINTF_LOG_ERROR("framer failed on list %u\n", curr->pktID);
         return MAC_TX_ERR_FATAL;
       }
       

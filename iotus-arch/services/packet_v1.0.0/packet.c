@@ -35,7 +35,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -442,6 +442,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     SAFE_PRINT("Broadcast\n");
     //newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
   }
+  SAFE_PRINTF_LOG_INFO("Created pktID %u", newMsg->pktID);
   //Link the message into the list, sorting...
   pieces_insert_timeout_priority(gPacketList, newMsg);
   return newMsg;

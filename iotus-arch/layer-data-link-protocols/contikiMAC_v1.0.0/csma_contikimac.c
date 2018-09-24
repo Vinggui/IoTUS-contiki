@@ -265,7 +265,6 @@ csma_send_packet(iotus_packet_t *packet)
   // packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, seqno++);
   packet_set_sequence_number(packet, seqno++);
 
-
   schedule_transmission(packet);
 
   return MAC_TX_DEFERRED;
