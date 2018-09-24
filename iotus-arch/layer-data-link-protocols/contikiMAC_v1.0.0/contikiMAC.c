@@ -617,7 +617,7 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
     recvAddr = nodes_get_address(iotus_radio_selected_address_type,
                                  packet_get_next_destination(packet));
     if(NULL != recvAddr) {
-      SAFE_PRINTF_LOG_INFO("contikimac: send unicast to %u.%u\n",
+      SAFE_PRINTF_LOG_INFO("contikimac: send unicast to %u.%u",
                  recvAddr[0],
                  recvAddr[1]);
     }
@@ -888,18 +888,19 @@ int8_t
 contikimac_send_packet(iotus_packet_t *packet)
 {
   int8_t result = send_packet_handler(packet, 0, 1);
-  
-  if(0 == gPkt_tx_first_attempts) {
-    gPkt_tx_first_attempts = gPkt_tx_attempts;
-    gPkt_tx_attempts = 0;
-    printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
-  }
-  if(MAC_TX_OK == result) {
-    gPkt_tx_successful++;
-  }
+  if(result != MAC_TX_DEFERRED) {
+    if(0 == gPkt_tx_first_attempts) {
+      gPkt_tx_first_attempts = gPkt_tx_attempts;
+      gPkt_tx_attempts = 0;
+      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+    }
+    if(MAC_TX_OK == result) {
+      gPkt_tx_successful++;
+    }
 
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-    piggyback_confirm_sent(packet, result);
+    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+      piggyback_confirm_sent(packet, result);
+    }
   }
   return result;
 }
@@ -913,6 +914,10 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
   int is_receiver_awake;
   int pending;
 
+  if(packet == NULL) {
+    SAFE_PRINTF_LOG_ERROR("Packet was null!");
+  }
+
   /* Do not send during reception of a burst */
   if(we_are_receiving_burst) {
     /* Return COLLISION so the MAC may try again later */
@@ -921,8 +926,8 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
 
   /* Create and secure frames in advance */
   iotus_node_t *node = packet_get_next_destination(packet);
-  curr = packet_get_queue_by_node(node, packet);
-  printf("Amount %u\n", amount);
+  curr = packet;
+  printf("Amount %u %p %p\n", amount, node,curr);
   do {
     next = packet_get_queue_by_node(node, curr);
     if(!packet_get_parameter(curr, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
@@ -953,7 +958,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
   
   /* The receiver needs to be awoken before we send */
   is_receiver_awake = 0;
-  curr = packet_get_queue_by_node(node, NULL);
+  curr = packet;
   do { /* A loop sending a burst of packets from buf_list */
     next = packet_get_queue_by_node(node, curr);
 
@@ -961,21 +966,20 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
 
     /* Send the current packet */
     int8_t ret = send_packet_handler(curr, is_receiver_awake, amount);
-    
-    if(0 == gPkt_tx_first_attempts) {
-      gPkt_tx_first_attempts = gPkt_tx_attempts;
-      gPkt_tx_attempts = 0;
-      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
-    }
-    if(MAC_TX_OK == ret) {
-      gPkt_tx_successful++;
-    }
-
-    if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
-      piggyback_confirm_sent(curr, ret);
-    }
-
+    printf("ret %u\n", ret);
     if(ret != MAC_TX_DEFERRED) {
+      if(0 == gPkt_tx_first_attempts) {
+        gPkt_tx_first_attempts = gPkt_tx_attempts;
+        gPkt_tx_attempts = 0;
+        printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+      }
+      if(MAC_TX_OK == ret) {
+        gPkt_tx_successful++;
+      }
+
+      if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+        piggyback_confirm_sent(curr, ret);
+      }
       csma_packet_sent(curr, ret, 1);
     }
 
@@ -990,6 +994,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       next = NULL;
     }
   } while((next != NULL) && pending);
+      printf("aquiiiiiiiiiii\n");
 }
 
 /*---------------------------------------------------------------------------*/

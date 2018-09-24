@@ -857,15 +857,15 @@ qsend_packet(mac_callback_t sent, void *ptr)
 {
   int ret = send_packet(sent, ptr, NULL, 0);
 
-  if(0 == gPkt_tx_first_attempts) {
-    gPkt_tx_first_attempts = gPkt_tx_attempts;
-    gPkt_tx_attempts = 0;
-    printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
-  }
-  if(MAC_TX_OK == ret) {
-    gPkt_tx_successful++;
-  }
   if(ret != MAC_TX_DEFERRED) {
+    if(0 == gPkt_tx_first_attempts) {
+      gPkt_tx_first_attempts = gPkt_tx_attempts;
+      gPkt_tx_attempts = 0;
+      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+    }
+    if(MAC_TX_OK == ret) {
+      gPkt_tx_successful++;
+    }
     mac_call_sent_callback(sent, ptr, ret, 1);
   }
 }
@@ -931,16 +931,16 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
 
     /* Send the current packet */
     ret = send_packet(sent, ptr, curr, is_receiver_awake);
-    
-    if(0 == gPkt_tx_first_attempts) {
-      gPkt_tx_first_attempts = gPkt_tx_attempts;
-      gPkt_tx_attempts = 0;
-      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
-    }
-    if(MAC_TX_OK == ret) {
-      gPkt_tx_successful++;
-    }
+
     if(ret != MAC_TX_DEFERRED) {
+      if(0 == gPkt_tx_first_attempts) {
+        gPkt_tx_first_attempts = gPkt_tx_attempts;
+        gPkt_tx_attempts = 0;
+        printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+      }
+      if(MAC_TX_OK == ret) {
+        gPkt_tx_successful++;
+      }
       mac_call_sent_callback(sent, ptr, ret, 1);
     }
 

@@ -146,7 +146,7 @@ send_packet(void *ptr)
   if(p->pkt_queue_size > 1) {
     returnAns = active_data_link_protocol->send_list(p->packetPhased, p->pkt_queue_size);
   } else {
-    returnAns = active_data_link_protocol->send(p->packetPhased);
+    returnAns = active_data_link_protocol->send(p->packetPhased); REMOVER AQUI!
   }
   packet_clear_parameter(p->packetPhased, PACKET_PARAMETERS_WAS_DEFFERED);
   packet_confirm_transmission(p->packetPhased, returnAns);
