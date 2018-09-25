@@ -134,9 +134,6 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
   // printf("ebbbbooooo %u\n", status);
   if (MAC_TX_DEFERRED == status) {
     return packet;
-  } else {
-    gApplicationConfirmationCB(packet, status);
-    // printf("passou no iniciate com cb\n");
   }
   return packet;
 }

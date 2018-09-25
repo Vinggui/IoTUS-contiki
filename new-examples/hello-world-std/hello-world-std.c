@@ -50,6 +50,7 @@ AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 
 static uint8_t selfMsg[20];
+static uint8_t gPkt_created = 0;
 
 static linkaddr_t addrThis;
 
@@ -64,6 +65,10 @@ void msg_input(const linkaddr_t *source) {
 static void
 send_msg(void *ptr)
 {
+  if(gPkt_created >= MAX_GENERATED_PKT) {
+      return;
+  }
+  gPkt_created++;
   printf("App sending to 1\n");
   TIC();
   packetbuf_copyfrom(selfMsg, 20);
@@ -127,15 +132,11 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     // set the etimer module to generate an event in one second.
     etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
-
-    static uint8_t n = 0;
     for(;;) {
-        n++;
         //uint8_t nodeToSend = n%7 + 2;
 
 #if SINGLE_NODE_NULL == 0
-        if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr) &&
-           random_rand()%100 > (100-TRANSMISSION_CHANCE)) {
+        if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
 #else
           {
 #endif
@@ -153,7 +154,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             uint8_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
             ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
           #endif
-          
         }
         
         

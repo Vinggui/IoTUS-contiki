@@ -86,6 +86,7 @@ uint8_t ticTocFlag = 0;
 static clock_time_t backOffDifference;
 
 static uint8_t private_keep_alive[12];
+static uint8_t gPkt_created = 0;
 
 void (* up_msg_confirm)(int status, int num_tx) = NULL;
 void (* up_msg_input)(const linkaddr_t *source) = NULL;
@@ -174,6 +175,12 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 static void
 send_keep_alive(void *ptr)
 {
+  if(gPkt_created >= MAX_GENERATED_KA) {
+      return;
+  }
+  gPkt_created++;
+
+  
   clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
   backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
   backoff += backOffDifference;

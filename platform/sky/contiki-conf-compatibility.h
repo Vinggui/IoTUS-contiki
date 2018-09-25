@@ -3,7 +3,7 @@
 #define CONTIKI_CONF_COMPATIBILITY_H
 
 #ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     csma_driver//nullmac_driver
+#define NETSTACK_CONF_MAC     nullmac_driver//csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
 #ifndef NETSTACK_CONF_RDC

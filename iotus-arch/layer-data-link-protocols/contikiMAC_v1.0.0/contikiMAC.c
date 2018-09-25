@@ -61,7 +61,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -902,7 +902,12 @@ contikimac_send_packet(iotus_packet_t *packet)
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
       piggyback_confirm_sent(packet, result);
     }
+
+#if USE_CSMA_MODULE == 1
     csma_packet_sent(packet, result, 1);
+#else
+    packet_confirm_transmission(packet, result);
+#endif
   }
   return result;
 }
@@ -968,7 +973,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
 
     /* Send the current packet */
     int8_t ret = send_packet_handler(curr, is_receiver_awake, amount);
-    printf("ret %u\n", ret);
+    SAFE_PRINTF_LOG_INFO("ret %u\n", ret);
     if(ret != MAC_TX_DEFERRED) {
       if(0 == gPkt_tx_first_attempts) {
         gPkt_tx_first_attempts = gPkt_tx_attempts;
@@ -982,7 +987,11 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
         piggyback_confirm_sent(curr, ret);
       }
+#if USE_CSMA_MODULE == 1
       csma_packet_sent(curr, ret, 1);
+#else
+    packet_confirm_transmission(curr, ret);
+#endif
     }
 
     if(ret == MAC_TX_OK) {

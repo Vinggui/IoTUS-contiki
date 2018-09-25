@@ -22,7 +22,7 @@
 #include "sys/ctimer.h"
 #include "random.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
 
@@ -63,6 +63,7 @@ static clock_time_t backOffDifference;
 iotus_node_t *rootNode;
 iotus_node_t *fatherNode;
 static uint8_t private_keep_alive[12];
+static uint8_t gPkt_created = 0;
 
 
 static iotus_netstack_return
@@ -170,13 +171,13 @@ input_packet(iotus_packet_t *packet)
 
           iotus_netstack_return status = send(packetForward);
           SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
-          // if (!(MAC_TX_OK == status ||
-          //     MAC_TX_DEFERRED == status)) {
-          if (MAC_TX_DEFERRED != status) {
-            send_cb(packetForward, status);
-            // printf("Packet fwd del %u\n", packetForward->pktID);
-            // packet_destroy(packetForward);
-          }
+          // // if (!(MAC_TX_OK == status ||
+          // //     MAC_TX_DEFERRED == status)) {
+          // if (MAC_TX_DEFERRED != status) {
+          //   send_cb(packetForward, status);
+          //   // printf("Packet fwd del %u\n", packetForward->pktID);
+          //   // packet_destroy(packetForward);
+          // }
         }
     }
     return RX_PROCESSED;
@@ -190,6 +191,11 @@ input_packet(iotus_packet_t *packet)
 static void
 send_keep_alive(void *ptr)
 {
+  if(gPkt_created >= MAX_GENERATED_KA) {
+      return;
+  }
+  gPkt_created++;
+
   static uint8_t selfAddrValue;
   selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
 
@@ -235,13 +241,13 @@ send_keep_alive(void *ptr)
 
         SAFE_PRINTF_LOG_INFO("Packet KA %u \n", packet->pktID);
         iotus_netstack_return status = send(packet);
-        // if (!(MAC_TX_OK == status ||
-        //     MAC_TX_DEFERRED == status)) {
-        if (MAC_TX_DEFERRED != status) {
-          send_cb(packet, status);
-          // printf("Packet KA del %u\n", packet->pktID);
-          // packet_destroy(packet);
-        }
+        // // if (!(MAC_TX_OK == status ||
+        // //     MAC_TX_DEFERRED == status)) {
+        // if (MAC_TX_DEFERRED != status) {
+        //   send_cb(packet, status);
+        //   // printf("Packet KA del %u\n", packet->pktID);
+        //   // packet_destroy(packet);
+        // }
       }
 #endif
   }

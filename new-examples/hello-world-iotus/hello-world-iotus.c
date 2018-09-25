@@ -52,6 +52,7 @@ AUTOSTART_PROCESSES(&hello_world_process);
 
 
 static uint8_t selfMsg[20];
+static uint8_t gPkt_created = 0;
 /*---------------------------------------------------------------------------*/
 
 static void
@@ -74,6 +75,11 @@ app_packet_handler(iotus_packet_t *packet)
 /*---------------------------------------------------------------------------*/
 static void
 send_app_msg(void *ptr) {
+    if(gPkt_created >= MAX_GENERATED_PKT) {
+        return;
+    }
+    gPkt_created++;
+
     uint8_t address2[2] = {1,0};
     rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
     
@@ -139,8 +145,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         //}
         
 #if SINGLE_NODE_NULL == 0
-        if(selfAddrValue != 1 &&
-           random_rand()%100 > (100-TRANSMISSION_CHANCE))
+        if(selfAddrValue != 1)
         {
 #else
         {
