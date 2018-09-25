@@ -142,14 +142,11 @@ send_packet(void *ptr)
   SAFE_PRINTF_LOG_INFO("sending phased pkt %u\n", packet_get_sequence_number(p->packetPhased));
   
   // packet_continue_deferred_packet(p->packetPhased);
-  iotus_netstack_return returnAns;
-  if(p->pkt_queue_size > 1) {
-    returnAns = active_data_link_protocol->send_list(p->packetPhased, p->pkt_queue_size);
-  } else {
-    returnAns = active_data_link_protocol->send(p->packetPhased); REMOVER AQUI!
-  }
+  iotus_netstack_return returnAns = 255;
+  returnAns = active_data_link_protocol->send_list(p->packetPhased, p->pkt_queue_size);
+
   packet_clear_parameter(p->packetPhased, PACKET_PARAMETERS_WAS_DEFFERED);
-  packet_confirm_transmission(p->packetPhased, returnAns);
+  // packet_confirm_transmission(p->packetPhased, returnAns);
 
   memb_free(&phased_packets_memb, p);
 }

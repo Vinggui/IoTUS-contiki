@@ -901,6 +901,7 @@ contikimac_send_packet(iotus_packet_t *packet)
     if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
       piggyback_confirm_sent(packet, result);
     }
+    csma_packet_sent(packet, result, 1);
   }
   return result;
 }
