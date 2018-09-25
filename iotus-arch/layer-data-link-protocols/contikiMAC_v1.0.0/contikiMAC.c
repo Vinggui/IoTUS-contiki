@@ -617,7 +617,8 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
     recvAddr = nodes_get_address(iotus_radio_selected_address_type,
                                  packet_get_next_destination(packet));
     if(NULL != recvAddr) {
-      SAFE_PRINTF_LOG_INFO("contikimac: send unicast to %u.%u",
+      SAFE_PRINTF_LOG_INFO("contikimac: send unicast %u to %u.%u",
+                 packet->pktID,
                  recvAddr[0],
                  recvAddr[1]);
     }
@@ -928,7 +929,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
   /* Create and secure frames in advance */
   iotus_node_t *node = packet_get_next_destination(packet);
   curr = packet;
-  printf("Amount %u %p %p\n", amount, node,curr);
+  // printf("Amount %u %p %p\n", amount, node,curr);
   do {
     next = packet_get_queue_by_node(node, curr);
     if(!packet_get_parameter(curr, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
@@ -954,7 +955,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     }
 
     curr = next;
-    if(curr == NULL) printf("foi nulo!!\n");
+    // if(curr == NULL) printf("foi nulo!!\n");
   } while(next != NULL);
   
   /* The receiver needs to be awoken before we send */
@@ -995,7 +996,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       next = NULL;
     }
   } while((next != NULL) && pending);
-      printf("aquiiiiiiiiiii\n");
+      // printf("aquiiiiiiiiiii\n");
 }
 
 /*---------------------------------------------------------------------------*/

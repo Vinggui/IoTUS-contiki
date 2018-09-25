@@ -35,7 +35,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -426,6 +426,8 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   newMsg->nextDestinationNode = NULL;
   newMsg->prevSourceNode = NULL;
   newMsg->confirm_cb = NULL;
+  newMsg->collisions = 0;
+  newMsg->transmissions = 0;
   newMsg->pktID = ++gPacketIDcounter;
   newMsg->params = 0;
   //newMsg->iotusHeader = PACKET_IOTUS_HDR_FIRST_BIT;

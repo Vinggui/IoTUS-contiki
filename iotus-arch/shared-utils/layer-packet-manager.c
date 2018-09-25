@@ -20,7 +20,7 @@
 #include "platform-conf.h"
 #include "random.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "pktMng"
 #include "safe-printer.h"
 
@@ -131,12 +131,12 @@ iotus_initiate_msg(uint16_t payloadSize, const uint8_t* payload, uint8_t params,
 
   SAFE_PRINTF_LOG_INFO("Packet App %u \n", packet->pktID);
   iotus_netstack_return status = packet_send(packet);
-  printf("ebbbbooooo %u\n", status);
+  // printf("ebbbbooooo %u\n", status);
   if (MAC_TX_DEFERRED == status) {
     return packet;
   } else {
     gApplicationConfirmationCB(packet, status);
-    printf("passou no iniciate com cb\n");
+    // printf("passou no iniciate com cb\n");
   }
   return packet;
 }

@@ -49,7 +49,7 @@
 
 #include <stdio.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -158,8 +158,8 @@ tx_done(int status, iotus_packet_t *packet)
     break;
   case MAC_TX_COLLISION:
   case MAC_TX_NOACK:
-    PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
-                 status, packet->transmissions, packet->collisions);
+    PRINTF("csma: drop %u with status %d after %d transmissions, %d collisions\n",
+                 packet->pktID ,status, packet->transmissions, packet->collisions);
     break;
   default:
     PRINTF("csma: rexmit failed %d: %d\n", packet->transmissions, status);
@@ -226,7 +226,7 @@ csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
     PRINTF("csma: seqno not found\n");
     return;
   }
-printf("vltou %u\n", status);
+// printf("vltou %u\n", status);
   switch(status) {
   case MAC_TX_OK:
     tx_ok(packet, num_transmissions);
