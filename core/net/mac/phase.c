@@ -68,7 +68,7 @@ struct phase_queueitem {
 };
 
 #define PHASE_DEFER_THRESHOLD 1
-#define PHASE_QUEUESIZE       8
+#define PHASE_QUEUESIZE       10
 
 #define MAX_NOACKS            4
 
