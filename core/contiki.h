@@ -78,11 +78,11 @@
 #define DOUBLE_NODE_NULL                  0
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec
-#define BACKOFF_TIME                      15000
+#define BACKOFF_TIME                      15000UL
 #define TRANSMISSION_CHANCE               100//%
 #define MAX_GENERATED_KA                  MAX_GENERATED_PKT
 #define KEEP_ALIVE_INTERVAL               30//sec
-#define ROUTING_PACKETS_TIMEOUT           15000//msec
+#define ROUTING_PACKETS_TIMEOUT           19000UL//msec
 
 
 extern uint16_t gPkt_tx_successful;

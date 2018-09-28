@@ -150,7 +150,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 #else
         {
 #endif
-            clock_time_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+            clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
             ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
         }
 

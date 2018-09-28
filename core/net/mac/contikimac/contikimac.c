@@ -619,6 +619,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 
   if(!packetbuf_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED)) {
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
+
+    aggregation_apply();
+
     if(NETSTACK_FRAMER.create() < 0) {
       PRINTF("contikimac: framer failed\n");
       return MAC_TX_ERR_FATAL;
@@ -906,6 +909,9 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
       packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 #endif
       packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
+
+      aggregation_apply();
+
       if(NETSTACK_FRAMER.create() < 0) {
         PRINTF("contikimac: framer failed\n");
         mac_call_sent_callback(sent, ptr, MAC_TX_ERR_FATAL, 1);

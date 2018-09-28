@@ -205,13 +205,15 @@ send_keep_alive(void *ptr)
 #if USE_NEW_FEATURES == 1
     backOffDifference = 0;
 #else
-    backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
+    backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
 #endif
     backoff += backOffDifference;
     ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 
     printf("Net sending to 1\n");
 #if USE_NEW_FEATURES == 1
+    uint8_t address3[2] = {1,0};
+    rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address3);
     SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
     piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, ROUTING_PACKETS_TIMEOUT);
 #else
@@ -275,11 +277,13 @@ post_start(void)
   if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
 #if USE_NEW_FEATURES == 1
     backOffDifference = 0;
+    clock_time_t backoff = CLOCK_SECOND/8;//ms
+    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 #else
-    backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
-#endif
+    backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
     clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
     ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+#endif
   }
 #endif
 }

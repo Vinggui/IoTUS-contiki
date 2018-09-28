@@ -174,6 +174,21 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 
 /*---------------------------------------------------------------------------*/
 static void
+create_keep_alive_full_packet(void *ptr, int status, int num_tx)
+{
+  // packetbuf_copyfrom("123456789012345678901234567890", 30);
+  packetbuf_copyfrom(private_keep_alive, 12);
+  linkaddr_t addr;
+  addr.u8[0] = 1;
+  addr.u8[1] = 0;
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  staticnet_output();
+}
+
+/*---------------------------------------------------------------------------*/
+static void
 send_keep_alive(void *ptr)
 {
   if(gPkt_created >= MAX_GENERATED_KA) {
@@ -189,28 +204,22 @@ send_keep_alive(void *ptr)
   ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 
 
+  //A slightly cheat
   linkaddr_t addr;
-  addr.u8[0] = 1;
   addr.u8[1] = 0;
-  if(!create_aggregation_frame(private_keep_alive, 12, &addr, NULL, ROUTING_PACKETS_TIMEOUT)) {
+  addr.u8[0] = routing_table[linkaddr_node_addr.u8[0]][1];
+
+  if(!create_aggregation_frame(private_keep_alive, 12, &addr, create_keep_alive_full_packet, ROUTING_PACKETS_TIMEOUT)) {
     PRINTF("Failed creating KA!\n");
   }
 
 #else
   clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
+  backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
   backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
 
-  // packetbuf_copyfrom("123456789012345678901234567890", 30);
-  packetbuf_copyfrom(private_keep_alive, 12);
-  linkaddr_t addr;
-  addr.u8[0] = 1;
-  addr.u8[1] = 0;
-  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
-  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-
-  staticnet_output();
+  create_keep_alive_full_packet(NULL,0,1);
 #endif
 
   printf("Net sending to 1\n");
@@ -233,9 +242,16 @@ init(void)
 #if BROADCAST_EXAMPLE == 0
   #if DOUBLE_NODE_NULL == 0
     if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-      backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
+
+#if USE_NEW_FEATURES == 1
+      backOffDifference = 0;
+      clock_time_t backoff = CLOCK_SECOND/8;//ms
+      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+#else
+      backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
       clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
       ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+#endif
     }
   #endif
 #if DOUBLE_NODE_NULL == 1

@@ -151,7 +151,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
               send_msg(NULL);
             #endif
           #else
-            uint8_t backoff = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;//ms
+            uint32_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)));
+            backoff /= 1000;//ms
             ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
           #endif
         }

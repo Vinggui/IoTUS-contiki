@@ -21,9 +21,11 @@ struct aggregation_queueitem {
 void
 aggregation_init(void);
 
+void
+aggregation_apply(void);
 
 uint8_t
-create_aggregation_frame(const char *msg, uint8_t size, linkaddr_t *node_addr, mac_callback_t mac_callback, uint16_t timeout);
+create_aggregation_frame(const uint8_t *msg, uint8_t size, linkaddr_t *node_addr, mac_callback_t mac_callback, uint32_t timeout);
 
 
 void
