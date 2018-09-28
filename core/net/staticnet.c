@@ -20,6 +20,7 @@
 #include "net/mac/mac.h"
 #include "random.h"
 #include "sys/ctimer.h"
+#include "aggregation.h"
 
 #include "lib/list.h"
 
@@ -180,7 +181,22 @@ send_keep_alive(void *ptr)
   }
   gPkt_created++;
 
-  
+
+#if USE_NEW_FEATURES == 1
+  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
+  backOffDifference = 0;
+  backoff += backOffDifference;
+  ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+
+
+  linkaddr_t addr;
+  addr.u8[0] = 1;
+  addr.u8[1] = 0;
+  if(!create_aggregation_frame(private_keep_alive, 12, &addr, NULL, ROUTING_PACKETS_TIMEOUT)) {
+    PRINTF("Failed creating KA!\n");
+  }
+
+#else
   clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
   backOffDifference = (CLOCK_SECOND*(random_rand()%BACKOFF_TIME))/1000;
   backoff += backOffDifference;
@@ -194,8 +210,10 @@ send_keep_alive(void *ptr)
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 
-  printf("Net sending to 1\n");
   staticnet_output();
+#endif
+
+  printf("Net sending to 1\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -204,6 +222,7 @@ init(void)
 {
   PRINTF("staticnet started\n");
   queuebuf_init();
+  aggregation_init();
   packetbuf_clear();
 
 

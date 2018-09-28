@@ -253,6 +253,10 @@ main(int argc, char **argv)
 	 ds2411_id[0], ds2411_id[1], ds2411_id[2], ds2411_id[3],
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
+
+  #if IOTUS_USING_MALLOC == 0
+    mmem_init();
+  #endif
 #ifdef CONTIKI_COMM_NEW_STACK
   iotus_node_id_hardcoded[0]= node_id & 0xff;
   iotus_node_id_hardcoded[1]= (node_id>>8) & 0xff;
@@ -262,9 +266,6 @@ main(int argc, char **argv)
   
   iotus_node_long_id_hardcoded[0]= node_id & 0xff;
   iotus_node_long_id_hardcoded[1]= (node_id>>8) & 0xff;
-  #if IOTUS_USING_MALLOC == 0
-    mmem_init();
-  #endif
 #else /*CONTIKI_COMM_NEW_STACK*/
   //This bracket preserves the old contiki architecture
   NETSTACK_RDC.init();
