@@ -43,7 +43,7 @@
 #define IOTUS_RADIO_FULL_ADDRESS                2
 #define IOTUS_RADIO_MAX_PACKET_SIZE             127//CC2420_MAX_PACKET_LEN)
 #define IOTUS_ADDITIONAL_HANDLERS_SIZE          20
-#define IOTUS_NODES_LIST_SIZE                   14
+#define IOTUS_NODES_LIST_SIZE                   20
 #define IOTUS_PACKET_LIST_SIZE                  10
 #define IOTUS_PIGGYBACK_LIST_SIZE               10
 #define IOTUS_USING_MALLOC                      0
@@ -56,8 +56,9 @@
 
 //#define RDC_WITH_DUPLICATE_DETECTION            1
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION   1
-#define CSMA_CONF_MAX_NEIGHBOR_QUEUES             10
-#define CSMA_CONF_MAX_PACKET_PER_NEIGHBOR         10
+#define CSMA_CONF_MAX_NEIGHBOR_QUEUES             IOTUS_NODES_LIST_SIZE
+#define CSMA_CONF_MAX_PACKET_PER_NEIGHBOR         IOTUS_PACKET_LIST_SIZE
+#define QUEUEBUF_CONF_NUM              CSMA_CONF_MAX_PACKET_PER_NEIGHBOR
 
 /*
  * Definitions below are dictated by the hardware and not really

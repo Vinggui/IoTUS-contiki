@@ -42,7 +42,7 @@
 
 #define MAX_NOACKS_TIME       CLOCK_SECOND * 60
 
-#define PHASE_QUEUESIZE       8
+#define PHASE_QUEUESIZE       CSMA_CONF_MAX_PACKET_PER_NEIGHBOR
 
 
 struct phase_queueitem {
