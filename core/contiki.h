@@ -74,6 +74,7 @@
 #define USE_NEW_FEATURES                  1
 #define ALOHA_STYLE                       0
 #define EXP_STAR_LIKE                     0
+#define EXP_LINEAR_NODES                  1
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
 #define MAX_GENERATED_PKT                 60

@@ -132,6 +132,8 @@ staticnet_output(void)
 
 #if EXP_STAR_LIKE == 1
   addrNext.u8[0] = 1;
+#elif EXP_LINEAR_NODES == 1
+    addrNext.u8[0] = linkaddr_node_addr.u8[0] -1;
 #else
   addrNext.u8[0] = routing_table[linkaddr_node_addr.u8[0]][finalReceiver->u8[0]];
 #endif

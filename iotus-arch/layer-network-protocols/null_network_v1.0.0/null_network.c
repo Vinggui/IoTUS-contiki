@@ -81,6 +81,8 @@ send(iotus_packet_t *packet)
                                           packet->finalDestinationNode);
 #if EXP_STAR_LIKE == 1
     uint8_t nextHop = 1;
+#elif EXP_LINEAR_NODES == 1
+    uint8_t nextHop = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] -1;
 #else
     if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] > 12 ||
        finalDestLastAddress[0] > 12) {
@@ -97,14 +99,14 @@ send(iotus_packet_t *packet)
 
     SAFE_PRINTF_LOG_INFO("Final %u next %u ID:%u\n",finalDestLastAddress[0],nextHop,packet->pktID);
 
-    uint8_t rootValue = 0;
-#if EXP_STAR_LIKE == 0
-    rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][1];
-#else
-    rootValue = 1;
-#endif
+//     uint8_t rootValue = 0;
+// #if EXP_STAR_LIKE == 0
+//     rootValue = routing_table[addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]][1];
+// #else
+//     rootValue = 1;
+// #endif
   
-    uint8_t address[2] = {rootValue,0};
+    uint8_t address[2] = {nextHop,0};
     fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
 
     packet->nextDestinationNode = fatherNode;
@@ -149,7 +151,11 @@ input_packet(iotus_packet_t *packet)
 
     //search for the next node...
     uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+#if EXP_LINEAR_NODES == 1
+    uint8_t nextHop = ourAddr-1;
+#else
     uint8_t nextHop = routing_table[ourAddr][finalDestAddr];
+#endif
 
     if(nextHop != 0) {
         uint8_t address2[2] = {1,0};
