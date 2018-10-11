@@ -279,19 +279,21 @@ start(void)
 static void
 post_start(void)
 {
-#if BROADCAST_EXAMPLE == 0
-  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-#if USE_NEW_FEATURES == 1
-    backOffDifference = 0;
-    clock_time_t backoff = CLOCK_SECOND/8;//ms
-    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-#else
-    backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
-    clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
-    ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-#endif
-  }
-#endif
+#if KEEP_ALIVE_SERVICE == 1
+  #if BROADCAST_EXAMPLE == 0
+    if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    #if USE_NEW_FEATURES == 1
+      backOffDifference = 0;
+      clock_time_t backoff = CLOCK_SECOND/8;//ms
+      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+    #else /*USE_NEW_FEATURES*/
+      backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
+      clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
+      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+    #endif /*USE_NEW_FEATURES*/
+    }
+  #endif /*BROADCAST_EXAMPLE*/
+#endif /*KEEP_ALIVE_SERVICE*/
 }
 
 static void

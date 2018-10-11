@@ -209,7 +209,11 @@ send_keep_alive(void *ptr)
   //A slightly cheat
   linkaddr_t addr;
   addr.u8[1] = 0;
+#if EXP_LINEAR_NODES == 1
+  addr.u8[0] = linkaddr_node_addr.u8[0]-1;
+#else
   addr.u8[0] = routing_table[linkaddr_node_addr.u8[0]][1];
+#endif
 
   if(!create_aggregation_frame(private_keep_alive, 12, &addr, create_keep_alive_full_packet, ROUTING_PACKETS_TIMEOUT)) {
     PRINTF("Failed creating KA!\n");
@@ -236,32 +240,33 @@ init(void)
   aggregation_init();
   packetbuf_clear();
 
-
   linkaddr_t addrThis;
   addrThis.u8[0] = 1;
   addrThis.u8[1] = 0;
 
-#if BROADCAST_EXAMPLE == 0
-  #if DOUBLE_NODE_NULL == 0
-    if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+#if KEEP_ALIVE_SERVICE == 1
+  #if BROADCAST_EXAMPLE == 0
+    #if DOUBLE_NODE_NULL == 0
+      if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
 
-#if USE_NEW_FEATURES == 1
-      backOffDifference = 0;
-      clock_time_t backoff = CLOCK_SECOND/8;//ms
-      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-#else
-      backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
-      clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
-      ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-#endif
-    }
-  #endif
-#if DOUBLE_NODE_NULL == 1
-  if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-    NETSTACK_RDC.on();
-  }
-#endif
-#endif
+      #if USE_NEW_FEATURES == 1
+        backOffDifference = 0;
+        clock_time_t backoff = CLOCK_SECOND/8;//ms
+        ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+      #else /*USE_NEW_FEATURES*/
+        backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
+        ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+      #endif /*USE_NEW_FEATURES*/
+      }
+    #endif /*DOUBLE_NODE_NULL*/
+    #if DOUBLE_NODE_NULL == 1
+      if(linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+        NETSTACK_RDC.on();
+      }
+    #endif /*DOUBLE_NODE_NULL*/
+  #endif /*BROADCAST_EXAMPLE*/
+#endif /*KEEP_ALIVE_SERVICE*/
 
 
   static uint8_t selfAddrValue;

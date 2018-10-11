@@ -70,19 +70,27 @@
 
 
 #define POWER_TRACE_RATE                  60
+#define USE_NEW_FEATURES                  0
+
 #define BROADCAST_EXAMPLE                 0
-#define USE_NEW_FEATURES                  1
 #define ALOHA_STYLE                       0
+
 #define EXP_STAR_LIKE                     0
 #define EXP_LINEAR_NODES                  1
+#define EXP_ONE_NODE_GEN                  6 //Only this node # will generate messages
+
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
+
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec
 #define BACKOFF_TIME                      15000UL
 #define TRANSMISSION_CHANCE               100//%
+
+#define KEEP_ALIVE_SERVICE                0
 #define MAX_GENERATED_KA                  MAX_GENERATED_PKT
 #define KEEP_ALIVE_INTERVAL               30//sec
+
 #define ROUTING_PACKETS_TIMEOUT           19000UL//msec
 
 

@@ -123,7 +123,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     addrThis.u8[0] = 1;
     addrThis.u8[1] = 0;
 
-
     /* Start powertracing, once every two seconds. */
     powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
     
@@ -141,6 +140,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           {
 #endif
 
+
+#if EXP_ONE_NODE_GEN > 0
+        if(selfAddrValue != EXP_ONE_NODE_GEN) {
+          PROCESS_WAIT_EVENT();
+          continue;
+        }
+#endif
           // send_msg(NULL);
           #if SINGLE_NODE_NULL == 1
             #if DOUBLE_NODE_NULL == 1
@@ -155,8 +161,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
             backoff /= 1000;//ms
             ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
           #endif
+
         }
-        
         
         PROCESS_WAIT_EVENT();
         etimer_reset(&timer);
