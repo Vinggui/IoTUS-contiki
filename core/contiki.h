@@ -76,8 +76,8 @@
 #define ALOHA_STYLE                       0
 
 #define EXP_STAR_LIKE                     0
-#define EXP_LINEAR_NODES                  1
-#define EXP_ONE_NODE_GEN                  6 //Only this node # will generate messages
+#define EXP_LINEAR_NODES                  0
+#define EXP_ONE_NODE_GEN                  0 //Only this node # will generate messages
 
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
