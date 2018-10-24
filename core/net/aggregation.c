@@ -22,7 +22,8 @@
 #include "aggregation.h"
 
 
-MEMB(queued_packets_memb, struct aggregation_queueitem, CSMA_CONF_MAX_PACKET_PER_NEIGHBOR);
+#if STANDARD_CONTIKI_WITH_SERVICES == 1
+MEMB(queued_packets_memb, struct aggregation_queueitem, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gAggregationFramesList);
 LIST(gAggregationFramesInsertedList);
 
@@ -157,3 +158,4 @@ aggregation_init(void)
   list_init(gAggregationFramesList);
   list_init(gAggregationFramesInsertedList);
 }
+#endif /*STANDARD_CONTIKI_WITH_SERVICES*/

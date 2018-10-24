@@ -71,6 +71,7 @@
 
 #define POWER_TRACE_RATE                  60
 #define USE_NEW_FEATURES                  1
+#define STANDARD_CONTIKI_WITH_SERVICES    1
 
 #define BROADCAST_EXAMPLE                 0
 #define ALOHA_STYLE                       0

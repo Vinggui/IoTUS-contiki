@@ -55,6 +55,10 @@
 
 #include "staticnet.h"
 
+#if STANDARD_CONTIKI_WITH_SERVICES == 1
+#include "aggregation.h"
+#endif
+
 #include <string.h>
 
 /* TX/RX cycles are synchronized with neighbor wake periods */
@@ -621,7 +625,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   if(!packetbuf_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED)) {
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
 
+#if STANDARD_CONTIKI_WITH_SERVICES == 1
     aggregation_apply();
+#endif
 
     if(NETSTACK_FRAMER.create() < 0) {
       PRINTF("contikimac: framer failed\n");
@@ -911,7 +917,9 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
 #endif
       packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
 
+#if STANDARD_CONTIKI_WITH_SERVICES == 1
       aggregation_apply();
+#endif
 
       if(NETSTACK_FRAMER.create() < 0) {
         PRINTF("contikimac: framer failed\n");

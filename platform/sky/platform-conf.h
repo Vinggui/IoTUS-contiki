@@ -42,9 +42,10 @@
 
 #define IOTUS_RADIO_FULL_ADDRESS                2
 #define IOTUS_RADIO_MAX_PACKET_SIZE             127//CC2420_MAX_PACKET_LEN)
-#define IOTUS_ADDITIONAL_HANDLERS_SIZE          40
+
 #define IOTUS_NODES_LIST_SIZE                   20
 #define IOTUS_PACKET_LIST_SIZE                  10
+#define IOTUS_ADDITIONAL_HANDLERS_SIZE          1*(IOTUS_PACKET_LIST_SIZE+IOTUS_NODES_LIST_SIZE)
 #define IOTUS_PIGGYBACK_LIST_SIZE               10
 #define IOTUS_USING_MALLOC                      0
 #define MMEM_CONF_SIZE                          1000//bytes
