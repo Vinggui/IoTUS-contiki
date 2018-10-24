@@ -51,6 +51,7 @@
 #include "sys/compower.h"
 #include "sys/pt.h"
 #include "sys/rtimer.h"
+#include "aggregation.h"
 
 #include "staticnet.h"
 
