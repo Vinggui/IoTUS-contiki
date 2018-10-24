@@ -71,6 +71,7 @@
 
 #define POWER_TRACE_RATE                  60
 #define USE_NEW_FEATURES                  0
+#define STANDARD_CONTIKI_WITH_SERVICES    0
 
 #define BROADCAST_EXAMPLE                 0
 #define ALOHA_STYLE                       0
@@ -87,7 +88,7 @@
 #define BACKOFF_TIME                      15000UL
 #define TRANSMISSION_CHANCE               100//%
 
-#define KEEP_ALIVE_SERVICE                0
+#define KEEP_ALIVE_SERVICE                1
 #define MAX_GENERATED_KA                  MAX_GENERATED_PKT
 #define KEEP_ALIVE_INTERVAL               30//sec
 

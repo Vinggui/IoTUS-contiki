@@ -49,6 +49,12 @@
 #define BROADCAST_ANNOUNCEMENT_MAX_TIME CLOCK_SECOND * 3600UL
 #endif /* RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME */
 
+#if STANDARD_CONTIKI_WITH_SERVICES == 0
+  #if USE_NEW_FEATURES == 1
+    #error "New features service is ON when standard contiki service is OFF!"
+  #endif
+#endif
+
 // Next dest table using final value{source, final destination}
 int routing_table[33][33] =
 {
@@ -277,7 +283,10 @@ init(void)
 {
   PRINTF("staticnet started\n");
   queuebuf_init();
+
+#if STANDARD_CONTIKI_WITH_SERVICES == 1
   aggregation_init();
+#endif
   packetbuf_clear();
 
   linkaddr_t addrThis;
