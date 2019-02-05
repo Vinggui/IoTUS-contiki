@@ -50,9 +50,14 @@
   #if NETSTACK_CONF_WITH_IPV6
     #include "net/ipv6/uip-ds6.h"
   #endif /* NETSTACK_CONF_WITH_IPV6 */
-#include "net/nullnet.h"
 
-#else
+  #if CONTIKI_WITH_RIME == 1
+    #include "net/rime/rime.h"
+  #else
+    #include "net/nullnet.h"
+  #endif
+
+#else/*CONTIKI_COMM_NEW_STACK*/
   #include "iotus-core.h"
   #include "addresses.h"
   #include "iotus-frame802154.h"
@@ -67,10 +72,48 @@
 #include "lib/mmem.h"
 #endif
 
+#if CONTIKI_WITH_RIME == 1
+  #if UIP_CONF_ROUTER
+
+  #ifndef UIP_ROUTER_MODULE
+  #ifdef UIP_CONF_ROUTER_MODULE
+  #define UIP_ROUTER_MODULE UIP_CONF_ROUTER_MODULE
+  #else /* UIP_CONF_ROUTER_MODULE */
+  #define UIP_ROUTER_MODULE rimeroute
+  #endif /* UIP_CONF_ROUTER_MODULE */
+  #endif /* UIP_ROUTER_MODULE */
+
+  extern const struct uip_router UIP_ROUTER_MODULE;
+  #endif /* UIP_CONF_ROUTER */
+#endif
+
 #if DCOSYNCH_CONF_ENABLED
 static struct timer mgt_timer;
 #endif
 extern int msp430_dco_required;
+
+#if CONTIKI_WITH_RIME == 1
+  #ifndef NETSTACK_CONF_WITH_IPV4
+  #define NETSTACK_CONF_WITH_IPV4 0
+  #endif
+
+  #if NETSTACK_CONF_WITH_IPV4
+  #include "net/ip/uip.h"
+  #include "net/ipv4/uip-fw.h"
+  #include "net/ipv4/uip-fw-drv.h"
+  #include "net/ipv4/uip-over-mesh.h"
+  static struct uip_fw_netif slipif =
+    {UIP_FW_NETIF(192,168,1,2, 255,255,255,255, slip_send)};
+  static struct uip_fw_netif meshif =
+    {UIP_FW_NETIF(172,16,0,0, 255,255,0,0, uip_over_mesh_send)};
+
+  #endif /* NETSTACK_CONF_WITH_IPV4 */
+
+  #define UIP_OVER_MESH_CHANNEL 8
+  #if NETSTACK_CONF_WITH_IPV4
+  static uint8_t is_gateway;
+  #endif /* NETSTACK_CONF_WITH_IPV4 */
+#endif
 
 #ifdef EXPERIMENT_SETUP
 #include "experiment-setup.h"
@@ -152,6 +195,26 @@ set_rime_addr(void)
   PRINTF("%d\n", addr.u8[i]);
 }
 #endif
+
+/*--------------------------------------------------------------------------*/
+#if CONTIKI_WITH_RIME == 1
+#if NETSTACK_CONF_WITH_IPV4
+static void
+set_gateway(void)
+{
+  if(!is_gateway) {
+    leds_on(LEDS_RED);
+    PRINTF("%d.%d: making myself the IP network gateway.\n\n",
+     linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1]);
+    PRINTF("IPv4 address of the gateway: %d.%d.%d.%d\n\n",
+     uip_ipaddr_to_quad(&uip_hostaddr));
+    uip_over_mesh_set_gateway(&linkaddr_node_addr);
+    uip_over_mesh_make_announced_gateway();
+    is_gateway = 1;
+  }
+}
+#endif /* NETSTACK_CONF_WITH_IPV4 */
+#endif /*CONTIKI_WITH_RIME == 1*/
 /*---------------------------------------------------------------------------*/
 #if WITH_TINYOS_AUTO_IDS
 uint16_t TOS_NODE_ID = 0x1234; /* non-zero */
@@ -220,6 +283,12 @@ main(int argc, char **argv)
 
   ctimer_init();
 
+#if CONTIKI_WITH_RIME == 1
+#if NETSTACK_CONF_WITH_IPV4
+  slip_arch_init(BAUD2UBR(115200));
+#endif /* NETSTACK_CONF_WITH_IPV4 */
+#endif /*CONTIKI_WITH_RIME == 1*/
+
   init_platform();
 
 #ifndef CONTIKI_COMM_NEW_STACK
@@ -267,6 +336,57 @@ main(int argc, char **argv)
   iotus_node_long_id_hardcoded[0]= node_id & 0xff;
   iotus_node_long_id_hardcoded[1]= (node_id>>8) & 0xff;
 #else /*CONTIKI_COMM_NEW_STACK*/
+  #if NETSTACK_CONF_WITH_IPV6
+  memcpy(&uip_lladdr.addr, ds2411_id, sizeof(uip_lladdr.addr));
+  /* Setup nullmac-like MAC for 802.15.4 */
+/*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
+/*   PRINTF(" %s channel %u\n", sicslowmac_driver.name, CC2420_CONF_CCA_THRESH); */
+
+  /* Setup X-MAC for 802.15.4 */
+  queuebuf_init();
+  NETSTACK_RDC.init();
+  NETSTACK_MAC.init();
+  NETSTACK_LLSEC.init();
+  NETSTACK_NETWORK.init();
+
+  PRINTF("%s %s %s, channel check rate %lu Hz, radio channel %u, CCA threshold %i\n",
+         NETSTACK_LLSEC.name, NETSTACK_MAC.name, NETSTACK_RDC.name,
+         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
+                         NETSTACK_RDC.channel_check_interval()),
+         CC2420_CONF_CHANNEL,
+         CC2420_CONF_CCA_THRESH);
+  
+  process_start(&tcpip_process, NULL);
+
+#if DEBUG
+  PRINTF("Tentative link-local IPv6 address ");
+  {
+    uip_ds6_addr_t *lladdr;
+    int i;
+    lladdr = uip_ds6_get_link_local(-1);
+    for(i = 0; i < 7; ++i) {
+      PRINTF("%02x%02x:", lladdr->ipaddr.u8[i * 2],
+             lladdr->ipaddr.u8[i * 2 + 1]);
+    }
+    PRINTF("%02x%02x\n", lladdr->ipaddr.u8[14], lladdr->ipaddr.u8[15]);
+  }
+#endif /* DEBUG */
+
+  if(!UIP_CONF_IPV6_RPL) {
+    uip_ipaddr_t ipaddr;
+    int i;
+    uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+    uip_ds6_addr_add(&ipaddr, 0, ADDR_TENTATIVE);
+    PRINTF("Tentative global IPv6 address ");
+    for(i = 0; i < 7; ++i) {
+      PRINTF("%02x%02x:",
+             ipaddr.u8[i * 2], ipaddr.u8[i * 2 + 1]);
+    }
+    PRINTF("%02x%02x\n",
+           ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
+  }
+#else /* NETSTACK_CONF_WITH_IPV6 */
   //This bracket preserves the old contiki architecture
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -280,7 +400,14 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          CC2420_CONF_CHANNEL);
+  
+#endif /* NETSTACK_CONF_WITH_IPV6 */
 #endif /*CONTIKI_COMM_NEW_STACK*/
+
+#if !NETSTACK_CONF_WITH_IPV4 && !NETSTACK_CONF_WITH_IPV6
+  uart1_set_input(serial_line_input_byte);
+  serial_line_init();
+#endif
 
   leds_off(LEDS_GREEN);
 
@@ -289,6 +416,35 @@ main(int argc, char **argv)
   timesynch_set_authority_level((linkaddr_node_addr.u8[0] << 4) + 16);
 #endif /* TIMESYNCH_CONF_ENABLED */
   
+#if NETSTACK_CONF_WITH_IPV4
+  process_start(&tcpip_process, NULL);
+  process_start(&uip_fw_process, NULL); /* Start IP output */
+  process_start(&slip_process, NULL);
+
+  slip_set_input_callback(set_gateway);
+
+  {
+    uip_ipaddr_t hostaddr, netmask;
+
+    uip_init();
+
+    uip_ipaddr(&hostaddr, 172,16,
+         linkaddr_node_addr.u8[0],linkaddr_node_addr.u8[1]);
+    uip_ipaddr(&netmask, 255,255,0,0);
+    uip_ipaddr_copy(&meshif.ipaddr, &hostaddr);
+
+    uip_sethostaddr(&hostaddr);
+    uip_setnetmask(&netmask);
+    uip_over_mesh_set_net(&hostaddr, &netmask);
+    /*    uip_fw_register(&slipif);*/
+    uip_over_mesh_set_gateway_netif(&slipif);
+    uip_fw_default(&meshif);
+    uip_over_mesh_init(UIP_OVER_MESH_CHANNEL);
+    PRINTF("uIP started with IP address %d.%d.%d.%d\n",
+     uip_ipaddr_to_quad(&hostaddr));
+  }
+#endif /* NETSTACK_CONF_WITH_IPV4 */
+
   watchdog_start();
 
 #if !PROCESS_CONF_NO_PROCESS_NAMES

@@ -3,7 +3,7 @@
 #define CONTIKI_CONF_COMPATIBILITY_H
 
 #ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     nullmac_driver//csma_driver
+#define NETSTACK_CONF_MAC     csma_driver//nullmac_driver
 #endif /* NETSTACK_CONF_MAC */
 
 #ifndef NETSTACK_CONF_RDC
@@ -47,7 +47,12 @@
 
 /* Network setup for non-IPv6 (rime). */
 
-#define NETSTACK_CONF_NETWORK staticnet_driver
+#if CONTIKI_WITH_RIME == 1
+  #define NETSTACK_CONF_NETWORK rime_driver
+#else
+  #define NETSTACK_CONF_NETWORK staticnet_driver
+#endif
+
 
 #define COLLECT_CONF_ANNOUNCEMENTS       1
 #define CXMAC_CONF_ANNOUNCEMENTS         0

@@ -18,6 +18,9 @@ endif
 ifeq ($(MAKE_WITH_NON_STORING),1)
 CFLAGS += -DWITH_NON_STORING=1
 endif
-
+# For the use of the new archtecture, this declaration is necessary
+#CONTIKI_COMM_NEW_STACK = IoTUS
+CONTIKI_WITH_RIME = 1
 CONTIKI_WITH_IPV6 = 1
+
 include $(CONTIKI)/Makefile.include
