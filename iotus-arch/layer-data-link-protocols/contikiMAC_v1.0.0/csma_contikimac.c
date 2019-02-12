@@ -49,7 +49,7 @@
 
 #include <stdio.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -152,18 +152,16 @@ schedule_transmission(iotus_packet_t *packet)
 static void
 tx_done(int status, iotus_packet_t *packet)
 {
-  switch(status) {
-  case MAC_TX_OK:
+  if(status == MAC_TX_OK) {
     PRINTF("csma: rexmit ok %d\n", packet->transmissions);
-    break;
-  case MAC_TX_COLLISION:
-  case MAC_TX_NOACK:
+  }
+  else if(status == MAC_TX_COLLISION ||
+     status == MAC_TX_NOACK) {
     PRINTF("csma: drop %u with status %d after %d transmissions, %d collisions\n",
                  packet->pktID ,status, packet->transmissions, packet->collisions);
-    break;
-  default:
+  }
+  else {
     PRINTF("csma: rexmit failed %d: %d\n", packet->transmissions, status);
-    break;
   }
 
   packet_confirm_transmission(packet, status);
@@ -223,25 +221,23 @@ void
 csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
 {
   if(packet == NULL) {
-    PRINTF("csma: seqno not found\n");
+    PRINTF("csma: pkt not found\n");
     return;
   }
-// printf("vltou %u\n", status);
-  switch(status) {
-  case MAC_TX_OK:
+ // printf("vltou %u\n", status);
+  if(status == MAC_TX_OK) {
     tx_ok(packet, num_transmissions);
-    break;
-  case MAC_TX_NOACK:
+  }
+  else if(status == MAC_TX_NOACK) {
     noack(packet, num_transmissions);
-    break;
-  case MAC_TX_COLLISION:
+  }
+  else if(status == MAC_TX_COLLISION) {
     collision(packet, num_transmissions);
-    break;
-  case MAC_TX_DEFERRED:
-    break;
-  default:
+  }
+  else if(status == MAC_TX_DEFERRED) {
+
+  } else {
     tx_done(status, packet);
-    break;
   }
 }
 /*---------------------------------------------------------------------------*/

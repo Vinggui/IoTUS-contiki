@@ -43,8 +43,6 @@
 #include "iotus-netstack.h"
 #include "sys/rtimer.h"
 
-#define USE_CSMA_MODULE     0
-
 int8_t
 contikimac_send_packet(iotus_packet_t *packet);
 

@@ -42,7 +42,6 @@
 #include "contiki-conf.h"
 #include "contikiMAC.h"
 #include "contikimac-framer.h"
-#include "csma_contikimac.h"
 #include "dev/leds.h"
 #include "dev/watchdog.h"
 #include "iotus-netstack.h"
@@ -58,6 +57,9 @@
 
 #include "contiki.h"
 
+#if USE_CSMA_MODULE == 1
+  #include "csma_contikimac.h"
+#endif
 
 #include <string.h>
 
@@ -893,7 +895,7 @@ contikimac_send_packet(iotus_packet_t *packet)
     if(0 == gPkt_tx_first_attempts) {
       gPkt_tx_first_attempts = gPkt_tx_attempts;
       gPkt_tx_attempts = 0;
-      printf("First burst attempt: %u\n",gPkt_tx_first_attempts);
+      PRINTF("First burst attempt: %u\n",gPkt_tx_first_attempts);
     }
     if(MAC_TX_OK == result) {
       gPkt_tx_successful++;
@@ -988,9 +990,10 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
         piggyback_confirm_sent(curr, ret);
       }
 #if USE_CSMA_MODULE == 1
+    // printf("Sent from Pkt_list");
       csma_packet_sent(curr, ret, 1);
 #else
-    packet_confirm_transmission(curr, ret);
+      packet_confirm_transmission(curr, ret);
 #endif
     }
 
@@ -1229,11 +1232,11 @@ const struct iotus_data_link_protocol_struct contikiMAC_protocol = {
   init,
   post_start,
   NULL,
-#if USE_CSMA_MODULE == 1
-  csma_send_packet,
-#else
+// #if USE_CSMA_MODULE == 1
+  // csma_send_packet,
+// #else
   contikimac_send_packet,
-#endif
+// #endif
   contikimac_send_list,
   NULL,
   input_packet,

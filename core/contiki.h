@@ -69,6 +69,7 @@
 // #define BACKOFF_TIME                      1000
 
 
+#define USE_CSMA_MODULE                   1//Using MAC of Rime
 #define POWER_TRACE_RATE                  60
 #define USE_NEW_FEATURES                  1
 #define STANDARD_CONTIKI_WITH_SERVICES    1

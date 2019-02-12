@@ -22,6 +22,10 @@
 #include "sys/ctimer.h"
 #include "random.h"
 
+#if USE_CSMA_MODULE == 1
+  #include "csma_contikimac.h"
+#endif
+
 #define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "nullRouting"
 #include "safe-printer.h"
@@ -134,7 +138,11 @@ static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
   if(packet_get_parameter(packet, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
-    return active_data_link_protocol->send(packet);
+    #if USE_CSMA_MODULE == 1
+      return csma_send_packet(packet);
+    #else
+      return active_data_link_protocol->send(packet);
+    #endif
   }
 
   if(NODES_BROADCAST == packet->finalDestinationNode) {
@@ -180,7 +188,11 @@ send(iotus_packet_t *packet)
     packet_push_bit_header(8, bitSequence, packet);
   }
 
+#if USE_CSMA_MODULE == 1
+  return csma_send_packet(packet);
+#else
   return active_data_link_protocol->send(packet);
+#endif
 }
 
 
