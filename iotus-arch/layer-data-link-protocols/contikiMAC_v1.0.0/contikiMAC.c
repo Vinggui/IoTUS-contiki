@@ -269,9 +269,7 @@ static struct compower_activity current_packet;
 #endif /* CONTIKIMAC_CONF_COMPOWER */
 
 #if WITH_PHASE_OPTIMIZATION
-
 #include "phase_recorder.h"
-
 #endif /* WITH_PHASE_OPTIMIZATION */
 
 #define DEFAULT_STREAM_TIME (4 * CYCLE_TIME)
@@ -280,6 +278,11 @@ static struct compower_activity current_packet;
 static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
+
+#if EXP_CONTIKIMAC_802_15_4 == 1
+#include "tree_manager.h"
+static uint8_t isCoordinator = 0;
+#endif /* EXP_CONTIKIMAC_802_15_4 */
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -922,6 +925,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
   iotus_packet_t *next;
   int is_receiver_awake;
   int pending;
+  int8_t ret;
 
   if(packet == NULL) {
     SAFE_PRINTF_LOG_ERROR("Packet was null!");
@@ -974,7 +978,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     pending = packet_get_parameter(curr, PACKET_PARAMETERS_PACKET_PENDING);
 
     /* Send the current packet */
-    int8_t ret = send_packet_handler(curr, is_receiver_awake, amount);
+    ret = send_packet_handler(curr, is_receiver_awake, amount);
     SAFE_PRINTF_LOG_INFO("ret %u\n", ret);
     if(ret != MAC_TX_DEFERRED) {
       if(0 == gPkt_tx_first_attempts) {
@@ -1009,6 +1013,9 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     }
   } while((next != NULL) && pending);
       // printf("aquiiiiiiiiiii\n");
+
+
+  return ret;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1187,6 +1194,23 @@ input_packet(iotus_packet_t *packet)
 //     return active_radio_driver->off();
 //   }
 // }
+
+/*---------------------------------------------------------------------------*/
+#if EXP_CONTIKIMAC_802_15_4 == 1
+void start_802_15_4_contikimac()
+{
+  uint8_t coords[] = PREDEFINED_COORDINATORS;
+  uint8_t i=0;
+  for(; i<STATIC_COORDINATORS_NUM; i++) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == coords[i]) {
+      isCoordinator = 1;
+      printf("sou coord\n");
+    }
+  }
+}
+
+#endif /* EXP_CONTIKIMAC_802_15_4 */
+
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
@@ -1198,9 +1222,9 @@ init(void)
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
 
   contikimac_is_on = 1;
-// #if WITH_PHASE_OPTIMIZATION
-//   phase_init();
-// #endif /* WITH_PHASE_OPTIMIZATION */
+#if EXP_CONTIKIMAC_802_15_4 == 1
+  start_802_15_4_contikimac();
+#endif /* EXP_CONTIKIMAC_802_15_4 */
 
   //iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }

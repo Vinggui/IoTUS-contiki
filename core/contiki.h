@@ -69,7 +69,7 @@
 // #define BACKOFF_TIME                      1000
 
 
-#define USE_CSMA_MODULE                   1//Using MAC of Rime
+#define USE_CSMA_MODULE                   1//Using MAC layer of Rime
 #define POWER_TRACE_RATE                  60
 #define USE_NEW_FEATURES                  1
 #define STANDARD_CONTIKI_WITH_SERVICES    1
@@ -83,6 +83,9 @@
 
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
+
+#define EXP_CONTIKIMAC_802_15_4           1
+#define PREDEFINED_COORDINATORS           {1,2}
 
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec
