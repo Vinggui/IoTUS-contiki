@@ -85,7 +85,6 @@
 #define DOUBLE_NODE_NULL                  0
 
 #define EXP_CONTIKIMAC_802_15_4           1
-#define PREDEFINED_COORDINATORS           {1,2}
 
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec

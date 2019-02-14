@@ -20,11 +20,14 @@
 
 
 #define STATIC_TREE                   1//1 for true. 0 for false
-#define STATIC_COORDINATORS_NUM       2
-#define STATIC_COORDINATORS           PREDEFINED_COORDINATORS
+#define STATIC_COORDINATORS_NUM       1
+#define STATIC_COORDINATORS           {1}
+#define STATIC_ROOT_ADDRESS           {1,0}
 
 extern uint8_t amIRouter;
 extern uint8_t routerNodes[];
+extern iotus_node_t *rootNode;
+extern iotus_node_t *fatherNode;
 
 void
 iotus_signal_handler_tree_manager(iotus_service_signal signal, void *data);

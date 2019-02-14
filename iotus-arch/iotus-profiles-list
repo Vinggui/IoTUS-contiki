@@ -59,6 +59,16 @@ TEST_NETWORK = null_network_v1.0.0
 # Data link protocols
 TEST_DATA_LINK = contikiMAC_v1.0.0
 
+####################### ND testing Profile #######################
+# Transport protocols
+ND_TEST_TRANSPORT = null_transport_v1.0.0
+
+# Routing protocols
+ND_TEST_NETWORK = edytee_routing_v1.0.0
+
+# Data link protocols
+ND_TEST_DATA_LINK = contikiMAC_v1.0.0
+
 ####################### ALL Profile #######################
 # Transport protocols
 ALL_TRANSPORT = \

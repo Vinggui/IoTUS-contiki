@@ -442,6 +442,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
   }
   if(finalDestination == NODES_BROADCAST) {
     SAFE_PRINT("Broadcast\n");
+    newMsg->nextDestinationNode = NODES_BROADCAST;
     //newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
   }
   SAFE_PRINTF_LOG_INFO("Created pktID %u", newMsg->pktID);

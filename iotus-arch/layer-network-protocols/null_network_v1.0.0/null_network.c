@@ -134,6 +134,7 @@ static uint8_t private_keep_alive[12];
 static uint8_t gPkt_created = 0;
 
 
+/*---------------------------------------------------------------------------*/
 static iotus_netstack_return
 send(iotus_packet_t *packet)
 {
@@ -196,6 +197,7 @@ send(iotus_packet_t *packet)
 }
 
 
+/*---------------------------------------------------------------------------*/
 static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
@@ -205,6 +207,7 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
   // }
 }
 
+/*---------------------------------------------------------------------------*/
 static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
 {

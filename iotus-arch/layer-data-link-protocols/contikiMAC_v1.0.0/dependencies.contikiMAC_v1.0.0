@@ -1,4 +1,4 @@
 # This file should contain all the dependencies that this
 # service requires to work.
 
-IOTUS_SERVICE_DEPENDENCIES_LIST = packet_v1.0.0 piggyback_v1.0.0 seqnum_v1.0.0 phase_recorder_v1.0.0 tree_manager_v1.0.0
+IOTUS_SERVICE_DEPENDENCIES_LIST = packet_v1.0.0 piggyback_v1.0.0 seqnum_v1.0.0 phase_recorder_v1.0.0 neighbor_discovery_v1.0.0 tree_manager_v1.0.0

@@ -1199,14 +1199,6 @@ input_packet(iotus_packet_t *packet)
 #if EXP_CONTIKIMAC_802_15_4 == 1
 void start_802_15_4_contikimac()
 {
-  uint8_t coords[] = PREDEFINED_COORDINATORS;
-  uint8_t i=0;
-  for(; i<STATIC_COORDINATORS_NUM; i++) {
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == coords[i]) {
-      isCoordinator = 1;
-      printf("sou coord\n");
-    }
-  }
 }
 
 #endif /* EXP_CONTIKIMAC_802_15_4 */

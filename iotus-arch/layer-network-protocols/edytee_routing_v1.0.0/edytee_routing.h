@@ -19,7 +19,7 @@
 #include "contiki.h"
 
 PROCESS_NAME(edytee_routing_process);
-extern const struct iotus_routing_protocol_struct edytee_routing_protocol;
+extern const struct iotus_network_protocol_struct edytee_routing_protocol;
 
 #endif /* IOTUS_ARCH_ROUTING_LAYER_PROTOCOLS_EDYTEE_ROUTING_V1_0_0_EDYTEE_ROUTING_H_ */
 

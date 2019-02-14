@@ -38,7 +38,7 @@
 
 #define DECORATED_FRAMER    (*(active_radio_driver->radio_framer))
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "ctkMAC-Frmr"
 #include "safe-printer.h"
 
