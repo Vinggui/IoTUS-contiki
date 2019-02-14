@@ -24,8 +24,8 @@
 #define STATIC_COORDINATORS           {1}
 #define STATIC_ROOT_ADDRESS           {1,0}
 
-extern uint8_t amIRouter;
-extern uint8_t routerNodes[];
+extern uint8_t gAmIRouter;
+extern uint8_t gRouterNodes[];
 extern iotus_node_t *rootNode;
 extern iotus_node_t *fatherNode;
 

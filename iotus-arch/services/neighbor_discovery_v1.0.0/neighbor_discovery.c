@@ -21,6 +21,7 @@
 #include "iotus-netstack.h"
 #include "layer-packet-manager.h"
 #include "lib/mmem.h"
+#include "neighbor_discovery.h"
 #include "random.h"
 #include "timestamp.h"
 #include "tree_manager.h"
@@ -31,17 +32,19 @@
 #include "safe-printer.h"
 
 
-
-#if IOTUS_USING_MALLOC == 0
-static struct mmem gPayload;
-#endif /* IOTUS_USING_MALLOC == 0 */
-
-uint8_t gMaintenancePeriod = 60;
+uint16_t gMaintenancePeriod = ND_PERIOD_TIME;
 
 static struct ctimer sendNDTimer;
 static clock_time_t backOffDifference;
 static uint8_t private_nd_control[12];
 
+
+/*---------------------------------------------------------------------------*/
+void
+control_frame_input(iotus_packet_t *packet)
+{
+
+}
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -60,8 +63,8 @@ send_beacon(void *ptr)
   static uint8_t selfAddrValue;
   selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
 
-  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*gMaintenancePeriod - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%ND_BACKOFF_TIME)))/1000;
 
   backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
@@ -81,6 +84,8 @@ send_beacon(void *ptr)
     return;
   }
 
+  packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
+
   SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
   active_data_link_protocol->send(packet);
 }
@@ -96,13 +101,17 @@ void iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *
 
     sprintf((char *)private_nd_control, "### tira ###");
 
-    backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
-    clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
-    ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
-
   }
-  /* else if (IOTUS_RUN_SERVICE == signal){
+  else if (IOTUS_RUN_SERVICE == signal){
+    if(gAmIRouter) {
+      printf("root\n");
+      backOffDifference = (CLOCK_SECOND*((random_rand()%ND_BACKOFF_TIME)))/1000;
+      clock_time_t backoff = CLOCK_SECOND*gMaintenancePeriod + backOffDifference;//ms
+      ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+    } else {
+      printf("not root\n");
+    }
   } else if (IOTUS_END_SERVICE == signal){
 
-  }*/
+  }
 }

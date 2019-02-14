@@ -227,6 +227,11 @@ iotus_core_start_system (
   ACTIVE_DATA_LINK_PROTOCOL(post_start);
   #endif
 
+  /////////////////////////////////////////////
+  //      Call the post start of each service     //
+  /////////////////////////////////////////////
+  send_signal_to_services(IOTUS_RUN_SERVICE, NULL);
+
   // process_start(&iotus_core_process, NULL);
 }
 

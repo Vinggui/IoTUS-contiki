@@ -1054,7 +1054,6 @@ input_packet(iotus_packet_t *packet)
   }
 
   /*  printf("cycle_start 0x%02x 0x%02x\n", cycle_start, cycle_start % CYCLE_TIME);*/
-
   if(contikimac_framer.parse(packet) >= 0) {
     if(packet_get_payload_size(packet) > 0 &&
        packet_get_size(packet) > 0 &&
@@ -1103,6 +1102,7 @@ input_packet(iotus_packet_t *packet)
 #endif /* CONTIKIMAC_CONF_COMPOWER */
 
       SAFE_PRINTF_LOG_INFO("contikimac: data (%u)\n", packet_get_payload_size(packet));
+      SAFE_PRINTF_LOG_INFO("Pkt type: %u\n",packet_get_type(packet));
 
 #if CONTIKIMAC_SEND_SW_ACK
       {
@@ -1157,7 +1157,17 @@ input_packet(iotus_packet_t *packet)
         }
 
         gPkt_rx_successful++;
-        active_network_protocol->receive(packet);
+    #if EXP_CONTIKIMAC_802_15_4 == 1
+        if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
+          //Beacon means ND was done
+          control_frame_input(packet);
+        } else {
+    #else
+        {
+    #endif
+          //CSMA does not get any packet... Transmit to network
+          active_network_protocol->receive(packet);
+        }
       }
       return RX_PROCESSED;
     } else {

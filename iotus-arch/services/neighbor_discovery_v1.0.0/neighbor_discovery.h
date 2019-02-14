@@ -18,6 +18,9 @@
 
 #include "iotus-core.h"
 
+#define ND_PERIOD_TIME            4//sec
+#define ND_BACKOFF_TIME           2000UL
+
 void
 iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *data);
 
