@@ -140,6 +140,21 @@ packet_get_final_destination(iotus_packet_t *packetPiece)
   return packetPiece->finalDestinationNode;
 }
 
+/*---------------------------------------------------------------------*/
+/*
+ * Return the pointer to the sender node of this packet
+ * \param packetPiece       The pointer to the packet to be searched.
+ * \return                  The pointer to the node.
+ */
+iotus_node_t *
+packet_get_prevSource_node(iotus_packet_t *packetPiece)
+{
+  if(NULL == packetPiece) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return NULL;
+  }
+  return packetPiece->prevSourceNode;
+}
 
 /*---------------------------------------------------------------------*/
 /*

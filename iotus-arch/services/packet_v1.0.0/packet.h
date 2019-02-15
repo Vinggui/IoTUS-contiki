@@ -108,6 +108,9 @@ iotus_node_t *
 packet_get_final_destination(iotus_packet_t *packet_piece);
 
 iotus_node_t *
+packet_get_prevSource_node(iotus_packet_t *packetPiece);
+
+iotus_node_t *
 packet_get_next_destination(iotus_packet_t *packetPiece);
 
 Status

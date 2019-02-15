@@ -39,23 +39,27 @@
 
 // #include "csma.h"
 #include "contikiMAC.h"
+#include "csma_contikimac.h"
+#include "iotus-api.h"
+#include "iotus-core.h"
 #include "iotus-netstack.h"
-#include "sys/ctimer.h"
+#include "random.h"
+#include "piggyback.h"
+#include "tree_manager.h"
 #include "sys/clock.h"
-
+#include "sys/ctimer.h"
+#include "sys/timer.h"
 #include "lib/random.h"
-
 #include <string.h>
-
 #include <stdio.h>
 
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
+
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define THIS_LOG_FILE_NAME_DESCRITOR "contCSMA"
+#include "safe-printer.h"
+
+#define PRINTF(...)         SAFE_PRINTF_CLEAN(__VA_ARGS__)
+#define PRINTDEBUG(...)     SAFE_PRINTF_CLEAN(__VA_ARGS__)
 
 /* Constants of the IEEE 802.15.4 standard */
 
@@ -86,6 +90,16 @@
 #else
 #define CSMA_MAX_MAX_FRAME_RETRIES 7
 #endif
+
+static uint8_t isCoordinator = 0;
+static uint8_t private_nd_control[12];
+//Timer for sending neighbor discovery
+static struct ctimer sendNDTimer;
+static clock_time_t backOffDifference;
+static iotus_node_t *gBestNode = NULL;
+
+static struct timer NDScanTimer;
+
 
 // /*---------------------------------------------------------------------------*/
 // static struct neighbor_queue *
@@ -265,4 +279,130 @@ csma_send_packet(iotus_packet_t *packet)
 
   return MAC_TX_DEFERRED;
   // mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
+}
+
+
+/*---------------------------------------------------------------------------*/
+static void
+control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
+{
+  SAFE_PRINTF_LOG_INFO("ns %p sent %u", packet, returnAns);
+  // if(returnAns == MAC_TX_OK) {
+    packet_destroy(packet);
+  // }
+}
+
+/*---------------------------------------------------------------------------*/
+void
+csma_control_frame_receive(iotus_packet_t *packet)
+{
+  if(!timer_expired(&NDScanTimer)) {
+    uint8_t sourceNodeRank = packet_unwrap_pushed_byte(packet);
+
+    iotus_node_t *source = packet_get_prevSource_node(packet);
+
+    uint8_t *rankPointer = pieces_modify_additional_info_var(
+                                source->additionalInfoList,
+                                IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
+                                1,
+                                TRUE);
+
+    if(!rankPointer) {
+      SAFE_PRINTF_LOG_ERROR("Rank ptr null");
+    }
+
+    *rankPointer = sourceNodeRank;
+
+    if(gBestNode == NULL) {
+      gBestNode = source;
+    printf("found\n");
+    } else {
+      rankPointer = pieces_get_additional_info_var(
+                              source->additionalInfoList,
+                              IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
+      if(*rankPointer < sourceNodeRank) {
+        gBestNode = source;
+
+        printf("changing\n");
+      } else {
+
+    printf("keeping\n");
+      }
+    }
+  } else {
+    //Select the best rank node and make a request
+    printf("t expired\n");
+    if(gBestNode != NULL) {
+      //make resquest
+      iotus_packet_t *packet = iotus_initiate_packet(
+                                5,
+                                "teste",
+                                PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                IOTUS_PRIORITY_DATA_LINK,
+                                5000,
+                                gBestNode,
+                                control_frames_nd_cb);
+
+      if(NULL == packet) {
+        SAFE_PRINTF_LOG_INFO("Packet failed");
+        return;
+      }
+
+      packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+     
+      active_data_link_protocol->send(packet);
+    } else {
+      SAFE_PRINTF_LOG_WARNING("No router found");
+    }
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+send_beacon(void *ptr)
+{
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+
+  backoff += backOffDifference;
+  ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    iotus_packet_t *packet = iotus_initiate_packet(
+                              1,
+                              &treePersonalRank,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              IOTUS_PRIORITY_ROUTING,
+                              5000,
+                              NODES_BROADCAST,
+                              control_frames_nd_cb);
+
+    if(NULL == packet) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return;
+    }
+
+    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
+   
+    SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
+    active_data_link_protocol->send(packet);
+  } else {
+    SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
+    piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
+  }
+}
+/*---------------------------------------------------------------------*/
+void start_802_15_4_contikimac(void)
+{
+  if(treeRouter) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+      //This is the root...
+      treePersonalRank = 1;
+    }
+    backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+    clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+    ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+  } else {
+    timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+  }
 }

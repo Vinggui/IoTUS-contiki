@@ -279,11 +279,6 @@ static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
 
-#if EXP_CONTIKIMAC_802_15_4 == 1
-#include "tree_manager.h"
-static uint8_t isCoordinator = 0;
-#endif /* EXP_CONTIKIMAC_802_15_4 */
-
 /*---------------------------------------------------------------------------*/
 static void
 on(void)
@@ -1160,7 +1155,7 @@ input_packet(iotus_packet_t *packet)
     #if EXP_CONTIKIMAC_802_15_4 == 1
         if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
           //Beacon means ND was done
-          control_frame_input(packet);
+          csma_control_frame_receive(packet);
         } else {
     #else
         {
@@ -1206,14 +1201,6 @@ input_packet(iotus_packet_t *packet)
 // }
 
 /*---------------------------------------------------------------------------*/
-#if EXP_CONTIKIMAC_802_15_4 == 1
-void start_802_15_4_contikimac()
-{
-}
-
-#endif /* EXP_CONTIKIMAC_802_15_4 */
-
-/*---------------------------------------------------------------------------*/
 static void
 init(void)
 {
@@ -1222,11 +1209,9 @@ init(void)
 
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 
   contikimac_is_on = 1;
-#if EXP_CONTIKIMAC_802_15_4 == 1
-  start_802_15_4_contikimac();
-#endif /* EXP_CONTIKIMAC_802_15_4 */
 
   //iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
@@ -1243,6 +1228,10 @@ post_start(void)
   // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
   //   timer_set(&sendBC, CLOCK_SECOND*10);
   // }
+
+#if EXP_CONTIKIMAC_802_15_4 == 1
+  start_802_15_4_contikimac();
+#endif /* EXP_CONTIKIMAC_802_15_4 */
 }
 
 /*---------------------------------------------------------------------------*/
