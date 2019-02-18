@@ -58,6 +58,7 @@
 #include "contiki.h"
 
 #if USE_CSMA_MODULE == 1
+  #include "tree_manager.h"
   #include "csma_contikimac.h"
 #endif
 
@@ -279,6 +280,13 @@ static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
 
+/*---------------------------------------------------------------------------*/
+void
+contikiMAC_back_on(void)
+{
+  active_radio_driver->off();
+  contikimac_is_on = 1;
+}
 /*---------------------------------------------------------------------------*/
 static void
 on(void)
@@ -773,6 +781,13 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
       active_radio_driver->transmit(packet);
 #endif
 
+#if EXP_CONTIKIMAC_802_15_4 == 1
+      //Modification to the contikiMAC_802.15.4
+  if(is_broadcast) {
+      got_strobe_ack = 1;
+    }
+#endif
+
 #if RDC_CONF_HARDWARE_ACK
      /* For radios that block in the transmit routine and detect the
 	ACK in hardware */
@@ -1153,7 +1168,8 @@ input_packet(iotus_packet_t *packet)
 
         gPkt_rx_successful++;
     #if EXP_CONTIKIMAC_802_15_4 == 1
-        if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
+        if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON ||
+           packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_COMMAND) {
           //Beacon means ND was done
           csma_control_frame_receive(packet);
         } else {
@@ -1211,8 +1227,6 @@ init(void)
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 
-  contikimac_is_on = 1;
-
   //iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
 }
 /*---------------------------------------------------------------------------*/
@@ -1230,7 +1244,18 @@ post_start(void)
   // }
 
 #if EXP_CONTIKIMAC_802_15_4 == 1
+  if(treeRouter) {
+    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+      //This is the root...
+      contikimac_is_on = 1;
+    }
+  } else {
+    contikimac_is_on = 0;
+    active_radio_driver->on();
+  }
   start_802_15_4_contikimac();
+#else
+  contikimac_is_on = 1;
 #endif /* EXP_CONTIKIMAC_802_15_4 */
 }
 

@@ -287,10 +287,11 @@ parse(iotus_packet_t *packet)
         } else {
           memcpy(addrPointer, (uint8_t *)&frame.src_addr, ADDRESSES_GET_TYPE_SIZE(iotusAddressType));
         }
-      } else {
-        packet->prevSourceNode = tempNode;
       }
     }
+    
+    packet->prevSourceNode = tempNode;
+    
 
 
     //packetbuf_set_attr(PACKETBUF_ATTR_PENDING, frame.fcf.frame_pending);

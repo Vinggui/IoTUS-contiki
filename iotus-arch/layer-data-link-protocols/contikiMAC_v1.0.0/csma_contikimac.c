@@ -40,6 +40,7 @@
 // #include "csma.h"
 #include "contikiMAC.h"
 #include "csma_contikimac.h"
+#include "dev/leds.h"
 #include "iotus-api.h"
 #include "iotus-core.h"
 #include "iotus-netstack.h"
@@ -54,7 +55,7 @@
 #include <stdio.h>
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contCSMA"
 #include "safe-printer.h"
 
@@ -99,6 +100,14 @@ static clock_time_t backOffDifference;
 static iotus_node_t *gBestNode = NULL;
 
 static struct timer NDScanTimer;
+typedef enum {
+  DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_CONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION
+} csma_connection_status;
+
+static csma_connection_status gConnectionStatus;
 
 
 // /*---------------------------------------------------------------------------*/
@@ -286,9 +295,9 @@ csma_send_packet(iotus_packet_t *packet)
 static void
 control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
-  SAFE_PRINTF_LOG_INFO("ns %p sent %u", packet, returnAns);
+  SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
   // if(returnAns == MAC_TX_OK) {
-    packet_destroy(packet);
+  packet_destroy(packet);
   // }
 }
 
@@ -296,63 +305,142 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 void
 csma_control_frame_receive(iotus_packet_t *packet)
 {
-  if(!timer_expired(&NDScanTimer)) {
-    uint8_t sourceNodeRank = packet_unwrap_pushed_byte(packet);
+  iotus_node_t *source = packet_get_prevSource_node(packet);
+  if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
+    if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
+      //Ignore msg
+    } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
+      if(!timer_expired(&NDScanTimer)) {
+        //ready to request asnwer from router
+        if(gBestNode != NULL) {
+          //make resquest
+          iotus_packet_t *packet = iotus_initiate_packet(
+                                    8,
+                                    "answer",
+                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                    IOTUS_PRIORITY_DATA_LINK,
+                                    5000,
+                                    gBestNode,
+                                    control_frames_nd_cb);
 
-    iotus_node_t *source = packet_get_prevSource_node(packet);
+          if(NULL == packet) {
+            SAFE_PRINTF_LOG_INFO("Packet failed");
+            return;
+          }
 
-    uint8_t *rankPointer = pieces_modify_additional_info_var(
-                                source->additionalInfoList,
-                                IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
-                                1,
-                                TRUE);
+          packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+          packet->nextDestinationNode = gBestNode;
+         
+          //active_data_link_protocol->send(packet);
+          csma_send_packet(packet);
 
-    if(!rankPointer) {
-      SAFE_PRINTF_LOG_ERROR("Rank ptr null");
-    }
-
-    *rankPointer = sourceNodeRank;
-
-    if(gBestNode == NULL) {
-      gBestNode = source;
-    printf("found\n");
+          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
+          timer_set(&NDScanTimer, CLOCK_SECOND*2*CONTIKIMAC_ND_SCAN_TIME);
+        } else {
+          SAFE_PRINTF_LOG_WARNING("No router found");
+        }
+      }
+    } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION) {
+      //Nothing to do now
     } else {
-      rankPointer = pieces_get_additional_info_var(
-                              source->additionalInfoList,
-                              IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
-      if(*rankPointer < sourceNodeRank) {
-        gBestNode = source;
+      if(!timer_expired(&NDScanTimer)) {
+        uint8_t sourceNodeRank = packet_unwrap_pushed_byte(packet);
 
-        printf("changing\n");
+        uint8_t *rankPointer = pieces_modify_additional_info_var(
+                                    source->additionalInfoList,
+                                    IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
+                                    1,
+                                    TRUE);
+
+        if(!rankPointer) {
+          SAFE_PRINTF_LOG_ERROR("Rank ptr null");
+        }
+
+        *rankPointer = sourceNodeRank;
+
+        if(gBestNode == NULL) {
+          gBestNode = source;
+          // printf("found %p\n", gBestNode);
+        } else {
+          rankPointer = pieces_get_additional_info_var(
+                                  source->additionalInfoList,
+                                  IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
+          if(*rankPointer < sourceNodeRank) {
+            gBestNode = source;
+            // printf("changing\n");
+          } else {
+          // printf("keeping\n");
+          }
+        }
       } else {
+        //Select the best rank node and make a request
+        // printf("t expired %p\n", gBestNode);
+        if(gBestNode != NULL) {
+          //make resquest
 
-    printf("keeping\n");
+          contikiMAC_back_on();
+          
+          iotus_packet_t *packet = iotus_initiate_packet(
+                                    8,
+                                    "register",
+                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                    IOTUS_PRIORITY_DATA_LINK,
+                                    5000,
+                                    gBestNode,
+                                    control_frames_nd_cb);
+
+          if(NULL == packet) {
+            SAFE_PRINTF_LOG_INFO("Packet failed");
+            return;
+          }
+
+          packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+          packet->nextDestinationNode = gBestNode;
+         
+          // active_data_link_protocol->send(packet);
+          csma_send_packet(packet);
+
+          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+          timer_set(&NDScanTimer, CLOCK_SECOND*2*CONTIKIMAC_ND_SCAN_TIME);
+        } else {
+          SAFE_PRINTF_LOG_WARNING("No router found");
+        }
       }
     }
-  } else {
-    //Select the best rank node and make a request
-    printf("t expired\n");
-    if(gBestNode != NULL) {
-      //make resquest
-      iotus_packet_t *packet = iotus_initiate_packet(
-                                5,
-                                "teste",
-                                PACKET_PARAMETERS_WAIT_FOR_ACK,
-                                IOTUS_PRIORITY_DATA_LINK,
-                                5000,
-                                gBestNode,
-                                control_frames_nd_cb);
+  } else if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_COMMAND) {
+    uint8_t commandType = packet_unwrap_pushed_byte(packet);
+    uint8_t nodeSourceAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, source)[0];
 
+    if(commandType == 'r') {
+      SAFE_PRINTF_LOG_INFO("register cmm from %u\n", nodeSourceAddress);
+      //TODO send info to application layer and confirm association
+    } else if(commandType == 'a') {
+      SAFE_PRINTF_LOG_INFO("answer cmm from %u\n", nodeSourceAddress);
+      iotus_packet_t *packet = iotus_initiate_packet(
+                                    4,
+                                    "join",
+                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                    IOTUS_PRIORITY_DATA_LINK,
+                                    5000,
+                                    source,
+                                    control_frames_nd_cb);
       if(NULL == packet) {
         SAFE_PRINTF_LOG_INFO("Packet failed");
         return;
       }
-
       packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+      packet->nextDestinationNode = source;
      
-      active_data_link_protocol->send(packet);
+      // active_data_link_protocol->send(packet);
+      csma_send_packet(packet);
+    } else if(commandType == 'c') {
+      SAFE_PRINTF_LOG_INFO("confirm cmm from %u\n", nodeSourceAddress);
+    } else if(commandType == 'j') {
+      SAFE_PRINTF_LOG_INFO("join cmm from %u\n", nodeSourceAddress);
+      gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
+      leds_on(LEDS_GREEN);
     } else {
-      SAFE_PRINTF_LOG_WARNING("No router found");
+      //Nothing to do
     }
   }
 }
@@ -384,7 +472,7 @@ send_beacon(void *ptr)
 
     packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
    
-    SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
+    SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
     active_data_link_protocol->send(packet);
   } else {
     SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
@@ -394,6 +482,7 @@ send_beacon(void *ptr)
 /*---------------------------------------------------------------------*/
 void start_802_15_4_contikimac(void)
 {
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
   if(treeRouter) {
     if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
       //This is the root...

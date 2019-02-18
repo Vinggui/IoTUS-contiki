@@ -43,6 +43,8 @@
 #include "iotus-netstack.h"
 #include "sys/rtimer.h"
 
+void
+contikiMAC_back_on(void);
 
 int8_t
 contikimac_send_packet(iotus_packet_t *packet);
