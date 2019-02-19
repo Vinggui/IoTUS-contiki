@@ -280,13 +280,7 @@ static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
 
-/*---------------------------------------------------------------------------*/
-void
-contikiMAC_back_on(void)
-{
-  active_radio_driver->off();
-  contikimac_is_on = 1;
-}
+
 /*---------------------------------------------------------------------------*/
 static void
 on(void)
@@ -1215,15 +1209,20 @@ input_packet(iotus_packet_t *packet)
 //     return active_radio_driver->off();
 //   }
 // }
-
+/*---------------------------------------------------------------------------*/
+void
+contikiMAC_back_on(void)
+{
+  powercycle(&rt, NULL);
+}
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
 {
   radio_is_on = 0;
   PT_INIT(&pt);
+  contikimac_is_on = 1;
 
-  rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 
@@ -1247,15 +1246,16 @@ post_start(void)
   if(treeRouter) {
     if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
       //This is the root...
-      contikimac_is_on = 1;
+      rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
     }
   } else {
-    contikimac_is_on = 0;
+    // contikimac_is_on = 0;
     active_radio_driver->on();
   }
   start_802_15_4_contikimac();
 #else
   contikimac_is_on = 1;
+  rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
 #endif /* EXP_CONTIKIMAC_802_15_4 */
 }
 

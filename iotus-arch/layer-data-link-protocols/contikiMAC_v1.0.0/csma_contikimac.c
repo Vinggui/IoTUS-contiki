@@ -303,6 +303,39 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 
 /*---------------------------------------------------------------------------*/
 void
+csma_802like_register_process(void *ptr){
+  //ready to request asnwer from router
+  if(gBestNode != NULL) {
+    //make resquest
+    iotus_packet_t *packet = iotus_initiate_packet(
+                              8,
+                              "answer",
+                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              IOTUS_PRIORITY_DATA_LINK,
+                              5000,
+                              gBestNode,
+                              control_frames_nd_cb);
+
+    if(NULL == packet) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return;
+    }
+
+    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+    packet->nextDestinationNode = gBestNode;
+   
+    //active_data_link_protocol->send(packet);
+    csma_send_packet(packet);
+
+    contikiMAC_back_on();
+    gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
+  } else {
+    SAFE_PRINTF_LOG_WARNING("No router found");
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+void
 csma_control_frame_receive(iotus_packet_t *packet)
 {
   iotus_node_t *source = packet_get_prevSource_node(packet);
@@ -310,36 +343,7 @@ csma_control_frame_receive(iotus_packet_t *packet)
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
       //Ignore msg
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
-      if(!timer_expired(&NDScanTimer)) {
-        //ready to request asnwer from router
-        if(gBestNode != NULL) {
-          //make resquest
-          iotus_packet_t *packet = iotus_initiate_packet(
-                                    8,
-                                    "answer",
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
-                                    IOTUS_PRIORITY_DATA_LINK,
-                                    5000,
-                                    gBestNode,
-                                    control_frames_nd_cb);
-
-          if(NULL == packet) {
-            SAFE_PRINTF_LOG_INFO("Packet failed");
-            return;
-          }
-
-          packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
-          packet->nextDestinationNode = gBestNode;
-         
-          //active_data_link_protocol->send(packet);
-          csma_send_packet(packet);
-
-          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
-          timer_set(&NDScanTimer, CLOCK_SECOND*2*CONTIKIMAC_ND_SCAN_TIME);
-        } else {
-          SAFE_PRINTF_LOG_WARNING("No router found");
-        }
-      }
+      //Nothing to do      
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION) {
       //Nothing to do now
     } else {
@@ -377,9 +381,6 @@ csma_control_frame_receive(iotus_packet_t *packet)
         // printf("t expired %p\n", gBestNode);
         if(gBestNode != NULL) {
           //make resquest
-
-          contikiMAC_back_on();
-          
           iotus_packet_t *packet = iotus_initiate_packet(
                                     8,
                                     "register",
@@ -401,7 +402,10 @@ csma_control_frame_receive(iotus_packet_t *packet)
           csma_send_packet(packet);
 
           gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
-          timer_set(&NDScanTimer, CLOCK_SECOND*2*CONTIKIMAC_ND_SCAN_TIME);
+          
+          backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
           SAFE_PRINTF_LOG_WARNING("No router found");
         }
@@ -439,6 +443,7 @@ csma_control_frame_receive(iotus_packet_t *packet)
       SAFE_PRINTF_LOG_INFO("join cmm from %u\n", nodeSourceAddress);
       gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
       leds_on(LEDS_GREEN);
+      contikiMAC_back_on();
     } else {
       //Nothing to do
     }
