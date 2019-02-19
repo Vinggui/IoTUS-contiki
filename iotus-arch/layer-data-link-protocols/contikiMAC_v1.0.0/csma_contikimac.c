@@ -92,6 +92,7 @@
 #define CSMA_MAX_MAX_FRAME_RETRIES 7
 #endif
 
+#if EXP_CONTIKIMAC_802_15_4 == 1
 static uint8_t isCoordinator = 0;
 static uint8_t private_nd_control[12];
 //Timer for sending neighbor discovery
@@ -108,6 +109,7 @@ typedef enum {
 } csma_connection_status;
 
 static csma_connection_status gConnectionStatus;
+#endif
 
 
 // /*---------------------------------------------------------------------------*/
@@ -342,7 +344,7 @@ csma_802like_register_process(void *ptr){
   if(gBestNode != NULL) {
     //make resquest
     iotus_packet_t *packet = iotus_initiate_packet(
-                              8,
+                              6,
                               "answer",
                               PACKET_PARAMETERS_WAIT_FOR_ACK,
                               IOTUS_PRIORITY_DATA_LINK,

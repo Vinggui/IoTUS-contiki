@@ -37,6 +37,7 @@
  *         Adam Dunkels <adam@sics.se>
  */
 
+#include "dev/leds.h"
 #include "net/mac/csma.h"
 #include "net/packetbuf.h"
 #include "net/queuebuf.h"
@@ -107,6 +108,9 @@ struct neighbor_queue {
   struct ctimer transmit_timer;
   uint8_t transmissions;
   uint8_t collisions;
+#if EXP_CONTIKIMAC_802_15_4 == 1
+  uint8_t treeRank;
+#endif
   LIST_STRUCT(queued_packet_list);
 };
 
@@ -129,6 +133,43 @@ MEMB(neighbor_memb, struct neighbor_queue, CSMA_MAX_NEIGHBOR_QUEUES);
 MEMB(packet_memb, struct rdc_buf_list, MAX_QUEUED_PACKETS);
 MEMB(metadata_memb, struct qbuf_metadata, MAX_QUEUED_PACKETS);
 LIST(neighbor_list);
+
+/*
+ * Modification to install the 802.15.4 registering idea...
+*/
+#if EXP_CONTIKIMAC_802_15_4 == 1
+#define NUMARGS(...)  (sizeof((uint8_t[]){0, ##__VA_ARGS__})/sizeof(uint8_t)-1)
+#define STATIC_COORDINATORS_NUM       NUMARGS(STATIC_COORDINATORS)
+static uint8_t treeRouter = 0;
+static uint8_t treeRouterNodes[] = {STATIC_COORDINATORS};
+static uint8_t treePersonalRank = 0xFF;
+static linkaddr_t treeRoot;
+static linkaddr_t treeFather;
+static uint8_t treeFatherRank = 0xFF;
+
+
+#define CONTIKIMAC_ND_PERIOD_TIME            4//sec
+#define CONTIKIMAC_ND_BACKOFF_TIME           2000UL
+#define CONTIKIMAC_ND_SCAN_TIME              5//sec
+
+static uint8_t private_nd_control[12];
+//Timer for sending neighbor discovery
+static struct ctimer sendNDTimer;
+static linkaddr_t gBestNode;
+static uint8_t gBestNodeRank = 0xFF;
+static clock_time_t backOffDifference;
+
+static struct timer NDScanTimer;
+typedef enum {
+  DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_CONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION
+} csma_connection_status;
+static csma_connection_status gConnectionStatus;
+
+static void control_frames_nd_cb(void *ptr, int status, int num_transmissions);
+#endif /* EXP_CONTIKIMAC_802_15_4 == 1 */
 
 static void packet_sent(void *ptr, int status, int num_transmissions);
 static void transmit_packet_list(void *ptr);
@@ -370,7 +411,6 @@ send_packet(mac_callback_t sent, void *ptr)
   static uint8_t initialized = 0;
   static uint16_t seqno;
   const linkaddr_t *addr = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
-
   if(!initialized) {
     initialized = 1;
     /* Initialize the sequence number to a random value as per 802.15.4. */
@@ -402,6 +442,9 @@ send_packet(mac_callback_t sent, void *ptr)
   }
 
   if(n != NULL) {
+#if EXP_CONTIKIMAC_802_15_4 == 1
+    n->treeRank = 0xFF;
+#endif
     /* Add packet to the neighbor's queue */
     if(list_length(n->queued_packet_list) < CSMA_MAX_PACKET_PER_NEIGHBOR) {
       q = memb_alloc(&packet_memb);
@@ -459,11 +502,179 @@ send_packet(mac_callback_t sent, void *ptr)
   }
   mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
 }
+
+/*---------------------------------------------------------------------------*/
+#if EXP_CONTIKIMAC_802_15_4 == 1
+void
+csma_802like_register_process(void *ptr){
+  //ready to request asnwer from router
+  if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+    //make resquest
+
+    packetbuf_copyfrom("answer", 6);
+
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+    packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_CMDFRAME);
+    packetbuf_compact();
+    send_packet(control_frames_nd_cb, NULL);
+
+    // contikiMAC_back_on();
+    gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
+  } else {
+    PRINTF("No router found");
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+control_frames_nd_cb(void *ptr, int status, int num_transmissions)
+{
+  PRINTF("nd send");
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+send_beacon(void *ptr)
+{
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+
+  backoff += backOffDifference;
+  ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+
+  packetbuf_copyfrom(&treePersonalRank, 1);
+
+  //Address null is Broadcast
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_BEACONFRAME);
+  packetbuf_compact();
+  send_packet(control_frames_nd_cb, NULL);
+  PRINTF("Beacon nd \n");
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+csma_control_frame_receive(void)
+{
+  struct neighbor_queue *n;
+  linkaddr_t sourceAddr;
+  linkaddr_copy(&sourceAddr, packetbuf_addr(PACKETBUF_ADDR_SENDER));
+
+  if(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE) == FRAME802154_BEACONFRAME) {
+    if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
+      //Ignore msg
+    } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
+      //Nothing to do      
+    } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION) {
+      //Nothing to do now
+    } else {
+      if(!timer_expired(&NDScanTimer)) {
+        uint8_t *data = packetbuf_dataptr();
+        uint8_t sourceNodeRank = data[0];
+
+        if(linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+          linkaddr_copy(&gBestNode, &sourceAddr);
+          gBestNodeRank = sourceNodeRank;
+          // printf("found neighbor\n");
+        } else if(sourceNodeRank < gBestNodeRank) {
+            linkaddr_copy(&gBestNode, &sourceAddr);
+            gBestNodeRank = sourceNodeRank;
+            // printf("changing\n");
+        } else {
+        // printf("keeping\n");
+        }
+      } else {
+        NETSTACK_RDC.on();
+        //Select the best rank node and make a request
+        // printf("t expired\n");
+        if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+          //make resquest
+
+          // printf("register\n");
+          packetbuf_copyfrom("register", 8);
+
+          //Address null is Broadcast
+          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+          packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_CMDFRAME);
+          packetbuf_compact();
+          send_packet(control_frames_nd_cb, NULL);
+
+          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+          
+
+          backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
+        } else {
+          //Nothing found. Start over...
+          timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+          leds_on(LEDS_RED);
+          PRINTF("No router found");
+        }
+      }
+    }
+  } else if(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE) == FRAME802154_CMDFRAME) {
+    uint8_t *data = packetbuf_dataptr();
+    uint8_t commandType = data[0];
+
+    if(commandType == 'r') {
+      PRINTF("register cmm from %u\n", sourceAddr.u8[0]);
+      //TODO send info to application layer and confirm association
+    } else if(commandType == 'a') {
+      PRINTF("answer cmm from %u\n", sourceAddr.u8[0]);
+      //Address null is Broadcast
+
+      packetbuf_copyfrom("join", 4);
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &sourceAddr);
+      packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+      packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_CMDFRAME);
+      packetbuf_compact();
+      send_packet(control_frames_nd_cb, NULL);
+
+    } else if(commandType == 'c') {
+      PRINTF("confirm cmm from %u\n", sourceAddr.u8[0]);
+
+    } else if(commandType == 'j') {
+      PRINTF("join cmm from %u\n", sourceAddr.u8[0]);
+      linkaddr_copy(&treeRoot, &gBestNode);
+
+      treePersonalRank = gBestNodeRank + 1;
+      gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
+      leds_off(LEDS_RED);
+      leds_on(LEDS_GREEN);
+
+      //Now continue routing operation in the case of a router device
+      if(treeRouter) {
+        PRINTF("our rank %u\n", treePersonalRank);
+
+        backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+        ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+      }
+    } else {
+      //Nothing to do
+    }
+  }
+}
+#endif
 /*---------------------------------------------------------------------------*/
 static void
 input_packet(void)
 {
-  NETSTACK_LLSEC.input();
+  if(packetbuf_holds_broadcast() ||
+     packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE) == FRAME802154_CMDFRAME) {
+    csma_control_frame_receive();
+  } else {
+    NETSTACK_LLSEC.input();
+  }
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -486,6 +697,7 @@ channel_check_interval(void)
   }
   return 0;
 }
+
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
@@ -493,6 +705,37 @@ init(void)
   memb_init(&packet_memb);
   memb_init(&metadata_memb);
   memb_init(&neighbor_memb);
+
+#if EXP_CONTIKIMAC_802_15_4 == 1
+  linkaddr_copy(&gBestNode, &linkaddr_null);
+  uint8_t tempAddr[] = STATIC_ROOT_ADDRESS;
+  treeRoot.u8[0] = tempAddr[0];
+  treeRoot.u8[1] = tempAddr[1];
+  
+  uint8_t i=0;
+  for(; i<STATIC_COORDINATORS_NUM; i++) {
+    if(linkaddr_node_addr.u8[0] == treeRouterNodes[i]) {
+      treeRouter = 1;
+      PRINTF("I'm router!\n");
+    }
+  }
+
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
+  if(treeRouter &&
+     linkaddr_node_addr.u8[0] == 1) {
+    //This is the root...
+    treePersonalRank = 1;
+
+    NETSTACK_RDC.on();
+
+    backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+    clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+    ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+  } else {
+    NETSTACK_RDC.off(1);
+    timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+  }
+#endif /* EXP_CONTIKIMAC_802_15_4 */
 }
 /*---------------------------------------------------------------------------*/
 const struct mac_driver csma_driver = {

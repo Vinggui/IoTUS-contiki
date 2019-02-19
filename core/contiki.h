@@ -86,12 +86,15 @@
 
 #define EXP_CONTIKIMAC_802_15_4           1
 
+#define STATIC_COORDINATORS               1,2,3//Use comma to add more routers
+#define STATIC_ROOT_ADDRESS               {1,0}//two bytes address (short)
+
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec
 #define BACKOFF_TIME                      15000UL
 #define TRANSMISSION_CHANCE               100//%
 
-#define KEEP_ALIVE_SERVICE                1
+#define KEEP_ALIVE_SERVICE                0
 #define MAX_GENERATED_KA                  MAX_GENERATED_PKT
 #define KEEP_ALIVE_INTERVAL               30//sec
 

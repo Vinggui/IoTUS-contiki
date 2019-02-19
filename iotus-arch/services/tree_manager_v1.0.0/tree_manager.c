@@ -32,6 +32,7 @@
 #include "safe-printer.h"
 
 
+#define NUMARGS(...)  (sizeof((uint8_t[]){0, ##__VA_ARGS__})/sizeof(uint8_t)-1)
 #define STATIC_COORDINATORS_NUM       NUMARGS(STATIC_COORDINATORS)
 
 uint8_t treeRouter = 0;

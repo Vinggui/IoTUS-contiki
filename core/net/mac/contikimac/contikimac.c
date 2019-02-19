@@ -280,6 +280,15 @@ static struct timer broadcast_rate_timer;
 static int broadcast_rate_counter;
 #endif /* CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT */
 
+// #if EXP_CONTIKIMAC_802_15_4 == 1
+// #define NUMARGS(...)  (sizeof((uint8_t[]){0, ##__VA_ARGS__})/sizeof(uint8_t)-1)
+// #define STATIC_COORDINATORS_NUM       NUMARGS(STATIC_COORDINATORS)
+// static uint8_t treeRouter = 0;
+// static uint8_t treeRouterNodes[] = {STATIC_COORDINATORS};
+// static uint8_t treePersonalRank = 0xFF;
+// static uint8_t treeRoot[] = STATIC_ROOT_ADDRESS;
+// #endif
+
 /*---------------------------------------------------------------------------*/
 static void
 on(void)
@@ -762,6 +771,13 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       NETSTACK_RADIO.transmit(transmit_len);
 #endif
 
+#if EXP_CONTIKIMAC_802_15_4 == 1
+      //Modification to the contikiMAC_802.15.4
+  if(is_broadcast) {
+      got_strobe_ack = 1;
+    }
+#endif
+
 #if RDC_CONF_HARDWARE_ACK
      /* For radios that block in the transmit routine and detect the
 	ACK in hardware */
@@ -1088,6 +1104,7 @@ input_packet(void)
     PRINTF("contikimac: failed to parse (%u)\n", packetbuf_totlen());
   }
 }
+
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
@@ -1095,9 +1112,31 @@ init(void)
   radio_is_on = 0;
   PT_INIT(&pt);
 
+  contikimac_is_on = 1;
   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
 
-  contikimac_is_on = 1;
+// #if EXP_CONTIKIMAC_802_15_4 == 1
+//   uint8_t i=0;
+//   for(; i<STATIC_COORDINATORS_NUM; i++) {
+//     if(linkaddr_node_addr.u8[0] == treeRouterNodes[i]) {
+//       treeRouter = 1;
+//       // printf("I'm router!\n");
+//     }
+//   }
+
+
+//   if(treeRouter &&
+//      linkaddr_node_addr.u8[0] == 1) {
+//       //This is the root...
+//       rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+//   } else {
+//     // contikimac_is_on = 0;
+//     NETSTACK_RADIO.on();
+//   }
+// #else
+//   contikimac_is_on = 1;
+//   rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+// #endif /* EXP_CONTIKIMAC_802_15_4 */
 
 #if WITH_PHASE_OPTIMIZATION
   phase_init();
