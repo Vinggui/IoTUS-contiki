@@ -18,11 +18,19 @@
 
 #include "iotus-core.h"
 
+#define NUMARGS(...)  (sizeof((uint8_t[]){0, ##__VA_ARGS__})/sizeof(uint8_t)-1)
 
 #define STATIC_TREE                   1//1 for true. 0 for false
-#define STATIC_COORDINATORS_NUM       1
-#define STATIC_COORDINATORS           {1}
-#define STATIC_ROOT_ADDRESS           {1,0}
+
+#define STATIC_COORDINATORS           1,2//Use comma to add more routers
+#define STATIC_ROOT_ADDRESS           {1,0}//two bytes address (short)
+
+typedef enum {
+  TREE_STATUS_DISCONNECTED,
+  TREE_STATUS_BUILDING,
+  TREE_STATUS_CONNECTED,
+  TREE_STATUS_RECONNECTING
+} tree_manager_conn_status;
 
 extern uint8_t treeRouter;
 extern uint8_t treeRouterNodes[];

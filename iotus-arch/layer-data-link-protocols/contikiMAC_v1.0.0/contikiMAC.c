@@ -1243,11 +1243,10 @@ post_start(void)
   // }
 
 #if EXP_CONTIKIMAC_802_15_4 == 1
-  if(treeRouter) {
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+  if(treeRouter &&
+     addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
       //This is the root...
       rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-    }
   } else {
     // contikimac_is_on = 0;
     active_radio_driver->on();

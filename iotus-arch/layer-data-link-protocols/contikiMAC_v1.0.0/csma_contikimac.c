@@ -300,6 +300,40 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
   packet_destroy(packet);
   // }
 }
+/*---------------------------------------------------------------------------*/
+static void
+send_beacon(void *ptr)
+{
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+
+  backoff += backOffDifference;
+  ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    iotus_packet_t *packet = iotus_initiate_packet(
+                              1,
+                              &treePersonalRank,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              IOTUS_PRIORITY_ROUTING,
+                              5000,
+                              NODES_BROADCAST,
+                              control_frames_nd_cb);
+
+    if(NULL == packet) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return;
+    }
+
+    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
+   
+    SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
+    active_data_link_protocol->send(packet);
+  } else {
+    SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
+    piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
+  }
+}
 
 /*---------------------------------------------------------------------------*/
 void
@@ -407,7 +441,10 @@ csma_control_frame_receive(iotus_packet_t *packet)
           clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
-          SAFE_PRINTF_LOG_WARNING("No router found");
+          //Nothing found. Start over...
+          timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+          leds_on(LEDS_RED);
+          SAFE_PRINTF_LOG_INFO("No router found");
         }
       }
     }
@@ -441,58 +478,40 @@ csma_control_frame_receive(iotus_packet_t *packet)
       SAFE_PRINTF_LOG_INFO("confirm cmm from %u\n", nodeSourceAddress);
     } else if(commandType == 'j') {
       SAFE_PRINTF_LOG_INFO("join cmm from %u\n", nodeSourceAddress);
+
+      fatherNode = gBestNode;
+      uint8_t *rankPointer = pieces_get_additional_info_var(
+                                  source->additionalInfoList,
+                                  IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
+
+
+      treePersonalRank = *rankPointer + 1;
       gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
+      leds_off(LEDS_RED);
       leds_on(LEDS_GREEN);
       contikiMAC_back_on();
+
+      //Now continue routing operation in the case of a router device
+      if(treeRouter) {
+        printf("our rank %u\n", treePersonalRank);
+
+        backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+        ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+      }
     } else {
       //Nothing to do
     }
-  }
-}
-
-/*---------------------------------------------------------------------------*/
-static void
-send_beacon(void *ptr)
-{
-  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-
-  backoff += backOffDifference;
-  ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
-
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    iotus_packet_t *packet = iotus_initiate_packet(
-                              1,
-                              &treePersonalRank,
-                              PACKET_PARAMETERS_WAIT_FOR_ACK,
-                              IOTUS_PRIORITY_ROUTING,
-                              5000,
-                              NODES_BROADCAST,
-                              control_frames_nd_cb);
-
-    if(NULL == packet) {
-      SAFE_PRINTF_LOG_INFO("Packet failed");
-      return;
-    }
-
-    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
-   
-    SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
-    active_data_link_protocol->send(packet);
-  } else {
-    SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
-    piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
   }
 }
 /*---------------------------------------------------------------------*/
 void start_802_15_4_contikimac(void)
 {
   gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
-  if(treeRouter) {
-    if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
-      //This is the root...
-      treePersonalRank = 1;
-    }
+  if(treeRouter &&
+     addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+    //This is the root...
+    treePersonalRank = 1;
     backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
     clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
     ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);

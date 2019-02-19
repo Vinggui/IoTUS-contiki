@@ -32,8 +32,10 @@
 #include "safe-printer.h"
 
 
+#define STATIC_COORDINATORS_NUM       NUMARGS(STATIC_COORDINATORS)
+
 uint8_t treeRouter = 0;
-uint8_t treeRouterNodes[] = STATIC_COORDINATORS;
+uint8_t treeRouterNodes[] = {STATIC_COORDINATORS};
 uint8_t treePersonalRank = 0xFF;
 static struct ctimer sendNDTimer;
 static clock_time_t backOffDifference;
@@ -55,6 +57,7 @@ void iotus_signal_handler_tree_manager(iotus_service_signal signal, void *data)
     for(; i<STATIC_COORDINATORS_NUM; i++) {
       if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == treeRouterNodes[i]) {
         treeRouter = 1;
+        // printf("I'm router!\n");
       }
     }
 
