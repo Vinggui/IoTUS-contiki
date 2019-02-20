@@ -18,14 +18,19 @@
 #include "iotus-api.h"
 #include "iotus-netstack.h"
 #include "layer-packet-manager.h"
+#include "lib/random.h"
+#include "sys/timer.h"
+#include "sys/rtimer.h"
+#include "sys/ctimer.h"
 
 
 #if USE_CSMA_MODULE == 1
+  #include "tree_manager.h"
   #include "csma_contikimac.h"
 #endif
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "edyteeRouting"
 #include "safe-printer.h"
 
@@ -89,6 +94,8 @@ input_packet(iotus_packet_t *packet)
   // SAFE_PRINTF_CLEAN("\n");
   uint8_t finalDestAddr = packet_unwrap_pushed_byte(packet);
 
+  printf("got net %s\n", pieces_get_data_pointer(packet));
+
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
     //This is for us...
     active_transport_protocol->receive(packet);
@@ -120,7 +127,11 @@ input_packet(iotus_packet_t *packet)
             return RX_ERR_DROPPED;
           }
 
+          #if DEBUG != IOTUS_DONT_PRINT
           iotus_netstack_return status = send(packetForward);
+          #else
+          send(packetForward);
+          #endif
           SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
           // // if (!(MAC_TX_OK == status ||
           // //     MAC_TX_DEFERRED == status)) {
@@ -135,18 +146,94 @@ input_packet(iotus_packet_t *packet)
   }
 
 }
+/*---------------------------------------------------------------------------*/
+static void
+control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
+{
+  SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
+  // if(returnAns == MAC_TX_OK) {
+  packet_destroy(packet);
+  // }
+}
+/*---------------------------------------------------------------------------*/
+static void
+send_beacon(void *ptr)
+{
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+
+  backoff += backOffDifference;
+  ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+
+  //DAO packets have 4 bytes of base size
+  sprintf((char *)private_keep_alive, "%uRnk", treePersonalRank);
+
+  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    iotus_packet_t *packet = iotus_initiate_packet(
+                              4,
+                              private_keep_alive,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              IOTUS_PRIORITY_ROUTING,
+                              5000,
+                              NODES_BROADCAST,
+                              control_frames_nd_cb);
+
+    if(NULL == packet) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return;
+    }
+
+    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+   
+    SAFE_PRINTF_LOG_INFO("DAO nd %u \n", packet->pktID);
+    #if USE_CSMA_MODULE == 1
+      csma_send_packet(packet);
+    #else
+      active_data_link_protocol->send(packet);
+    #endif
+  } else {
+    SAFE_PRINTF_LOG_INFO("Creating piggy DAO\n");
+    piggyback_create_piece(4, private_keep_alive, IOTUS_PRIORITY_ROUTING, NODES_BROADCAST, 10000L);
+  }
+}
 
 /*---------------------------------------------------------------------------*/
 static void
 start(void)
 {
   SAFE_PRINTF_LOG_INFO("Starting edytee routing\n");
+
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
 }
 
 /*---------------------------------------------------------------------------*/
 static void
 post_start(void)
 {
+
+  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
+  //   SAFE_PRINTF_LOG_INFO("Network assign piggyback");
+  // }
+  // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+  //   SAFE_PRINTF_LOG_INFO("Network assign ND");
+  // }
+
+  #if EXP_CONTIKIMAC_802_15_4 == 1
+  if(treeRouter &&
+     addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
+    //This is the root...
+    
+    backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+    clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+    ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+
+    if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+      SAFE_PRINTF_LOG_INFO("Network assign ND");
+      treePersonalRank = 1;
+    }
+  }
+#endif /* EXP_CONTIKIMAC_802_15_4 */
 }
 
 static void

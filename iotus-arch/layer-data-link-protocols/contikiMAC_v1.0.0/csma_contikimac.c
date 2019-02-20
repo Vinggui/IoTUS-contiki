@@ -38,6 +38,7 @@
  */
 
 // #include "csma.h"
+#include "contiki.h"
 #include "contikiMAC.h"
 #include "csma_contikimac.h"
 #include "dev/leds.h"
@@ -317,7 +318,7 @@ send_beacon(void *ptr)
                               1,
                               &treePersonalRank,
                               PACKET_PARAMETERS_WAIT_FOR_ACK,
-                              IOTUS_PRIORITY_ROUTING,
+                              IOTUS_PRIORITY_DATA_LINK,
                               5000,
                               NODES_BROADCAST,
                               control_frames_nd_cb);
