@@ -572,7 +572,9 @@ csma_control_frame_receive(void)
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION) {
       //Nothing to do now
     } else {
+      // printf("disco\n");
       if(!timer_expired(&NDScanTimer)) {
+        // printf("Time ok\n");
         uint8_t *data = packetbuf_dataptr();
         uint8_t sourceNodeRank = data[0];
 
@@ -588,10 +590,12 @@ csma_control_frame_receive(void)
         // printf("keeping\n");
         }
       } else {
-        NETSTACK_RDC.on();
+        // printf("Time over\n");
         //Select the best rank node and make a request
         // printf("t expired\n");
         if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+          NETSTACK_RDC.on();
+          // printf("Have option\n");
           //make resquest
 
           // printf("register\n");
@@ -612,6 +616,7 @@ csma_control_frame_receive(void)
           clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
+          // printf("No option returng\n");
           //Nothing found. Start over...
           timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
           leds_on(LEDS_RED);
