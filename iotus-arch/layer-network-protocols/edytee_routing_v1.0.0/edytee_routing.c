@@ -34,6 +34,10 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "edyteeRouting"
 #include "safe-printer.h"
 
+#define RPL_DAO_PERIOD_TIME                   CONTIKIMAC_ND_PERIOD_TIME
+#define RPL_ND_BACKOFF_TIME                   CONTIKIMAC_ND_BACKOFF_TIME
+#define RPL_ND_SCAN_TIME                      CONTIKIMAC_ND_SCAN_TIME
+
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer;
 static clock_time_t backOffDifference;
@@ -159,8 +163,8 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 static void
 send_beacon(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
 
   backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
@@ -168,11 +172,11 @@ send_beacon(void *ptr)
   //DAO packets have 4 bytes of base size
   sprintf((char *)private_keep_alive, "%uRnk", treePersonalRank);
 
-  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
     iotus_packet_t *packet = iotus_initiate_packet(
                               4,
                               private_keep_alive,
-                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                               IOTUS_PRIORITY_ROUTING,
                               5000,
                               NODES_BROADCAST,
@@ -192,8 +196,10 @@ send_beacon(void *ptr)
       active_data_link_protocol->send(packet);
     #endif
   } else {
+    // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_TREE_BUILDING) ||
+    //    IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
     SAFE_PRINTF_LOG_INFO("Creating piggy DAO\n");
-    piggyback_create_piece(4, private_keep_alive, IOTUS_PRIORITY_ROUTING, NODES_BROADCAST, 10000L);
+    piggyback_create_piece(4, private_keep_alive, IOTUS_PRIORITY_ROUTING, NODES_BROADCAST, RPL_DAO_PERIOD_TIME*1000L+RPL_ND_BACKOFF_TIME);
   }
 }
 
@@ -205,6 +211,9 @@ start(void)
 
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_APPLY_PIGGYBACK);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_NEIGHBOR_DISCOVERY);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_ONEHOP_BROADCAST);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_FLOODING);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_DATA_LINK, IOTUS_CHORE_TREE_BUILDING);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -224,12 +233,15 @@ post_start(void)
      addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
     //This is the root...
     
-    backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-    clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
-    ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
+    // backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+    // clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+    // ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
 
     if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
       SAFE_PRINTF_LOG_INFO("Network assign ND");
+    }
+    if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_TREE_BUILDING)) {
+      SAFE_PRINTF_LOG_INFO("Network assign tree");
       treePersonalRank = 1;
     }
   }

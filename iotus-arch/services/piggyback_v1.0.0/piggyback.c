@@ -32,7 +32,7 @@
 #include "sys/ctimer.h"
 #include "timestamp.h"
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
@@ -131,7 +131,7 @@ piggyback_timeout_handler(void *ptr) {
   }
   piggyback_destroy(h);
 
-  SAFE_PRINTF_LOG_INFO("Packet piggy %u \n", packet->pktID);
+  SAFE_PRINTF_LOG_INFO("Piggy Timeout %u \n", packet->pktID);
   iotus_netstack_return status = active_transport_protocol->build_to_send(packet);
   // if (!(MAC_TX_OK == status ||
   //     MAC_TX_DEFERRED == status)) {
@@ -149,6 +149,7 @@ piggyback_timeout_handler(void *ptr) {
  */
 void
 piggyback_unwrap_payload(iotus_packet_t *packet) {
+  // printf("got here\n");
   if(packet_get_parameter(packet, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM)) {
     //Get the first byte of the pigyback payload
 

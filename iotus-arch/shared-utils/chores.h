@@ -43,6 +43,7 @@ typedef enum iotus_chores {
   IOTUS_CHORE_FLOODING,
   IOTUS_CHORE_NEIGHBOR_DISCOVERY,
   IOTUS_CHORE_SET_TX_POWER,
+  IOTUS_CHORE_TREE_BUILDING,
 
   /* System functions related chores */
   IOTUS_CHORE_SET_ADDR_FOR_RADIO,

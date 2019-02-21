@@ -34,15 +34,29 @@ typedef enum {
   ND_PKT_ASSOCIANTION_ANS,
   ND_PKT_ASSOCIANTION_CON,
   ND_PKT_KEEP_ALIVE_CON,
+
+  //Do not erase this last option
   ND_PKT_MAX_VALUE
 } nd_pkt_types;
+
+typedef void (*nd_cb_func)(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data);
 
 
 extern uint16_t ndKeepAlivePeriod;
 extern uint16_t ndAssociation_answer_delay;
 
 void
+nd_remove_subscription(iotus_layer_priority layer);
+
+void
+nd_set_association_request_data(iotus_layer_priority layer, uint8_t size, uint8_t* payload);
+
+void
+nd_set_layer_cb(iotus_layer_priority layer, nd_cb_func cb);
+
+void
 nd_set_layer_operations(iotus_layer_priority layer, nd_pkt_types op);
+
 uint8_t
 nd_get_layer_operations(nd_pkt_types op);
 

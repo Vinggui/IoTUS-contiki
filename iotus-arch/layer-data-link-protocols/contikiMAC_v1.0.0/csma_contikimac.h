@@ -44,9 +44,9 @@
 #include "iotus-netstack.h"
 
 
-#define CONTIKIMAC_ND_PERIOD_TIME            4//sec
-#define CONTIKIMAC_ND_BACKOFF_TIME           2000UL
-#define CONTIKIMAC_ND_SCAN_TIME              5//sec
+// #define CONTIKIMAC_ND_PERIOD_TIME            4//sec
+// #define CONTIKIMAC_ND_BACKOFF_TIME           2000UL
+// #define CONTIKIMAC_ND_SCAN_TIME              5//sec
 
 void
 csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions);

@@ -26,7 +26,7 @@
 #include "platform-conf.h"
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "pieces"
 #include "safe-printer.h"
 
@@ -116,6 +116,30 @@ pieces_get_additional_info(list_t list, uint8_t type)
   }
   return NULL;
 }
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief Get the the cb piece from a list.
+ * \param   list          The pointer of the list to be verified.
+ * \param   type          The type of information to be returned.
+ * \return                The pointer to the type requested.
+ * \retval  NULL           If the type was not found. 
+ */
+// iotus_cb_piece_t *
+// pieces_get_cb_piece(list_t list, uint8_t type)
+// {
+//   if(NULL == list) {
+//     return NULL;
+//   }
+//   iotus_cb_piece_t *addInfo;
+
+//   for(addInfo=list_head(list); addInfo != NULL; addInfo=list_item_next(addInfo)) {
+//     if(type == addInfo->type) {
+//       return addInfo;
+//     }
+//   }
+//   return NULL;
+// }
 
 /*---------------------------------------------------------------------*/
 /**
@@ -264,6 +288,73 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
   return pieces_get_data_pointer(addInfo);
 }
 
+/*---------------------------------------------------------------------*/
+/**
+ * \brief                Allocate, set and link the callback(cb) piece required.
+ *                       Hence, the information has to be given by its pointer and size only.
+ * \param list           The list where this info will be linked.
+ * \param varSize        The size of this value
+ * \param createBuffer   If the value needs to be created of not.
+ * \return               The pointer to this additional information var.
+ */
+// void *
+// pieces_modify_cb_piece(list_t list, uint8_t type,
+//                       uint16_t varSize,
+//                       void *cb)
+// {
+//   if(NULL == list) {
+//     return NULL;
+//   }
+
+//   //Verify if this list already has this info...
+//   iotus_cb_piece_t *addInfo = pieces_get_cb_piece(list,type);
+//   if(NULL != addInfo) {
+//     return pieces_get_data_pointer(addInfo);
+//   } 
+
+//   //create it...
+//   #if IOTUS_USING_MALLOC == 0
+//   addInfo = memb_alloc(&iotus_additional_info_handlers_mem);
+//   if(NULL == addInfo) {
+//     SAFE_PRINTF_LOG_ERROR("Alloc fail");
+//     return NULL;
+//   }
+//   #else
+//   addInfo = malloc(sizeof(iotus_cb_piece_t));
+//   if(NULL == addInfo) {
+//     SAFE_PRINTF_LOG_ERROR("Alloc fail");
+//     return NULL;
+//   }
+//   #endif
+
+
+//   #if IOTUS_USING_MALLOC == 0
+//   if(mmem_alloc(&(addInfo->data), varSize) == 0) {
+//     SAFE_PRINTF_LOG_ERROR("Alloc mmem");
+//     memb_free(&iotus_additional_info_handlers_mem, addInfo);
+//     return NULL;
+//   }
+//   memset(MMEM_PTR(&(addInfo->data)),0,varSize);
+//   //memcpy(MMEM_PTR(&(addInfo->data)), var, varSize);
+//   #else
+//   void *varPointer = malloc(varSize);
+//   if(varPointer == NULL) {
+//     SAFE_PRINTF_LOG_ERROR("Alloc malloc");
+//     free(addInfo);
+//     return NULL;
+//   }
+//   memset(varPointer,0,varSize);
+//   //memcpy(varPointer, var, varSize);
+//   addInfo->data.ptr = varPointer;
+//   #endif
+  
+
+//   addInfo->type = type;
+//   addInfo->cb = cb;
+
+//   list_push(list, addInfo);
+//   return pieces_get_data_pointer(addInfo);
+// }
 /*---------------------------------------------------------------------*/
 /**
  * \brief                Get the pointer to the variable allocated into the additional information.

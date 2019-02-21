@@ -31,8 +31,25 @@
 uint16_t ndKeepAlivePeriod;
 uint16_t ndAssociation_answer_delay;
 
+LIST(gNDAssociationPieces);
+LIST(gNDAnswerPieces);
+
 // static uint8_t gLayersDoingND = 0;
 static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
+static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
+
+
+
+// /*---------------------------------------------------------------------------*/
+void
+nd_remove_subscription(iotus_layer_priority layer)
+{
+  uint8_t i=0;
+  for(; i<ND_PKT_MAX_VALUE-1; i++) {
+    gNDOperations[i] &= ~(1<<layer);
+  }
+  gLayersCB[layer] = NULL;
+}
 
 // /*---------------------------------------------------------------------------*/
 // uint8_t
@@ -68,11 +85,17 @@ static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 // }
 
 // /*---------------------------------------------------------------------------*/
-// void
-// nd_assign_layer(iotus_layer_priority layer)
-// {
-//   gLayersDoingND |= (1<<layer);
-// }
+void
+nd_set_association_request_data(iotus_layer_priority layer, uint8_t size, uint8_t* payload)
+{
+  uint8_t *data = pieces_modify_additional_info_var(gNDAssociationPieces, layer, size, TRUE);
+  if(NULL == data) {
+    SAFE_PRINTF_LOG_ERROR("Association piece no assigned");
+    return;
+  }
+
+  memcpy(data, payload);
+}
 // ---------------------------------------------------------------------------
 // uint8_t
 // nd_get_assigned_layer(iotus_layer_priority layer)
@@ -84,7 +107,14 @@ void
 nd_set_layer_operations(iotus_layer_priority layer, nd_pkt_types op)
 {
   gNDOperations[op] |= (1<<layer);
-}/*---------------------------------------------------------------------------*/
+}
+/*---------------------------------------------------------------------------*/
+void
+nd_set_layer_cb(iotus_layer_priority layer, nd_cb_func cb)
+{
+  gLayersCB[layer] = cb;
+}
+/*---------------------------------------------------------------------------*/
 uint8_t
 nd_get_layer_operations(nd_pkt_types op)
 {
@@ -113,7 +143,7 @@ nd_get_layer_operations(nd_pkt_types op)
   // backoff += backOffDifference;
   // ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
 
-  // printf("nd maint beacon\n");
+  // printf("nd maint beacon\n");https://ez.analog.com/wireless-sensor-networks/ad6lowpan/w/documents/558/faq-node-joining-process-in-6lowpan---nd-rpl
   // iotus_packet_t *packet = iotus_initiate_packet(
   //                           12,
   //                           private_nd_control,
@@ -142,7 +172,8 @@ void iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *
   if(IOTUS_START_SERVICE == signal) {
     SAFE_PRINT("\tService Neighbor D.\n");
     // sprintf((char *)private_nd_control, "### tira ###");
-
+    list_init(gNDAssociationPieces);
+    list_init(gNDAnswerPieces);
   }
   // else if (IOTUS_RUN_SERVICE == signal){
     // if(gAmIRouter) {

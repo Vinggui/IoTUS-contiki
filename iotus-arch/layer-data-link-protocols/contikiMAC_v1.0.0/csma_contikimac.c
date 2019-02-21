@@ -45,6 +45,7 @@
 #include "iotus-api.h"
 #include "iotus-core.h"
 #include "iotus-netstack.h"
+#include "neighbor_discovery.h"
 #include "random.h"
 #include "piggyback.h"
 #include "tree_manager.h"
@@ -317,7 +318,7 @@ send_beacon(void *ptr)
     iotus_packet_t *packet = iotus_initiate_packet(
                               1,
                               &treePersonalRank,
-                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                               IOTUS_PRIORITY_DATA_LINK,
                               5000,
                               NODES_BROADCAST,
@@ -346,8 +347,8 @@ csma_802like_register_process(void *ptr){
     //make resquest
     iotus_packet_t *packet = iotus_initiate_packet(
                               6,
-                              "answer",
-                              PACKET_PARAMETERS_WAIT_FOR_ACK,
+                              (uint8_t *)"answer",
+                              PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                               IOTUS_PRIORITY_DATA_LINK,
                               5000,
                               gBestNode,
@@ -420,8 +421,8 @@ csma_control_frame_receive(iotus_packet_t *packet)
           //make resquest
           iotus_packet_t *packet = iotus_initiate_packet(
                                     8,
-                                    "register",
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                    (uint8_t *)"register",
+                                    PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                                     IOTUS_PRIORITY_DATA_LINK,
                                     5000,
                                     gBestNode,
@@ -453,7 +454,9 @@ csma_control_frame_receive(iotus_packet_t *packet)
     }
   } else if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_COMMAND) {
     uint8_t commandType = packet_unwrap_pushed_byte(packet);
+    #if DEBUG != IOTUS_DONT_PRINT
     uint8_t nodeSourceAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, source)[0];
+    #endif
 
     if(commandType == 'r') {
       SAFE_PRINTF_LOG_INFO("register cmm from %u\n", nodeSourceAddress);
@@ -462,8 +465,8 @@ csma_control_frame_receive(iotus_packet_t *packet)
       SAFE_PRINTF_LOG_INFO("answer cmm from %u\n", nodeSourceAddress);
       iotus_packet_t *packet = iotus_initiate_packet(
                                     4,
-                                    "join",
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK,
+                                    (uint8_t *)"join",
+                                    PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                                     IOTUS_PRIORITY_DATA_LINK,
                                     5000,
                                     source,
@@ -507,6 +510,15 @@ csma_control_frame_receive(iotus_packet_t *packet)
     }
   }
 }
+
+
+/*---------------------------------------------------------------------*/
+static void
+receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data)
+{
+  printf("recebi pacote!!!\n");
+}
+
 /*---------------------------------------------------------------------*/
 void start_802_15_4_contikimac(void)
 {
@@ -515,6 +527,16 @@ void start_802_15_4_contikimac(void)
      addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
     //This is the root...
     treePersonalRank = 1;
+
+    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS);
+    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ);
+    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET);
+    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS);
+    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
+
+    nd_set_association_request_data(IOTUS_PRIORITY_DATA_LINK, 1, &treePersonalRank);
+    nd_set_layer_cb(IOTUS_PRIORITY_DATA_LINK, receive_nd_frames);
+
     backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
     clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
     ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);

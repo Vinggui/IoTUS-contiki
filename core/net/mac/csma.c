@@ -148,10 +148,6 @@ static linkaddr_t treeFather;
 static uint8_t treeFatherRank = 0xFF;
 
 
-#define CONTIKIMAC_ND_PERIOD_TIME            4//sec
-#define CONTIKIMAC_ND_BACKOFF_TIME           2000UL
-#define CONTIKIMAC_ND_SCAN_TIME              5//sec
-
 static uint8_t private_nd_control[12];
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer;

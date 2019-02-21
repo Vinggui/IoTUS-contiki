@@ -50,6 +50,13 @@ typedef struct generic_additional_info {
   uint8_t isBuffered;
 } iotus_additional_info_t;
 
+// typedef struct generic_additional_info {
+//   struct generic_additional_info *next;
+//   struct mmem data;
+//   uint8_t type;
+//   uint8_t isBuffered;
+// } iotus_additional_info_t;
+
 ///////////////////////////////////////////
 //             MACROS                    //
 ///////////////////////////////////////////
@@ -73,7 +80,8 @@ iotus_additional_info_t *
 pieces_get_additional_info(list_t list, uint8_t type);
 
 void *
-pieces_modify_additional_info_var(list_t list, uint8_t type,
+pieces_modify_additional_info_var(list_t list,
+                                  uint8_t type,
                                   uint16_t varSize,
                                   Boolean createBuffer);
 
