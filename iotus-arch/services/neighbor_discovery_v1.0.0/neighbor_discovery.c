@@ -13,7 +13,7 @@
  *  Created on: Feb 27, 2018
  *      Author: vinicius
  */
-
+#include <string.h>
 #include "addresses.h"
 #include "contiki.h"
 #include "iotus-api.h"
@@ -23,20 +23,27 @@
 #include "neighbor_discovery.h"
 
 
+
 #define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//
 #define THIS_LOG_FILE_NAME_DESCRITOR "NDisc"
 #include "safe-printer.h"
 
 
+/*
+ * Each piece has the first byte as the layer.
+ * Second byte as the size of the piece inserted..
+*/
+
+
 uint16_t ndKeepAlivePeriod;
 uint16_t ndAssociation_answer_delay;
 
-LIST(gNDAssociationPieces);
-LIST(gNDAnswerPieces);
+LIST(gNDPieces);
 
 // static uint8_t gLayersDoingND = 0;
 static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
+static uint8_t gMsgPayload[20];
 
 
 
@@ -44,6 +51,22 @@ static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 void
 nd_remove_subscription(iotus_layer_priority layer)
 {
+  iotus_additional_info_t *h = list_head(gNDPieces);
+  while(NULL != h) {
+    iotus_additional_info_t *next = list_item_next(h);
+
+    /*
+     * The h->type is the operation
+     * The first byte is the size of this piece [0]
+     * The second byte is the layer of this piece [1]
+     */
+    uint8_t *payload = pieces_get_data_pointer(h);
+    if(payload[1] == layer) {
+      pieces_destroy_additional_info(gNDPieces,h);
+    }
+    h = next;
+  }
+
   uint8_t i=0;
   for(; i<ND_PKT_MAX_VALUE-1; i++) {
     gNDOperations[i] &= ~(1<<layer);
@@ -86,15 +109,20 @@ nd_remove_subscription(iotus_layer_priority layer)
 
 // /*---------------------------------------------------------------------------*/
 void
-nd_set_association_request_data(iotus_layer_priority layer, uint8_t size, uint8_t* payload)
+nd_set_operation_msg(iotus_layer_priority layer, nd_pkt_types operation, uint8_t size, uint8_t* payload)
 {
-  uint8_t *data = pieces_modify_additional_info_var(gNDAssociationPieces, layer, size, TRUE);
-  if(NULL == data) {
-    SAFE_PRINTF_LOG_ERROR("Association piece no assigned");
-    return;
-  }
+  if(size>0) {
+    //Ths type indicates which operation is saved there
+    uint8_t *data = pieces_modify_additional_info_var(gNDPieces, operation, size+2, TRUE);
+    if(NULL == data) {
+      SAFE_PRINTF_LOG_ERROR("Association piece no assigned");
+      return;
+    }
 
-  memcpy(data, payload);
+    data[0] = size+2;
+    data[1] = layer;
+    memcpy(data+2, payload, size);
+  }
 }
 // ---------------------------------------------------------------------------
 // uint8_t
@@ -163,6 +191,33 @@ nd_get_layer_operations(nd_pkt_types op)
   // SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
   // active_data_link_protocol->send(packet);
 // }
+
+/*---------------------------------------------------------------------*/
+uint8_t *
+build_packet_type(uint8_t operation) {
+  iotus_additional_info_t *h;
+  uint8_t totalSize = 0;
+
+  //First byte is the total size of this msg
+  uint8_t *bufferPointer = gMsgPayload + 1;
+
+  h = list_head(gNDPieces);
+  while(NULL != h) {
+    if(h->type == operation) {
+      uint8_t *ptr = pieces_get_data_pointer(h);
+      memcpy(bufferPointer, ptr, ptr[0]);
+      bufferPointer += ptr[0];
+      totalSize += ptr[0];
+    }
+    h = list_item_next(h);
+  }
+
+  //Fix the total size now...
+  gMsgPayload[0] = totalSize;
+
+  return gMsgPayload;
+}
+
 /*---------------------------------------------------------------------*/
 /*
  * Default function required from IoTUS, to initialize, run and finish this service
@@ -172,8 +227,7 @@ void iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *
   if(IOTUS_START_SERVICE == signal) {
     SAFE_PRINT("\tService Neighbor D.\n");
     // sprintf((char *)private_nd_control, "### tira ###");
-    list_init(gNDAssociationPieces);
-    list_init(gNDAnswerPieces);
+    list_init(gNDPieces);
   }
   // else if (IOTUS_RUN_SERVICE == signal){
     // if(gAmIRouter) {

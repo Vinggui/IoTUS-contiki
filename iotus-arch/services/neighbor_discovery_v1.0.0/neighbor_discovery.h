@@ -49,7 +49,10 @@ void
 nd_remove_subscription(iotus_layer_priority layer);
 
 void
-nd_set_association_request_data(iotus_layer_priority layer, uint8_t size, uint8_t* payload);
+nd_set_operation_msgnd_set_operation_msg(iotus_layer_priority layer,
+                                         nd_pkt_types operation,
+                                         uint8_t size,
+                                         uint8_t* payload);
 
 void
 nd_set_layer_cb(iotus_layer_priority layer, nd_cb_func cb);
@@ -59,6 +62,9 @@ nd_set_layer_operations(iotus_layer_priority layer, nd_pkt_types op);
 
 uint8_t
 nd_get_layer_operations(nd_pkt_types op);
+
+uint8_t *
+build_packet_type(uint8_t operation);
 
 void
 iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *data);

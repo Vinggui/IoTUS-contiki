@@ -314,29 +314,30 @@ send_beacon(void *ptr)
   backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
 
-  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-    iotus_packet_t *packet = iotus_initiate_packet(
-                              1,
-                              &treePersonalRank,
-                              PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                              IOTUS_PRIORITY_DATA_LINK,
-                              5000,
-                              NODES_BROADCAST,
-                              control_frames_nd_cb);
+  uint8_t *msg = build_packet_type(ND_PKT_BEACONS);
 
-    if(NULL == packet) {
-      SAFE_PRINTF_LOG_INFO("Packet failed");
-      return;
-    }
+  iotus_packet_t *packet = iotus_initiate_packet(
+                            msg[0],
+                            msg+1,
+                            PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                            IOTUS_PRIORITY_DATA_LINK,
+                            5000,
+                            NODES_BROADCAST,
+                            control_frames_nd_cb);
 
-    packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
-   
-    SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
-    active_data_link_protocol->send(packet);
-  } else {
-    SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
-    piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
+  if(NULL == packet) {
+    SAFE_PRINTF_LOG_INFO("Packet failed");
+    return;
   }
+
+  packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
+ 
+  SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
+  active_data_link_protocol->send(packet);
+
+  //   SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
+  //   piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -534,7 +535,7 @@ void start_802_15_4_contikimac(void)
     nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS);
     nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
 
-    nd_set_association_request_data(IOTUS_PRIORITY_DATA_LINK, 1, &treePersonalRank);
+    nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &treePersonalRank);
     nd_set_layer_cb(IOTUS_PRIORITY_DATA_LINK, receive_nd_frames);
 
     backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
