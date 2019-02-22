@@ -29,9 +29,9 @@
 */
 typedef enum {
   ND_PKT_BEACONS = 1,
-  ND_PKT_ASSOCIANTION_REQ,
-  ND_PKT_ASSOCIANTION_GET,
-  ND_PKT_ASSOCIANTION_ANS,
+  ND_PKT_ASSOCIANTION_REQ,//register
+  ND_PKT_ASSOCIANTION_GET,//answer
+  ND_PKT_ASSOCIANTION_ANS,//join
   ND_PKT_ASSOCIANTION_CON,
   ND_PKT_KEEP_ALIVE_CON,
 
@@ -64,7 +64,10 @@ uint8_t
 nd_get_layer_operations(nd_pkt_types op);
 
 uint8_t *
-build_packet_type(uint8_t operation);
+nd_build_packet_type(uint8_t operation);
+
+void
+nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet);
 
 void
 iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *data);

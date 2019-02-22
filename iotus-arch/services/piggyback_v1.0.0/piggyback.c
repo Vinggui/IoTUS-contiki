@@ -154,12 +154,12 @@ piggyback_unwrap_payload(iotus_packet_t *packet) {
     //Get the first byte of the pigyback payload
 
     uint8_t piggyHeader=0;
-    //packet_unwrap_appended_byte(packet, &piggyHeader, 1);
+    packet_unwrap_appended_byte(packet, &piggyHeader, 1);
 
     uint8_t numberOfPieces = piggyHeader & PIGGYBACK_MAX_ATTACHED_PIECES;
     uint8_t i = 0;    
     for(; i < numberOfPieces; i++) {
-      printf("got piggy\n");
+      SAFE_PRINTF_LOG_INFO("got piggy");
     }
 
   }

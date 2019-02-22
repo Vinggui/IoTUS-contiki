@@ -314,11 +314,11 @@ send_beacon(void *ptr)
   backoff += backOffDifference;
   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
 
-  uint8_t *msg = build_packet_type(ND_PKT_BEACONS);
+  uint8_t *msg = nd_build_packet_type(ND_PKT_BEACONS);
 
   iotus_packet_t *packet = iotus_initiate_packet(
                             msg[0],
-                            msg+1,
+                            msg,
                             PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                             IOTUS_PRIORITY_DATA_LINK,
                             5000,
@@ -329,7 +329,7 @@ send_beacon(void *ptr)
     SAFE_PRINTF_LOG_INFO("Packet failed");
     return;
   }
-
+  
   packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
  
   SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
@@ -345,10 +345,16 @@ void
 csma_802like_register_process(void *ptr){
   //ready to request asnwer from router
   if(gBestNode != NULL) {
+    uint8_t nextType[1];
     //make resquest
+    nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET, 6, (uint8_t *)"answer");
+
+    //make resquest
+    uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_GET);
+
     iotus_packet_t *packet = iotus_initiate_packet(
-                              6,
-                              (uint8_t *)"answer",
+                              msg[0],
+                              msg,
                               PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                               IOTUS_PRIORITY_DATA_LINK,
                               5000,
@@ -363,6 +369,10 @@ csma_802like_register_process(void *ptr){
     packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
     packet->nextDestinationNode = gBestNode;
    
+    //Define this commands as
+    nextType[0] = ND_PKT_ASSOCIANTION_GET;
+    packet_push_bit_header(8, nextType, packet);
+
     //active_data_link_protocol->send(packet);
     csma_send_packet(packet);
 
@@ -373,12 +383,14 @@ csma_802like_register_process(void *ptr){
   }
 }
 
-/*---------------------------------------------------------------------------*/
-void
-csma_control_frame_receive(iotus_packet_t *packet)
+/*---------------------------------------------------------------------*/
+static void
+receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data)
 {
   iotus_node_t *source = packet_get_prevSource_node(packet);
-  if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
+  uint8_t nextType[1];
+
+  if(type == ND_PKT_BEACONS) {
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
       //Ignore msg
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
@@ -387,7 +399,7 @@ csma_control_frame_receive(iotus_packet_t *packet)
       //Nothing to do now
     } else {
       if(!timer_expired(&NDScanTimer)) {
-        uint8_t sourceNodeRank = packet_unwrap_pushed_byte(packet);
+        uint8_t sourceNodeRank = data[0];
 
         uint8_t *rankPointer = pieces_modify_additional_info_var(
                                     source->additionalInfoList,
@@ -419,10 +431,14 @@ csma_control_frame_receive(iotus_packet_t *packet)
         //Select the best rank node and make a request
         // printf("t expired %p\n", gBestNode);
         if(gBestNode != NULL) {
+          nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ, 8, (uint8_t *)"register");
+
           //make resquest
+          uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_REQ);
+
           iotus_packet_t *packet = iotus_initiate_packet(
-                                    8,
-                                    (uint8_t *)"register",
+                                    msg[0],
+                                    msg,
                                     PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
                                     IOTUS_PRIORITY_DATA_LINK,
                                     5000,
@@ -437,6 +453,10 @@ csma_control_frame_receive(iotus_packet_t *packet)
           packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
           packet->nextDestinationNode = gBestNode;
          
+          //Define this commands as
+          nextType[0] = ND_PKT_ASSOCIANTION_REQ;
+          packet_push_bit_header(8, nextType, packet);
+
           // active_data_link_protocol->send(packet);
           csma_send_packet(packet);
 
@@ -453,37 +473,43 @@ csma_control_frame_receive(iotus_packet_t *packet)
         }
       }
     }
-  } else if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_COMMAND) {
-    uint8_t commandType = packet_unwrap_pushed_byte(packet);
+  } else {
     #if DEBUG != IOTUS_DONT_PRINT
     uint8_t nodeSourceAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, source)[0];
     #endif
 
-    if(commandType == 'r') {
+    if(type == ND_PKT_ASSOCIANTION_REQ) {
       SAFE_PRINTF_LOG_INFO("register cmm from %u\n", nodeSourceAddress);
       //TODO send info to application layer and confirm association
-    } else if(commandType == 'a') {
+    } else if(type == ND_PKT_ASSOCIANTION_GET) {
       SAFE_PRINTF_LOG_INFO("answer cmm from %u\n", nodeSourceAddress);
+      nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON, 4, (uint8_t *)"join");
+
+      //make resquest
+      uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_CON);
+
       iotus_packet_t *packet = iotus_initiate_packet(
-                                    4,
-                                    (uint8_t *)"join",
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                                    IOTUS_PRIORITY_DATA_LINK,
-                                    5000,
-                                    source,
-                                    control_frames_nd_cb);
+                                msg[0],
+                                msg,
+                                PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                                IOTUS_PRIORITY_DATA_LINK,
+                                5000,
+                                source,
+                                control_frames_nd_cb);
       if(NULL == packet) {
         SAFE_PRINTF_LOG_INFO("Packet failed");
         return;
       }
       packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
       packet->nextDestinationNode = source;
+
+      //Define this commands as
+      nextType[0] = ND_PKT_ASSOCIANTION_ANS;
+      packet_push_bit_header(8, nextType, packet);
      
       // active_data_link_protocol->send(packet);
       csma_send_packet(packet);
-    } else if(commandType == 'c') {
-      SAFE_PRINTF_LOG_INFO("confirm cmm from %u\n", nodeSourceAddress);
-    } else if(commandType == 'j') {
+    } else if(type == ND_PKT_ASSOCIANTION_ANS) {
       SAFE_PRINTF_LOG_INFO("join cmm from %u\n", nodeSourceAddress);
 
       fatherNode = gBestNode;
@@ -502,6 +528,8 @@ csma_control_frame_receive(iotus_packet_t *packet)
       if(treeRouter) {
         printf("our rank %u\n", treePersonalRank);
 
+        nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &treePersonalRank);
+
         backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
         clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
         ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
@@ -512,31 +540,39 @@ csma_control_frame_receive(iotus_packet_t *packet)
   }
 }
 
-
-/*---------------------------------------------------------------------*/
-static void
-receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data)
+/*---------------------------------------------------------------------------*/
+void
+csma_control_frame_receive(iotus_packet_t *packet)
 {
-  printf("recebi pacote!!!\n");
+  //Send this back to the ND service
+  if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_BEACON) {
+    nd_unwrap_msg(ND_PKT_BEACONS, packet);
+  } else if(packet_get_type(packet) == IOTUS_PACKET_TYPE_IEEE802154_COMMAND) {
+    //Ths is a command
+    uint8_t commandType = packet_unwrap_pushed_byte(packet);
+    // printf("commmand %u\n", commandType);
+    nd_unwrap_msg(commandType, packet);
+  }
 }
 
 /*---------------------------------------------------------------------*/
 void start_802_15_4_contikimac(void)
 {
   gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
+
+  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS);
+  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ);
+  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET);
+  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS);
+  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
+  nd_set_layer_cb(IOTUS_PRIORITY_DATA_LINK, receive_nd_frames);
+
   if(treeRouter &&
      addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
     //This is the root...
     treePersonalRank = 1;
 
-    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS);
-    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ);
-    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET);
-    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS);
-    nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
-
     nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &treePersonalRank);
-    nd_set_layer_cb(IOTUS_PRIORITY_DATA_LINK, receive_nd_frames);
 
     backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
     clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms

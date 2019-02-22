@@ -43,7 +43,7 @@ LIST(gNDPieces);
 // static uint8_t gLayersDoingND = 0;
 static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
-static uint8_t gMsgPayload[20];
+static uint8_t gMsgPayload[30];
 
 
 
@@ -73,39 +73,6 @@ nd_remove_subscription(iotus_layer_priority layer)
   }
   gLayersCB[layer] = NULL;
 }
-
-// /*---------------------------------------------------------------------------*/
-// uint8_t
-// nd_create_pkt(uint16_t payloadSize, const uint8_t* payload, iotus_layer_priority layer,
-//               nd_pkt_types pkt_type,
-//               uint16_t timeout, iotus_node_t *finalDestination, packet_sent_cb func_cb)
-// {
-//   if(gNDOperations[pkt_type]) {
-//     uint8_t address3[2] = {1,0};
-//     rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address3);
-//     SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
-//     piggyback_create_piece(12, private_keep_alive, IOTUS_PRIORITY_ROUTING, rootNode, ROUTING_PACKETS_TIMEOUT);
-//   } else {
-//     iotus_packet_t *packet = iotus_initiate_packet(
-//                               12,
-//                               private_nd_control,
-//                               PACKET_PARAMETERS_WAIT_FOR_ACK,
-//                               IOTUS_PRIORITY_ROUTING,
-//                               5000,
-//                               NODES_BROADCAST,
-//                               send_cb);
-
-//     if(NULL == packet) {
-//       SAFE_PRINTF_LOG_INFO("Packet failed");
-//       return;
-//     }
-
-//     packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
-   
-//     SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
-//     active_data_link_protocol->send(packet);
-//   }
-// }
 
 // /*---------------------------------------------------------------------------*/
 void
@@ -148,55 +115,32 @@ nd_get_layer_operations(nd_pkt_types op)
 {
   return gNDOperations[op];
 }
-/*---------------------------------------------------------------------------*/
-// static void
-// send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
-// {
-//   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
-//   // if(returnAns == MAC_TX_OK) {
-//     packet_destroy(packet);
-//   // }
-// }
 
 /*---------------------------------------------------------------------------*/
-// static void
-// send_beacon(void *ptr)
-// {
-  // static uint8_t selfAddrValue;
-  // selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+static void
+clean_pieces(nd_pkt_types type)
+{
+  iotus_additional_info_t *h = list_head(gNDPieces);
+  while(NULL != h) {
+    iotus_additional_info_t *next = list_item_next(h);
 
-  // clock_time_t backoff = CLOCK_SECOND*gMaintenancePeriod - backOffDifference;//ms
-  // backOffDifference = (CLOCK_SECOND*((random_rand()%ND_BACKOFF_TIME)))/1000;
-
-  // backoff += backOffDifference;
-  // ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
-
-  // printf("nd maint beacon\n");https://ez.analog.com/wireless-sensor-networks/ad6lowpan/w/documents/558/faq-node-joining-process-in-6lowpan---nd-rpl
-  // iotus_packet_t *packet = iotus_initiate_packet(
-  //                           12,
-  //                           private_nd_control,
-  //                           PACKET_PARAMETERS_WAIT_FOR_ACK,
-  //                           IOTUS_PRIORITY_ROUTING,
-  //                           5000,
-  //                           NODES_BROADCAST,
-  //                           send_cb);
-
-  // if(NULL == packet) {
-  //   SAFE_PRINTF_LOG_INFO("Packet failed");
-  //   return;
-  // }
-
-  // packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
- 
-  // SAFE_PRINTF_LOG_INFO("Packet nd %u \n", packet->pktID);
-  // active_data_link_protocol->send(packet);
-// }
-
+    /*
+     * The h->type is the operation
+     * The first byte is the size of this piece [0]
+     * The second byte is the layer of this piece [1]
+     */
+    uint8_t *payload = pieces_get_data_pointer(h);
+    if(h->type == type) {
+      pieces_destroy_additional_info(gNDPieces,h);
+    }
+    h = next;
+  }
+}
 /*---------------------------------------------------------------------*/
 uint8_t *
-build_packet_type(uint8_t operation) {
+nd_build_packet_type(uint8_t operation) {
   iotus_additional_info_t *h;
-  uint8_t totalSize = 0;
+  uint8_t totalSize = 1;
 
   //First byte is the total size of this msg
   uint8_t *bufferPointer = gMsgPayload + 1;
@@ -214,8 +158,57 @@ build_packet_type(uint8_t operation) {
 
   //Fix the total size now...
   gMsgPayload[0] = totalSize;
-
+  if(operation != ND_PKT_BEACONS) {
+    clean_pieces(operation);
+  }
   return gMsgPayload;
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ * Expects that the layer using this system can recognize what type of packet it tried to send and receive.
+*/
+void
+nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
+{
+  uint8_t pieceSize = 0;
+  uint8_t layer = 0;
+  // uint8_t size = packet_get_payload_size(packet);
+  uint8_t *ptr = packet_get_payload_data(packet);
+  uint8_t totalSize = ptr[0]-1;
+  ptr++;//first byte is the total length
+
+  uint8_t *skippedLayerPtr = NULL;
+
+  /*
+   * They layer calling this function HAS to be the last to have it`s CB called,
+   * otherwise synch can be broken.
+   */
+
+  while(totalSize > 0) {
+    pieceSize = ptr[0];
+    layer = ptr[1];
+
+    if(iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY) == layer) {
+      //skip for later
+      skippedLayerPtr = ptr;
+    } else if(gNDOperations[type] & (1<<layer) ||
+       gLayersCB[layer] != NULL) {
+      /*
+       * This layer is really operating here
+       * Call this cb function
+       */
+      gLayersCB[layer](packet, type, pieceSize-2, ptr+2);
+    } else {
+      SAFE_PRINTF_LOG_INFO("Layer not assigned");
+    }
+    ptr += pieceSize;
+    totalSize -= pieceSize;
+  }
+
+  if(skippedLayerPtr != NULL) {
+    gLayersCB[skippedLayerPtr[1]](packet, type, skippedLayerPtr[0]-2, skippedLayerPtr+2);
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -229,16 +222,9 @@ void iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *
     // sprintf((char *)private_nd_control, "### tira ###");
     list_init(gNDPieces);
   }
-  // else if (IOTUS_RUN_SERVICE == signal){
-    // if(gAmIRouter) {
-    //   printf("root\n");
-    //   backOffDifference = (CLOCK_SECOND*((random_rand()%ND_BACKOFF_TIME)))/1000;
-    //   clock_time_t backoff = CLOCK_SECOND*gMaintenancePeriod + backOffDifference;//ms
-    //   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
-    // } else {
-    //   printf("not root\n");
-    // }
-  // } else if (IOTUS_END_SERVICE == signal){
+  // else if (IOTUS_RUN_SERVICE == signal) {
+    
+  // } else if (IOTUS_END_SERVICE == signal) {
 
   // }
 }
