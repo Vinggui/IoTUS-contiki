@@ -49,6 +49,8 @@ static uint8_t gTreeOperations[TREE_PKT_MAX_VALUE-1] = {0};
 static tree_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 static uint8_t gMsgPayload[30];
 
+// static iotus_layer_priority gLayerControl;
+
 /*---------------------------------------------------------------------------*/
 static void
 clean_pieces(tree_pkt_types type)
@@ -160,7 +162,6 @@ tree_build_packet_type(tree_pkt_types operation) {
   }
   return gMsgPayload;
 }
-
 /*---------------------------------------------------------------------*/
 /*
  * Default function required from IoTUS, to initialize, run and finish this service
@@ -185,8 +186,10 @@ void iotus_signal_handler_tree_manager(iotus_service_signal signal, void *data)
     node_set_parameter(rootNode, IOTUS_NODES_PARAM_NETWORK_REACHABLE);
     #endif
   }
-  /* else if (IOTUS_RUN_SERVICE == signal){
-  } else if (IOTUS_END_SERVICE == signal){
+  //  else if (IOTUS_RUN_SERVICE == signal){
+  //   gLayerControl = iotus_get_layer_assigned_for(IOTUS_CHORE_TREE_BUILDING);
+  // }
+  // else if (IOTUS_END_SERVICE == signal){
 
-  }*/
+  // }
 }
