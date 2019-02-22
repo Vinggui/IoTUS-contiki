@@ -37,7 +37,9 @@ typedef struct nodes {
 //////////////////////////////////////////
 //            Params details            //
 //////////////////////////////////////////
-#define IOTUS_NODES_PARAM_      0b00000000
+#define IOTUS_NODES_PARAM_REGISTERED              0b00000001
+#define IOTUS_NODES_PARAM_DATA_LINK_REACHABLE     0b00000010
+#define IOTUS_NODES_PARAM_NETWORK_REACHABLE       0b00000100
 
 
 /////////////////////////////////////////
@@ -81,7 +83,12 @@ extern uint8_t nodes_self_pointer;
 #define NODES_SELF        ((iotus_node_t *)&nodes_self_pointer)
 
 
-/*--------------------------------------------------------------------------*/
+uint8_t
+node_get_parameter(iotus_node_t *node, uint8_t param);
+
+void
+node_set_parameter(iotus_node_t *node, uint8_t param);
+
 uint8_t *
 nodes_get_address(iotus_address_type addressType, iotus_node_t *node);
 

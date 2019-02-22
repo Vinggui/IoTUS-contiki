@@ -64,7 +64,7 @@ uint8_t
 nd_get_layer_operations(nd_pkt_types op);
 
 uint8_t *
-nd_build_packet_type(uint8_t operation);
+nd_build_packet_type(nd_pkt_types operation);
 
 void
 nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet);

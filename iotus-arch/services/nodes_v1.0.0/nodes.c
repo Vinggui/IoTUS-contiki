@@ -40,6 +40,42 @@ uint8_t nodes_self_pointer;
 
 /*---------------------------------------------------------------------*/
 /*
+ * \brief verify if a certain parameter is defined
+ * \param packetPiece Packet to be read.
+ * \param param Parameter to be verified
+ * \return Boolean.
+ */
+uint8_t
+node_get_parameter(iotus_node_t *node, uint8_t param) {
+  if(NULL == node) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return 0;
+  }
+
+  return node->params & param?1:0;
+}
+
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief Allow other services to set a parameter into a msg
+ * \param packetPiece Packet to be set.
+ * \param param Parameter to be written
+ * \return Boolean.
+ */
+void
+node_set_parameter(iotus_node_t *node, uint8_t param) {
+  if(NULL == node) {
+    SAFE_PRINTF_LOG_ERROR("Null pointer");
+    return;
+  }
+
+  /* Encode parameters */
+  node->params |= param;
+}
+
+/*---------------------------------------------------------------------*/
+/*
  * \brief Get the node address by its type.
  * \param   node          The pointer of the node to be queried.
  * \param   addressType   The type of address to be returned.

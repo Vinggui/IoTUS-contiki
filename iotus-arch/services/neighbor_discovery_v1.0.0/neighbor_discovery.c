@@ -24,7 +24,7 @@
 
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "NDisc"
 #include "safe-printer.h"
 
@@ -47,7 +47,7 @@ static uint8_t gMsgPayload[30];
 
 
 
-// /*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 void
 nd_remove_subscription(iotus_layer_priority layer)
 {
@@ -138,7 +138,7 @@ clean_pieces(nd_pkt_types type)
 }
 /*---------------------------------------------------------------------*/
 uint8_t *
-nd_build_packet_type(uint8_t operation) {
+nd_build_packet_type(nd_pkt_types operation) {
   iotus_additional_info_t *h;
   uint8_t totalSize = 1;
 
