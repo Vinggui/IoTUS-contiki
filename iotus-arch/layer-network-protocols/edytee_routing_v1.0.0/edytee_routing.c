@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "dev/leds.h"
+#include "edytee_routing.h"
 #include "iotus-api.h"
 #include "iotus-netstack.h"
 #include "layer-packet-manager.h"
@@ -81,6 +82,14 @@ send(iotus_packet_t *packet)
 
 /*---------------------------------------------------------------------------*/
 static void
+continue_dao_msg(iotus_packet_t *packet)
+{
+  printf("peguei DAO!\n");
+  //devolver dao ack e enviar DAo para o sink
+}
+
+/*---------------------------------------------------------------------------*/
+static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
@@ -102,11 +111,14 @@ input_packet(iotus_packet_t *packet)
   // SAFE_PRINTF_CLEAN("\n");
   uint8_t finalDestAddr = packet_unwrap_pushed_byte(packet);
 
-  printf("got net %s\n", pieces_get_data_pointer(packet));
-
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
     //This is for us...
-    active_transport_protocol->receive(packet);
+    uint8_t netCommand = packet_unwrap_pushed_byte(packet);
+    if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
+      continue_dao_msg(packet);
+    } else {
+      active_transport_protocol->receive(packet);
+    }
     return RX_PROCESSED;
   } else {
     iotus_packet_t *packetForward = NULL;
@@ -194,11 +206,7 @@ send_beacon(void *ptr)
   SAFE_PRINTF_LOG_INFO("Creating DAO\n");
  
   SAFE_PRINTF_LOG_INFO("DIO nd %u \n", packet->pktID);
-  #if USE_CSMA_MODULE == 1
-    csma_send_packet(packet);
-  #else
-    active_data_link_protocol->send(packet);
-  #endif
+  send(packet);
 }
 
 /*---------------------------------------------------------------------*/
@@ -209,7 +217,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
   uint8_t nextType[1];
 
   if(type == ND_PKT_BEACONS) {
-    SAFE_PRINTF_LOG_INFO("Got DIO");
+    SAFE_PRINTF_LOG_INFO("Got DIO BROADCAST");
 
     if(tree_connection_status == TREE_STATUS_DISCONNECTED) {
       //TODO Find a better logic for timing selection!!!
@@ -279,7 +287,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
           packet_push_bit_header(8, nextType, packet);
 
           // active_data_link_protocol->send(packet);
-          csma_send_packet(packet);
+          send(packet);
           
           // backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
           // clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
@@ -296,18 +304,48 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
     uint8_t nodeSourceAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, source)[0];
     #endif
 
-    if(type == ND_PKT_ASSOCIANTION_ANS) {
-      SAFE_PRINTF_LOG_INFO("DIO from %u\n", nodeSourceAddress);
+    if(type == ND_PKT_ASSOCIANTION_CONFIRM) {
+      SAFE_PRINTF_LOG_INFO("DAO from %u\n", nodeSourceAddress);
       //TODO send info to application layer and confirm association
+
+      // nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_GET, 4, (uint8_t *)"DAO#");
+
+      // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+      //   //make resquest
+      //   uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_GET);
+
+      //   iotus_packet_t *packet = iotus_initiate_packet(
+      //                             msg[0],
+      //                             msg,
+      //                             PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+      //                             IOTUS_PRIORITY_ROUTING,
+      //                             5000,
+      //                             gBestNode,
+      //                             control_frames_nd_cb);
+
+      //   if(NULL == packet) {
+      //     SAFE_PRINTF_LOG_INFO("Packet failed");
+      //     return;
+      //   }
+
+      //   packet->nextDestinationNode = gBestNode;
+       
+      //   //Define this commands as
+      //   nextType[0] = ND_PKT_ASSOCIANTION_REQ;
+      //   packet_push_bit_header(8, nextType, packet);
+
+      //   // active_data_link_protocol->send(packet);
+      //   send(packet);
+
     } else if(type == ND_PKT_ASSOCIANTION_GET) {
       SAFE_PRINTF_LOG_INFO("DIS from %u\n", nodeSourceAddress);
       sprintf((char *)gRoutingMsg, "#Rank_&_data");
       gRoutingMsg[0] = treePersonalRank;
-      nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CON, 12, gRoutingMsg);
+      nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_ANS, 12, gRoutingMsg);
 
       if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
         //make resquest
-        uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_CON);
+        uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_ANS);
 
         iotus_packet_t *packet = iotus_initiate_packet(
                                   msg[0],
@@ -328,7 +366,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
         packet_push_bit_header(8, nextType, packet);
        
         // active_data_link_protocol->send(packet);
-        csma_send_packet(packet);
+        send(packet);
       }
     } else if(type == ND_PKT_ASSOCIANTION_ANS) {
       SAFE_PRINTF_LOG_INFO("DIO from %u\n", nodeSourceAddress);
@@ -344,13 +382,42 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 
       leds_on(LEDS_BLUE);
 
+
+      //TODO SEND DAO using tree manager
+      // nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CONFIRM, 4, (uint8_t *));
+      //make resquest
+      // uint8_t *msg = nd_build_packet_type(TREE_PKT_ADVERTISEMENT);
+
+      iotus_packet_t *packet = iotus_initiate_packet(
+                                4,
+                                (uint8_t *)"DAO#",
+                                PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                                IOTUS_PRIORITY_ROUTING,
+                                5000,
+                                source,
+                                control_frames_nd_cb);
+      if(NULL == packet) {
+        SAFE_PRINTF_LOG_INFO("Packet failed");
+        return;
+      }
+      packet->nextDestinationNode = source;
+
+      //Define this commands as
+      nextType[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO;
+      packet_push_bit_header(8, nextType, packet);
+     
+      // active_data_link_protocol->send(packet);
+      send(packet);
+      
+
+
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
         printf("RPL rank %u\n", treePersonalRank);
 
         sprintf((char *)gRoutingMsg, "#Rank_&_data");
         gRoutingMsg[0] = treePersonalRank;
-        nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CON, 12, gRoutingMsg);
+        nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_BEACONS, 12, gRoutingMsg);
 
         if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
           backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
@@ -380,7 +447,7 @@ start(void)
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_REQ);
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_GET);
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_ANS);
-  nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CON);
+  nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CONFIRM);
   nd_set_layer_cb(IOTUS_PRIORITY_ROUTING, receive_nd_frames);
 }
 
@@ -428,7 +495,7 @@ close(void)
   
 }
 
-struct iotus_network_protocol_struct edytee_routing_protocol = {
+const struct iotus_network_protocol_struct edytee_routing_protocol = {
   start,
   post_start,
   close,

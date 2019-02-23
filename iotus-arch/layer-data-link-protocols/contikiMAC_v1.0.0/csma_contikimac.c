@@ -466,10 +466,10 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       //TODO send info to application layer and confirm association
     } else if(type == ND_PKT_ASSOCIANTION_GET) {
       SAFE_PRINTF_LOG_INFO("answer cmm from %u\n", nodeSourceAddress);
-      nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON, 4, (uint8_t *)"join");
+      nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS, 4, (uint8_t *)"join");
 
       //make resquest
-      uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_CON);
+      uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_ANS);
 
       iotus_packet_t *packet = iotus_initiate_packet(
                                 msg[0],
@@ -547,7 +547,7 @@ void start_802_15_4_contikimac(void)
   nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ);
   nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET);
   nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_ANS);
-  nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
+  // nd_set_layer_operations(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_CON);
   nd_set_layer_cb(IOTUS_PRIORITY_DATA_LINK, receive_nd_frames);
 
   if(treeRouter &&

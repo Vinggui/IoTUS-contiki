@@ -18,6 +18,15 @@
 
 #include "contiki.h"
 
+typedef enum {
+  EDYTEE_COMMAND_TYPE_DATA,
+  EDYTEE_COMMAND_TYPE_COMMAND_DAO,
+  EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK,
+  EDYTEE_COMMAND_TYPE_BROADCAST,
+
+  EDYTEE_COMMAND_TYPE_MAX
+} edytee_net_commands;
+
 PROCESS_NAME(edytee_routing_process);
 extern const struct iotus_network_protocol_struct edytee_routing_protocol;
 

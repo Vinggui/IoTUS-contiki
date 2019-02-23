@@ -32,7 +32,7 @@ typedef enum {
   ND_PKT_ASSOCIANTION_REQ,//register
   ND_PKT_ASSOCIANTION_GET,//answer
   ND_PKT_ASSOCIANTION_ANS,//join
-  ND_PKT_ASSOCIANTION_CON,
+  ND_PKT_ASSOCIANTION_CONFIRM,
   ND_PKT_KEEP_ALIVE_CON,
 
   //Do not erase this last option

@@ -30,9 +30,10 @@
 */
 typedef enum {
   TREE_PKT_ASSOCIANTION_GET = 1,  //Data get ("DIS")
-  TREE_PKT_ASSOCIANTION_ANS,  //Data info ("DIO")
-  TREE_PKT_ADVERTISEMENT,     //Data Advertisement
-  TREE_PKT_ADVERTISEMENT_ACK, //Data Advertisement Ack ("DAO-ACK")
+  TREE_PKT_ASSOCIANTION_ANS,      //Data info ("DIO")
+  TREE_PKT_ADVERTISEMENT,         //Data Advertisement
+  TREE_PKT_ADVERTISEMENT_ACK,     //Data Advertisement Ack ("DAO-ACK")
+  TREE_PKT_ADVERTISEMENT_to_root, //Data Advertisement - to the root
 
   //Do not erase this last option
   TREE_PKT_MAX_VALUE
