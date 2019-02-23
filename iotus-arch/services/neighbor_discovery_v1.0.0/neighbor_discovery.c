@@ -45,6 +45,7 @@ static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 static uint8_t gMsgPayload[30];
 nd_pkt_types ndLastOperation = 0;
+iotus_nodes_t nd_node_nogotiating = NULL;
 
 
 /*---------------------------------------------------------------------------*/

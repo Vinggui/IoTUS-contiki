@@ -85,6 +85,7 @@ static void
 continue_dao_msg(iotus_packet_t *packet)
 {
   printf("peguei DAO!\n");
+  nd_node_nogotiating = asdsd;
   //devolver dao ack e enviar DAo para o sink
 }
 
@@ -339,6 +340,9 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 
     } else if(type == ND_PKT_ASSOCIANTION_GET) {
       SAFE_PRINTF_LOG_INFO("DIS from %u\n", nodeSourceAddress);
+
+      nd_node_nogotiating = source;
+
       sprintf((char *)gRoutingMsg, "#Rank_&_data");
       gRoutingMsg[0] = treePersonalRank;
       nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_ANS, 12, gRoutingMsg);
