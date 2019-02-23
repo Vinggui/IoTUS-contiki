@@ -42,6 +42,8 @@ uint8_t treePersonalRank = 0xFF;
 iotus_node_t *rootNode;
 iotus_node_t *fatherNode;
 
+tree_manager_conn_status tree_connection_status = TREE_STATUS_DISCONNECTED;
+
 
 LIST(gTreePieces);
 
@@ -75,7 +77,7 @@ clean_pieces(tree_pkt_types type)
 void
 tree_remove_subscription(iotus_layer_priority layer)
 {
-  iotus_additional_info_t *h = list_head(gNDPieces);
+  iotus_additional_info_t *h = list_head(gTreePieces);
   while(NULL != h) {
     iotus_additional_info_t *next = list_item_next(h);
 
@@ -86,14 +88,14 @@ tree_remove_subscription(iotus_layer_priority layer)
      */
     uint8_t *payload = pieces_get_data_pointer(h);
     if(payload[1] == layer) {
-      pieces_destroy_additional_info(gNDPieces,h);
+      pieces_destroy_additional_info(gTreePieces,h);
     }
     h = next;
   }
 
   uint8_t i=0;
-  for(; i<ND_PKT_MAX_VALUE-1; i++) {
-    gNDOperations[i] &= ~(1<<layer);
+  for(; i<TREE_PKT_MAX_VALUE-1; i++) {
+    gTreeOperations[i] &= ~(1<<layer);
   }
   gLayersCB[layer] = NULL;
 }
@@ -104,7 +106,7 @@ tree_set_operation_msg(iotus_layer_priority layer, tree_pkt_types operation, uin
 {
   if(size>0) {
     //The type indicates which operation is saved there
-    uint8_t *data = pieces_modify_additional_info_var(gNDPieces, operation, size+2, TRUE);
+    uint8_t *data = pieces_modify_additional_info_var(gTreePieces, operation, size+2, TRUE);
     if(NULL == data) {
       SAFE_PRINTF_LOG_ERROR("Association piece no assigned");
       return;
@@ -171,6 +173,8 @@ void iotus_signal_handler_tree_manager(iotus_service_signal signal, void *data)
   if(IOTUS_START_SERVICE == signal) {
     SAFE_PRINT("\tService Tree\n");
 
+    list_init(gTreePieces);
+
 
     uint8_t i=0;
     for(; i<STATIC_COORDINATORS_NUM; i++) {
@@ -190,6 +194,6 @@ void iotus_signal_handler_tree_manager(iotus_service_signal signal, void *data)
   //   gLayerControl = iotus_get_layer_assigned_for(IOTUS_CHORE_TREE_BUILDING);
   // }
   // else if (IOTUS_END_SERVICE == signal){
-
+    // pieces_clean_additional_info_list(gTreePieces);
   // }
 }

@@ -80,6 +80,11 @@ iotus_additional_info_t *
 pieces_get_additional_info(list_t list, uint8_t type);
 
 void *
+pieces_set_additional_info_var(list_t list, uint8_t type,
+                                  uint16_t varSize,
+                                  Boolean createBuffer);
+
+void *
 pieces_modify_additional_info_var(list_t list,
                                   uint8_t type,
                                   uint16_t varSize,

@@ -43,16 +43,21 @@ typedef enum {
 
 typedef enum {
   TREE_STATUS_DISCONNECTED,
+  TREE_STATUS_SCANNING,
   TREE_STATUS_BUILDING,
   TREE_STATUS_CONNECTED,
   TREE_STATUS_RECONNECTING
 } tree_manager_conn_status;
+
+
+typedef void (*tree_cb_func)(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data);
 
 extern uint8_t treeRouter;
 extern uint8_t treeRouterNodes[];
 extern uint8_t treePersonalRank;
 extern iotus_node_t *rootNode;
 extern iotus_node_t *fatherNode;
+extern tree_manager_conn_status tree_connection_status;
 
 void
 tree_set_layer_operations(iotus_layer_priority layer, tree_pkt_types op);
@@ -63,7 +68,7 @@ tree_set_layer_cb(iotus_layer_priority layer, tree_cb_func cb);
 uint8_t
 tree_get_layer_operations(tree_pkt_types op);
 
-void
+uint8_t *
 tree_build_packet_type(tree_pkt_types operation);
 
 void

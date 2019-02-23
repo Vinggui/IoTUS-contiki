@@ -96,11 +96,13 @@
 
 #if EXP_CONTIKIMAC_802_15_4 == 1
 static uint8_t isCoordinator = 0;
-static uint8_t private_nd_control[12];
+// static uint8_t private_nd_control[12];
+
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer;
 static clock_time_t backOffDifference;
 static iotus_node_t *gBestNode = NULL;
+static gCoordinatorRank = 0xFF;
 
 static struct timer NDScanTimer;
 typedef enum {
@@ -329,19 +331,15 @@ send_beacon(void *ptr)
     SAFE_PRINTF_LOG_INFO("Packet failed");
     return;
   }
-  
+
   packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
  
   SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
   active_data_link_protocol->send(packet);
-
-  //   SAFE_PRINTF_LOG_INFO("Creating piggy routing\n");
-  //   piggyback_create_piece(12, private_nd_control, IOTUS_PRIORITY_DATA_LINK, NODES_BROADCAST, 1000L);
-
 }
 
 /*---------------------------------------------------------------------------*/
-void
+static void
 csma_802like_register_process(void *ptr){
   //ready to request asnwer from router
   if(gBestNode != NULL) {
@@ -401,26 +399,11 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       if(!timer_expired(&NDScanTimer)) {
         uint8_t sourceNodeRank = data[0];
 
-        uint8_t *rankPointer = pieces_modify_additional_info_var(
-                                    source->additionalInfoList,
-                                    IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
-                                    1,
-                                    TRUE);
-
-        if(!rankPointer) {
-          SAFE_PRINTF_LOG_ERROR("Rank ptr null");
-        }
-
-        *rankPointer = sourceNodeRank;
-
         if(gBestNode == NULL) {
           gBestNode = source;
           // printf("found %p\n", gBestNode);
         } else {
-          rankPointer = pieces_get_additional_info_var(
-                                  source->additionalInfoList,
-                                  IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
-          if(*rankPointer < sourceNodeRank) {
+          if(gCoordinatorRank < sourceNodeRank) {
             gBestNode = source;
             // printf("changing\n");
           } else {
@@ -518,7 +501,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
                                   IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
 
 
-      treePersonalRank = *rankPointer + 1;
+      gCoordinatorRank = *rankPointer + 1;
       gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
       leds_off(LEDS_RED);
       leds_on(LEDS_GREEN);
@@ -526,9 +509,9 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
-        printf("our rank %u\n", treePersonalRank);
+        printf("coord rank %u\n", gCoordinatorRank);
 
-        nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &treePersonalRank);
+        nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &gCoordinatorRank);
 
         backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
         clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
@@ -570,14 +553,18 @@ void start_802_15_4_contikimac(void)
   if(treeRouter &&
      addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
     //This is the root...
-    treePersonalRank = 1;
+    gCoordinatorRank = 1;
 
-    nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &treePersonalRank);
+    nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_BEACONS, 1, &gCoordinatorRank);
 
     backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
     clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
     ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
   } else {
     timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+  }
+  if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_ONEHOP_BROADCAST)) {
+    nd_association_scan_duration = CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME;
+    nd_beacon_period = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME;
   }
 }

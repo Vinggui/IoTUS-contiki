@@ -214,7 +214,6 @@ pieces_clean_additional_info_list(list_t list)
   }
 }
 
-
 /*---------------------------------------------------------------------*/
 /**
  * \brief                Allocate, set and link the additional information required.
@@ -224,20 +223,12 @@ pieces_clean_additional_info_list(list_t list)
  * \param createBuffer   If the value needs to be created of not.
  * \return               The pointer to this additional information var.
  */
-void *
-pieces_modify_additional_info_var(list_t list, uint8_t type,
+static iotus_additional_info_t *
+set_additional_info_var(list_t list, uint8_t type,
                                   uint16_t varSize,
                                   Boolean createBuffer)
 {
-  if(NULL == list) {
-    return NULL;
-  }
-
-  //Verify if this list already has this info...
-  iotus_additional_info_t *addInfo = pieces_get_additional_info(list,type);
-  if(NULL != addInfo) {
-    return pieces_get_data_pointer(addInfo);
-  } 
+  iotus_additional_info_t *addInfo;
 
   //create it...
   #if IOTUS_USING_MALLOC == 0
@@ -285,6 +276,55 @@ pieces_modify_additional_info_var(list_t list, uint8_t type,
 
   addInfo->type = type;
   list_push(list, addInfo);
+  return addInfo;
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief                Allocate, set and link the additional information required.
+ *                       Hence, the information has to be given by its pointer and size only.
+ * \param list           The list where this info will be linked.
+ * \param varSize        The size of this value
+ * \param createBuffer   If the value needs to be created of not.
+ * \return               The pointer to this additional information var.
+ */
+void *
+pieces_set_additional_info_var(list_t list, uint8_t type,
+                                  uint16_t varSize,
+                                  Boolean createBuffer)
+{
+  if(NULL == list) {
+    return NULL;
+  }
+  iotus_additional_info_t *addInfo = set_additional_info_var(list, type, varSize, createBuffer);
+  return pieces_get_data_pointer(addInfo);
+}
+
+/*---------------------------------------------------------------------*/
+/**
+ * \brief                Allocate, set and link the additional information required.
+ *                       Hence, the information has to be given by its pointer and size only.
+ * \param list           The list where this info will be linked.
+ * \param varSize        The size of this value
+ * \param createBuffer   If the value needs to be created of not.
+ * \return               The pointer to this additional information var.
+ */
+void *
+pieces_modify_additional_info_var(list_t list, uint8_t type,
+                                  uint16_t varSize,
+                                  Boolean createBuffer)
+{
+  if(NULL == list) {
+    return NULL;
+  }
+
+  //Verify if this list already has this info...
+  iotus_additional_info_t *addInfo = pieces_get_additional_info(list,type);
+  if(NULL != addInfo) {
+    return pieces_get_data_pointer(addInfo);
+  } 
+
+  addInfo = set_additional_info_var(list, type, varSize, createBuffer);
   return pieces_get_data_pointer(addInfo);
 }
 

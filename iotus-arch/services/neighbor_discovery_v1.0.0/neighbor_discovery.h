@@ -42,17 +42,17 @@ typedef enum {
 typedef void (*nd_cb_func)(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data);
 
 
-extern uint16_t ndKeepAlivePeriod;
-extern uint16_t ndAssociation_answer_delay;
+extern uint16_t nd_beacon_period;
+extern uint16_t nd_association_scan_duration;
 
 void
 nd_remove_subscription(iotus_layer_priority layer);
 
 void
-nd_set_operation_msgnd_set_operation_msg(iotus_layer_priority layer,
-                                         nd_pkt_types operation,
-                                         uint8_t size,
-                                         uint8_t* payload);
+nd_set_operation_msg(iotus_layer_priority layer,
+                     nd_pkt_types operation,
+                     uint8_t size,
+                     uint8_t* payload);
 
 void
 nd_set_layer_cb(iotus_layer_priority layer, nd_cb_func cb);

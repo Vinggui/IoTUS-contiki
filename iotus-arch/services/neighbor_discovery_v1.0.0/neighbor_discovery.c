@@ -35,8 +35,8 @@
 */
 
 
-uint16_t ndKeepAlivePeriod;
-uint16_t ndAssociation_answer_delay;
+uint16_t nd_beacon_period;
+uint16_t nd_association_scan_duration;
 
 LIST(gNDPieces);
 
@@ -44,7 +44,7 @@ LIST(gNDPieces);
 static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 static uint8_t gMsgPayload[30];
-
+nd_pkt_types ndLastOperation = 0;
 
 
 /*---------------------------------------------------------------------------*/
@@ -76,13 +76,29 @@ nd_remove_subscription(iotus_layer_priority layer)
 
 // /*---------------------------------------------------------------------------*/
 void
-nd_set_operation_msg(iotus_layer_priority layer, nd_pkt_types operation, uint8_t size, uint8_t* payload)
+nd_set_operation_msg(iotus_layer_priority layer,
+                     nd_pkt_types operation,
+                     uint8_t size,
+                     uint8_t* payload)
 {
   if(size>0) {
-    //Ths type indicates which operation is saved there
-    uint8_t *data = pieces_modify_additional_info_var(gNDPieces, operation, size+2, TRUE);
+    //First delete older msgs
+    iotus_additional_info_t *h = list_head(gNDPieces);
+    while(NULL != h) {
+      iotus_additional_info_t *next = list_item_next(h);
+
+      uint8_t *payload = pieces_get_data_pointer(h);
+      if(payload[1] == layer &&
+         h->type == operation) {
+        pieces_destroy_additional_info(gNDPieces,h);
+      }
+      h = next;
+    }
+    
+    //The type indicates which operation is saved there
+    uint8_t *data = pieces_set_additional_info_var(gNDPieces, operation, size+2, TRUE);
     if(NULL == data) {
-      SAFE_PRINTF_LOG_ERROR("Association piece no assigned");
+      SAFE_PRINTF_LOG_ERROR("Association piece not assigned");
       return;
     }
 
@@ -161,6 +177,7 @@ nd_build_packet_type(nd_pkt_types operation) {
   if(operation != ND_PKT_BEACONS) {
     clean_pieces(operation);
   }
+  ndLastOperation = operation;
   return gMsgPayload;
 }
 
@@ -225,6 +242,6 @@ void iotus_signal_handler_neighbor_discovery(iotus_service_signal signal, void *
   // else if (IOTUS_RUN_SERVICE == signal) {
     
   // } else if (IOTUS_END_SERVICE == signal) {
-
+  //    pieces_clean_additional_info_list(gNDPieces);
   // }
 }
