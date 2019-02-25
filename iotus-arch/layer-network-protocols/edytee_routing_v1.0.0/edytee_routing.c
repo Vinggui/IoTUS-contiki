@@ -40,9 +40,11 @@
 #define RPL_DAO_PERIOD_TIME                   CONTIKIMAC_ND_PERIOD_TIME
 #define RPL_ND_BACKOFF_TIME                   CONTIKIMAC_ND_BACKOFF_TIME
 #define RPL_ND_SCAN_TIME                      CONTIKIMAC_ND_SCAN_TIME
+#define RPL_DAO_PERIOD                        CONTIKIMAC_DAO_PERIOD
+#define RPL_DAO_PERIOD_BACKOFF                CONTIKIMAC_DAO_PERIOD_BACKOFF
 
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer;
+static struct ctimer sendNDTimer, sendDAOTimer, replyDAOACKTimer;
 static struct timer NDScanTimer;
 static clock_time_t backOffDifference;
 iotus_node_t *rootNode;
@@ -91,21 +93,56 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 
 /*---------------------------------------------------------------------------*/
 static void
+sendDAOToSink(void *ptr)
+{
+  uint8_t daoMsg[5], nextType[1];
+  memcpy(daoMsg, "#DAO", 4);
+  iotus_node_t *source = ptr;
+  daoMsg[0] = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, source)[0];
+
+  iotus_packet_t *packetForward = NULL;
+  packetForward = iotus_initiate_packet(
+                      4,
+                      daoMsg,
+                      PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                      IOTUS_PRIORITY_ROUTING,
+                      ROUTING_PACKETS_TIMEOUT,
+                      rootNode,
+                      send_cb);
+
+  if(NULL == packetForward) {
+    SAFE_PRINTF_LOG_INFO("Packet failed");
+    return RX_ERR_DROPPED;
+  }
+
+  //Define this commands as
+  nextType[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK;
+  packet_push_bit_header(8, nextType, packetForward);
+
+  packetForward->nextDestinationNode = fatherNode;
+
+  #if DEBUG != IOTUS_DONT_PRINT
+  iotus_netstack_return status = send(packetForward);
+  #else
+  send(packetForward);
+  #endif
+  SAFE_PRINTF_LOG_INFO("DAO-followed\n");
+}
+
+/*---------------------------------------------------------------------------*/
+static void
 continue_dao_msg(iotus_packet_t *packet)
 {
-  printf("got DAO!\n");
-  nd_node_nogotiating = asdsd;
-  //devolver dao ack e enviar DAo para o sink
-
   uint8_t nextType[1];
-
+  SAFE_PRINTF_LOG_INFO("got DAO!\n");
+  //devolver dao ack e enviar DAo para o sink
   iotus_node_t *source = packet_get_prevSource_node(packet);
 
   iotus_packet_t *packetForward = NULL;
   packetForward = iotus_initiate_packet(
                       4,
                       (uint8_t *)"DACK",
-                      packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                      PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM | PACKET_PARAMETERS_WAIT_FOR_ACK,
                       IOTUS_PRIORITY_ROUTING,
                       ROUTING_PACKETS_TIMEOUT,
                       source,
@@ -118,27 +155,41 @@ continue_dao_msg(iotus_packet_t *packet)
 
   //Define this commands as
   nextType[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK;
-  packet_push_bit_header(8, nextType, packet);
+  packet_push_bit_header(8, nextType, packetForward);
+
+  packetForward->nextDestinationNode = source;
 
   #if DEBUG != IOTUS_DONT_PRINT
   iotus_netstack_return status = send(packetForward);
   #else
   send(packetForward);
   #endif
-  SAFE_PRINTF_LOG_INFO("DAO-ACK replied\n");
+  SAFE_PRINTF_LOG_INFO("DAO-ACK replied");
+
+  //If not the sink node...
+  if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] != 1) {
+    clock_time_t backoff = CLOCK_SECOND*EDYTEE_RPL_DAOACK_DELAY;//ms
+    ctimer_set(&replyDAOACKTimer, backoff, sendDAOToSink, source);
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+sendPeriodicDAO(void *ptr)
+{
+  sendDAOToSink(NODES_SELF);
+
+  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+  ctimer_set(&sendDAOTimer, backoff, sendDAOToSink, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
 static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
 {
-  // SAFE_PRINTF_CLEAN("Got packet: ");
-  // int i;
-  // for (i = 0; i < packet_get_payload_size(packet); ++i)
-  // {
-  //   SAFE_PRINTF_CLEAN("%02x ", packet_get_payload_data(packet)[i]);
-  // }
-  // SAFE_PRINTF_CLEAN("\n");
+  
+  iotus_node_t *finalDestNode = NULL;
   uint8_t finalDestAddr = packet_unwrap_pushed_byte(packet);
 
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
@@ -146,57 +197,65 @@ input_packet(iotus_packet_t *packet)
     uint8_t netCommand = packet_unwrap_pushed_byte(packet);
     if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
       continue_dao_msg(packet);
+      return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
-      printf("Got DAO-ACK\n");
+      SAFE_PRINTF_LOG_INFO("Got DAO-ACK");
+      tree_connection_status = TREE_STATUS_CONNECTED;
+      leds_on(LEDS_BLUE);
+      //Start our periodic DAO sends
+      if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] != 1) {
+        backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+        ctimer_set(&sendDAOTimer, backoff, sendPeriodicDAO, NULL);
+      }
+      return RX_PROCESSED;
+    } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
+      SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
     } else {
       active_transport_protocol->receive(packet);
     }
     return RX_PROCESSED;
-  } else {
-    iotus_packet_t *packetForward = NULL;
-
-
-    //search for the next node...
-    uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-
-    uint8_t nextHop = ourAddr-1;
-
-    if(nextHop != 0) {
-        uint8_t address2[2] = {1,0};
-        rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
-        if(rootNode != NULL) {
-          packetForward = iotus_initiate_packet(
-                              packet_get_payload_size(packet),
-                              packet_get_payload_data(packet),
-                              packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
-                              IOTUS_PRIORITY_ROUTING,
-                              ROUTING_PACKETS_TIMEOUT,
-                              rootNode,
-                              send_cb);
-
-          if(NULL == packetForward) {
-            SAFE_PRINTF_LOG_INFO("Packet failed");
-            return RX_ERR_DROPPED;
-          }
-
-          #if DEBUG != IOTUS_DONT_PRINT
-          iotus_netstack_return status = send(packetForward);
-          #else
-          send(packetForward);
-          #endif
-          SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
-          // // if (!(MAC_TX_OK == status ||
-          // //     MAC_TX_DEFERRED == status)) {
-          // if (MAC_TX_DEFERRED != status) {
-          //   send_cb(packetForward, status);
-          //   // printf("Packet fwd del %u\n", packetForward->pktID);
-          //   // packet_destroy(packetForward);
-          // }
-        }
-    }
-    return RX_PROCESSED;
   }
 
+
+  iotus_packet_t *packetForward = NULL;
+  //search for the next node...
+  // uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+
+  uint8_t address2[2] = {finalDestAddr,0};
+  finalDestNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
+  if(finalDestNode != NULL) {
+    packetForward = iotus_initiate_packet(
+                        packet_get_payload_size(packet),
+                        packet_get_payload_data(packet),
+                        packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                        IOTUS_PRIORITY_ROUTING,
+                        ROUTING_PACKETS_TIMEOUT,
+                        finalDestNode,
+                        send_cb);
+
+    if(NULL == packetForward) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return RX_ERR_DROPPED;
+    }
+
+    packetForward->nextDestinationNode = fatherNode;
+
+    #if DEBUG != IOTUS_DONT_PRINT
+    iotus_netstack_return status = send(packetForward);
+    #else
+    send(packetForward);
+    #endif
+    SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
+    // // if (!(MAC_TX_OK == status ||
+    // //     MAC_TX_DEFERRED == status)) {
+    // if (MAC_TX_DEFERRED != status) {
+    //   send_cb(packetForward, status);
+    //   // printf("Packet fwd del %u\n", packetForward->pktID);
+    //   // packet_destroy(packetForward);
+    // }
+  }
+  return RX_PROCESSED;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -386,8 +445,6 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       treePersonalRank = *rankPointer + 1;
       tree_connection_status = TREE_STATUS_CONNECTED;
 
-      leds_on(LEDS_BLUE);
-
 
       //TODO SEND DAO using tree manager
       // nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_CONFIRM, 4, (uint8_t *));
@@ -419,7 +476,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
-        printf("RPL rank %u\n", treePersonalRank);
+        SAFE_PRINTF_LOG_INFO("RPL rank %u\n", treePersonalRank);
 
         sprintf((char *)gRoutingMsg, "#Rank_&_data");
         gRoutingMsg[0] = treePersonalRank;

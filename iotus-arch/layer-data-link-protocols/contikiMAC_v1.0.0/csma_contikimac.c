@@ -387,8 +387,8 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 {
   iotus_node_t *source = packet_get_prevSource_node(packet);
   uint8_t nextType[1];
+  nd_node_nogotiating = source;
 
-    printf("grt554 \n");
   if(type == ND_PKT_BEACONS) {
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
       //Ignore msg

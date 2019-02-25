@@ -92,6 +92,8 @@
 #define CONTIKIMAC_ND_PERIOD_TIME         4//sec
 #define CONTIKIMAC_ND_BACKOFF_TIME        2000UL
 #define CONTIKIMAC_ND_SCAN_TIME           5//sec
+#define CONTIKIMAC_DAO_PERIOD             30//sec
+#define CONTIKIMAC_DAO_PERIOD_BACKOFF     5000UL
 
 #define MAX_GENERATED_PKT                 60
 #define MSG_INTERVAL                      30//sec

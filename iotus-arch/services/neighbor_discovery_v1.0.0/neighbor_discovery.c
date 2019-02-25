@@ -45,7 +45,7 @@ static uint8_t gNDOperations[ND_PKT_MAX_VALUE-1] = {0};
 static nd_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 static uint8_t gMsgPayload[30];
 nd_pkt_types ndLastOperation = 0;
-iotus_nodes_t nd_node_nogotiating = NULL;
+iotus_node_t *nd_node_nogotiating = NULL;
 
 
 /*---------------------------------------------------------------------------*/
@@ -196,7 +196,10 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
   uint8_t totalSize = ptr[0]-1;
   ptr++;//first byte is the total length
 
-  uint8_t *skippedLayerPtr = NULL;
+  uint8_t lastMsgBuff[30] = {0};
+  uint8_t lastSize = 0;
+  uint8_t lastLayer = 0;
+
 
   /*
    * They layer calling this function HAS to be the last to have it`s CB called,
@@ -206,11 +209,13 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
   while(totalSize > 0) {
     pieceSize = ptr[0];
     layer = ptr[1];
-    printf("era %p layer %u\n", ptr, layer);
-// printf("aooo %p type %u size %u op %u layer%u\n", gLayersCB[layer], type, gNDOperations[type], pieceSize, layer );
+    // printf("era %p layer %u\n", ptr, layer);
     if(iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY) == layer) {
       //skip for later
-      skippedLayerPtr = ptr;
+      memcpy(lastMsgBuff, ptr+2, pieceSize);
+      lastSize = pieceSize;
+      lastLayer = layer;
+      // printf("tava %u %p\n", skippedLayerPtr[1], skippedLayerPtr);
 
     } else if(gNDOperations[type] & (1<<layer) ||
        gLayersCB[layer] != NULL) {
@@ -225,10 +230,9 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
     ptr += pieceSize;
     totalSize -= pieceSize;
   }
-printf("cheguei %u %p %p\n", skippedLayerPtr[1], skippedLayerPtr, gLayersCB[skippedLayerPtr[1]]);//Ta dando 0!
-  if(skippedLayerPtr != NULL) {
-    printf("grt44 \n");
-    gLayersCB[skippedLayerPtr[1]](packet, type, skippedLayerPtr[0]-2, skippedLayerPtr+2);
+// printf("cheguei %u %p %p\n", skippedLayerPtr[1], skippedLayerPtr, gLayersCB[skippedLayerPtr[1]]);//Ta dando 0!
+  if(lastSize > 0) {
+    gLayersCB[lastLayer](packet, type, lastSize, lastMsgBuff);
   }
 }
 

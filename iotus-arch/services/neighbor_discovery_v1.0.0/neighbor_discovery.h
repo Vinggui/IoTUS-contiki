@@ -44,6 +44,7 @@ typedef void (*nd_cb_func)(struct packet_piece *packet, uint8_t type, uint8_t si
 
 extern uint16_t nd_beacon_period;
 extern uint16_t nd_association_scan_duration;
+extern iotus_node_t *nd_node_nogotiating;
 
 void
 nd_remove_subscription(iotus_layer_priority layer);

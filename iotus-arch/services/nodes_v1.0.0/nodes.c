@@ -91,7 +91,10 @@ nodes_get_address(iotus_address_type addressType, iotus_node_t *node) {
   }
   if(node == NODES_BROADCAST) {
     return addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_BROADCAST);
+  } else if(node == NODES_SELF) {
+    return addresses_self_get_pointer(addressType);
   }
+
   iotus_additional_info_t *addressInfo = pieces_get_additional_info(
                                               node->additionalInfoList,
                                               addressType);
