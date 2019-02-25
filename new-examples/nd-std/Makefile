@@ -3,8 +3,11 @@ APPS+=powertrace
 
 # For the use of the new archtecture, this declaration is necessary
 #CONTIKI_COMM_NEW_STACK = IoTUS
-CONTIKI_WITH_RIME = 1
+CONTIKI_WITH_RIME = 0
 CONTIKI_WITH_IPV6 = 0
+
+
+ CFLAGS += -DCONTIKI_WITH_RPL_LIKE=1
 
 # These 3 declarations are mandatory to explicity define IoTUS
 #IOTUS_CONF_USING_TRANSPORT = 0

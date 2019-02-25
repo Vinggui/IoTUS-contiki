@@ -46,9 +46,10 @@
 #else /* NETSTACK_CONF_WITH_IPV6 */
 
 /* Network setup for non-IPv6 (rime). */
-
 #if CONTIKI_WITH_RIME == 1
   #define NETSTACK_CONF_NETWORK rime_driver
+#elif defined(CONTIKI_WITH_RPL_LIKE)
+  #define NETSTACK_CONF_NETWORK rpllikenet_driver
 #else
   #define NETSTACK_CONF_NETWORK staticnet_driver
 #endif

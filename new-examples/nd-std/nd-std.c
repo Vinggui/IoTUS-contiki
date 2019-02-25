@@ -40,7 +40,7 @@
 #include "contiki.h"
 #include "dev/leds.h"
 #include "powertrace.h"
-#include "staticnet.h"
+#include "rpl-like-net.h"
 #include <stdio.h> /* For printf() */
 #include "random.h"
 
