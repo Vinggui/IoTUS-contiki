@@ -62,10 +62,10 @@ send(iotus_packet_t *packet)
     //Get the final static destination
     uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
                                           packet->finalDestinationNode);
-    uint8_t address[2] = {1,0};
-    fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
+    // uint8_t address[2] = {1,0};
+    // fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
 
-    packet->nextDestinationNode = fatherNode;
+    // packet->nextDestinationNode = fatherNode;
 
     uint8_t bitSequence[1];
     bitSequence[0] = finalDestLastAddress[0];
@@ -79,15 +79,6 @@ send(iotus_packet_t *packet)
 #endif
 }
 
-
-/*---------------------------------------------------------------------------*/
-static void
-continue_dao_msg(iotus_packet_t *packet)
-{
-  printf("peguei DAO!\n");
-  //devolver dao ack e enviar DAo para o sink
-}
-
 /*---------------------------------------------------------------------------*/
 static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
@@ -96,6 +87,44 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
   // if(returnAns == MAC_TX_OK) {
     packet_destroy(packet);
   // }
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+continue_dao_msg(iotus_packet_t *packet)
+{
+  printf("got DAO!\n");
+  //devolver dao ack e enviar DAo para o sink
+
+  uint8_t nextType[1];
+
+  iotus_node_t *source = packet_get_prevSource_node(packet);
+
+  iotus_packet_t *packetForward = NULL;
+  packetForward = iotus_initiate_packet(
+                      4,
+                      (uint8_t *)"DACK",
+                      packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                      IOTUS_PRIORITY_ROUTING,
+                      ROUTING_PACKETS_TIMEOUT,
+                      source,
+                      send_cb);
+
+  if(NULL == packetForward) {
+    SAFE_PRINTF_LOG_INFO("Packet failed");
+    return RX_ERR_DROPPED;
+  }
+
+  //Define this commands as
+  nextType[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK;
+  packet_push_bit_header(8, nextType, packet);
+
+  #if DEBUG != IOTUS_DONT_PRINT
+  iotus_netstack_return status = send(packetForward);
+  #else
+  send(packetForward);
+  #endif
+  SAFE_PRINTF_LOG_INFO("DAO-ACK replied\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -116,6 +145,8 @@ input_packet(iotus_packet_t *packet)
     uint8_t netCommand = packet_unwrap_pushed_byte(packet);
     if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
       continue_dao_msg(packet);
+    } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
+      printf("Got DAO-ACK\n");
     } else {
       active_transport_protocol->receive(packet);
     }
@@ -307,35 +338,6 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
     if(type == ND_PKT_ASSOCIANTION_CONFIRM) {
       SAFE_PRINTF_LOG_INFO("DAO from %u\n", nodeSourceAddress);
       //TODO send info to application layer and confirm association
-
-      // nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_GET, 4, (uint8_t *)"DAO#");
-
-      // if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-      //   //make resquest
-      //   uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_GET);
-
-      //   iotus_packet_t *packet = iotus_initiate_packet(
-      //                             msg[0],
-      //                             msg,
-      //                             PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-      //                             IOTUS_PRIORITY_ROUTING,
-      //                             5000,
-      //                             gBestNode,
-      //                             control_frames_nd_cb);
-
-      //   if(NULL == packet) {
-      //     SAFE_PRINTF_LOG_INFO("Packet failed");
-      //     return;
-      //   }
-
-      //   packet->nextDestinationNode = gBestNode;
-       
-      //   //Define this commands as
-      //   nextType[0] = ND_PKT_ASSOCIANTION_REQ;
-      //   packet_push_bit_header(8, nextType, packet);
-
-      //   // active_data_link_protocol->send(packet);
-      //   send(packet);
 
     } else if(type == ND_PKT_ASSOCIANTION_GET) {
       SAFE_PRINTF_LOG_INFO("DIS from %u\n", nodeSourceAddress);

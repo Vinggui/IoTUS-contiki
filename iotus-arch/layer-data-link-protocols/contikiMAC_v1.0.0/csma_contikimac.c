@@ -57,7 +57,7 @@
 #include <stdio.h>
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contCSMA"
 #include "safe-printer.h"
 
@@ -388,6 +388,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
   iotus_node_t *source = packet_get_prevSource_node(packet);
   uint8_t nextType[1];
 
+    printf("grt554 \n");
   if(type == ND_PKT_BEACONS) {
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
       //Ignore msg

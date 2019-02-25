@@ -205,10 +205,12 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
   while(totalSize > 0) {
     pieceSize = ptr[0];
     layer = ptr[1];
-
+    printf("era %p layer %u\n", ptr, layer);
+// printf("aooo %p type %u size %u op %u layer%u\n", gLayersCB[layer], type, gNDOperations[type], pieceSize, layer );
     if(iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY) == layer) {
       //skip for later
       skippedLayerPtr = ptr;
+
     } else if(gNDOperations[type] & (1<<layer) ||
        gLayersCB[layer] != NULL) {
       /*
@@ -222,8 +224,9 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
     ptr += pieceSize;
     totalSize -= pieceSize;
   }
-
+printf("cheguei %u %p %p\n", skippedLayerPtr[1], skippedLayerPtr, gLayersCB[skippedLayerPtr[1]]);//Ta dando 0!
   if(skippedLayerPtr != NULL) {
+    printf("grt44 \n");
     gLayersCB[skippedLayerPtr[1]](packet, type, skippedLayerPtr[0]-2, skippedLayerPtr+2);
   }
 }
