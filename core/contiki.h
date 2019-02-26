@@ -86,7 +86,7 @@
 
 #define EXP_CONTIKIMAC_802_15_4           1
 
-#define STATIC_COORDINATORS               1,2,3//Use comma to add more routers
+#define STATIC_COORDINATORS               1,2,3,4,5,6//Use comma to add more routers
 #define STATIC_ROOT_ADDRESS               {1,0}//two bytes address (short)
 
 #define CONTIKIMAC_ND_PERIOD_TIME         4//sec

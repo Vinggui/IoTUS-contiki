@@ -112,11 +112,11 @@ phase_update(const linkaddr_t *neighbor, rtimer_clock_t time,
       if(e->noacks == 1) {
         timer_set(&e->noacks_timer, MAX_NOACKS_TIME);
       }
-      if(e->noacks >= MAX_NOACKS || timer_expired(&e->noacks_timer)) {
-        PRINTF2("drop %d\n", neighbor->u8[0]);
-        nbr_table_remove(nbr_phase, e);
-        return;
-      }
+      // if(e->noacks >= MAX_NOACKS || timer_expired(&e->noacks_timer)) {
+        // PRINTF2("drop %d\n", neighbor->u8[0]);
+        // nbr_table_remove(nbr_phase, e);
+        // return;
+      // }
     } else if(mac_status == MAC_TX_OK) {
       e->noacks = 0;
     }

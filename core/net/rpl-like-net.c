@@ -111,6 +111,7 @@ struct neighbor_queue {
 MEMB(neighbor_memb, struct neighbor_queue, RPL_MAX_NEIGHBOR_QUEUES);
 LIST(neighbor_list);
 
+static void check_data_link_connection(void *ptr);
 /*---------------------------------------------------------------------------*/
 static struct neighbor_queue *
 neighbor_queue_from_addr(const linkaddr_t *addr)
@@ -129,6 +130,13 @@ neighbor_queue_from_addr(const linkaddr_t *addr)
 static void
 packet_sent(void *ptr, int status, int num_tx)
 {
+  if(status != MAC_TX_OK) {
+    if(gTreeStatus == TREE_STATUS_WAITING_ASNWER) {
+      reset_connection();
+      return;
+    }
+  }
+
   switch(status) {
   case MAC_TX_COLLISION:
     PRINTF("rpllikenet: collision after %d tx\n", num_tx);
@@ -178,6 +186,54 @@ rpllikenet_output(void)
   packetbuf_compact();
   NETSTACK_LLSEC.send(packet_sent, NULL);
   return 1;
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+reset_connection(void)
+{
+  ctimer_stop(&sendNDTimer);
+  ctimer_stop(&sendDaoAckTimer);
+  ctimer_stop(&sendDaoTimer);
+
+
+  gTreeStatus = TREE_STATUS_DISCONNECTED;
+
+  gPersonalTreeRank = 0xFF;
+  treeRouter = 0;
+  gRPLTreeFatherRank = 0xFF;
+  linkaddr_copy(&gRPLTreeRoot, &linkaddr_null);
+  linkaddr_copy(&gRPLTreeFather, &linkaddr_null);
+  linkaddr_copy(&gBestNode, &linkaddr_null);
+   gBestNodeRank = 0xFF;
+
+  gData_link_is_on = 0;
+
+  check_data_link_connection(NULL);
+}
+
+/*---------------------------------------------------------------------------*/
+void
+RPL_like_DIS_process(void *ptr){
+  // printf("Creating DIS msg\n");
+  //DIS packets have 4 bytes of base size
+  packetbuf_copyfrom("DIS#", 4);
+
+  //Address null is Broadcast
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIS;
+  } else {
+    PRINTF("Failed to create packet");
+    return;
+  }
+  packetbuf_compact();
+  rpllikenet_output();
+
+  gTreeStatus = TREE_STATUS_WAITING_ASNWER;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -361,29 +417,9 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
           // printf("Have option %u %u\n", gBestNode.u8[1], gBestNode.u8[0]);
           //make resquest
 
-          // printf("Creating DIS msg\n");
-          //DIS packets have 4 bytes of base size
-          packetbuf_copyfrom("DIS#", 4);
-
-          //Address null is Broadcast
-          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
-          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-
-          if(packetbuf_hdralloc(1)) {
-            uint8_t *buf = packetbuf_hdrptr();
-            buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIS;
-          } else {
-            PRINTF("Failed to create packet");
-            return;
-          }
-          packetbuf_compact();
-          rpllikenet_output();
-
-          gTreeStatus = TREE_STATUS_WAITING_ASNWER;
-
-          // backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-          // clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
-          // ctimer_set(&sendNDTimer, backoff, RPL_like_register_process, NULL);
+          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = (random_rand()%RPL_DAO_PERIOD_TIME)*CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+          ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
         } else {
           // printf("No option returng\n");
           //Nothing found. Start over...
@@ -520,10 +556,10 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         NETSTACK_MAC.on();
         leds_off(LEDS_RED);
         leds_on(LEDS_BLUE);
+        printf("Connected RPL rank %u\n", gPersonalTreeRank);
 
         //Now continue routing operation in the case of a router device
         if(treeRouter) {
-          PRINTF("our RPL rank %u\n", gPersonalTreeRank);
 
           backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
           clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
@@ -638,7 +674,6 @@ check_data_link_connection(void *ptr)
     ctimer_set(&sendNDTimer, backoff, check_data_link_connection, NULL);
   }
 }
-
 
 /*---------------------------------------------------------------------------*/
 static void

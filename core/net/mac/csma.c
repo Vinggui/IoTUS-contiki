@@ -159,6 +159,7 @@ static struct timer NDScanTimer;
 typedef enum {
   DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED,
   DATA_LINK_ND_CONNECTION_STATUS_CONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER,
   DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER,
   DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION
 } csma_connection_status;
@@ -501,8 +502,27 @@ send_packet(mac_callback_t sent, void *ptr)
 
 /*---------------------------------------------------------------------------*/
 #if EXP_CONTIKIMAC_802_15_4 == 1
+static void
+reset_connection(void)
+{
+  ctimer_stop(&sendNDTimer);
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
+
+  treeRouter = 0;
+  treePersonalRank = 0xFF;
+  linkaddr_copy(&treeRoot, &linkaddr_null);
+  linkaddr_copy(&treeFather, &linkaddr_null);
+  treeFatherRank = 0xFF;
+  linkaddr_copy(&gBestNode, &linkaddr_null);
+  static uint8_t gBestNodeRank = 0xFF;
+
+  NETSTACK_RDC.off(1);
+  timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+}
+
+/*---------------------------------------------------------------------------*/
 void
-csma_802like_register_process(void *ptr){
+csma_802like_answer_process(void *ptr){
   //ready to request asnwer from router
   if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
     //make resquest
@@ -524,10 +544,39 @@ csma_802like_register_process(void *ptr){
 }
 
 /*---------------------------------------------------------------------------*/
+void
+csma_802like_register_process(void *ptr){
+  NETSTACK_RDC.on();
+  // printf("register\n");
+  packetbuf_copyfrom("register", 8);
+
+  //Address null is Broadcast
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_CMDFRAME);
+  packetbuf_compact();
+  send_packet(control_frames_nd_cb, NULL);
+
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+  
+
+  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+  ctimer_set(&sendNDTimer, backoff, csma_802like_answer_process, NULL);
+}
+
+/*---------------------------------------------------------------------------*/
 static void
 control_frames_nd_cb(void *ptr, int status, int num_transmissions)
 {
   PRINTF("nd send");
+  // printf("got ansrwe %u %u\n", status, num_transmissions);
+  if(status != MAC_TX_OK) {
+    if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
+      reset_connection();
+    }
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -590,26 +639,12 @@ csma_control_frame_receive(void)
         //Select the best rank node and make a request
         // printf("t expired\n");
         if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
-          NETSTACK_RDC.on();
           // printf("Have option\n");
           //make resquest
-
-          // printf("register\n");
-          packetbuf_copyfrom("register", 8);
-
-          //Address null is Broadcast
-          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
-          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-
-          packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_CMDFRAME);
-          packetbuf_compact();
-          send_packet(control_frames_nd_cb, NULL);
-
-          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER;
           
-
           backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          clock_time_t backoff = (random_rand()%CONTIKIMAC_ND_PERIOD_TIME)*CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
           // printf("No option returng\n");
@@ -651,10 +686,10 @@ csma_control_frame_receive(void)
       gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
       leds_off(LEDS_RED);
       leds_on(LEDS_GREEN);
+      printf("Connected CSMA rank %u\n", treePersonalRank);
 
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
-        PRINTF("our rank %u\n", treePersonalRank);
 
         backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
         clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
