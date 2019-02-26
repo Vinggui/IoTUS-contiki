@@ -3,7 +3,7 @@
  * @{
  */
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
@@ -64,6 +64,7 @@
 #define RPL_ND_SCAN_TIME                      CONTIKIMAC_ND_SCAN_TIME
 #define RPL_DAO_PERIOD                        CONTIKIMAC_DAO_PERIOD
 #define RPL_DAO_PERIOD_BACKOFF                CONTIKIMAC_DAO_PERIOD_BACKOFF
+#define RPL_DAO_FOLLOW_DELAY                  2//sec
 
 //Timer for sending neighbor discovery
 static struct ctimer sendNDTimer, sendDaoAckTimer, sendDaoTimer;
@@ -84,9 +85,9 @@ static tree_manager_conn_status gTreeStatus;
 
 static uint8_t treeRouter = 0;
 static uint8_t treeRouterNodes[] = {STATIC_COORDINATORS};
-static linkaddr_t treeRoot;
-static linkaddr_t treeFather;
-static uint8_t treeFatherRank = 0xFF;
+static linkaddr_t gRPLTreeRoot;
+static linkaddr_t gRPLTreeFather;
+static uint8_t gRPLTreeFatherRank = 0xFF;
 static linkaddr_t gBestNode;
 static uint8_t gBestNodeRank = 0xFF;
 
@@ -101,7 +102,7 @@ struct neighbor_queue {
 };
 
 /* The maximum number of co-existing neighbor queues */
-#ifdef RPL_CONF_MAX_NEIGHBOR_QUEUES
+#ifdef CSMA_CONF_MAX_NEIGHBOR_QUEUES
 #define RPL_MAX_NEIGHBOR_QUEUES CSMA_CONF_MAX_NEIGHBOR_QUEUES
 #else
 #define RPL_MAX_NEIGHBOR_QUEUES 2
@@ -158,7 +159,7 @@ rpllikenet_output(void)
     PRINTF("Failed to create packet");
     return 0;
   }
-  
+
   static linkaddr_t addrNext;
 
   /* Look for the neighbor entry */
@@ -168,8 +169,7 @@ rpllikenet_output(void)
     // printf("aquui\n");
     linkaddr_copy(&addrNext, finalReceiver);
   } else {
-    // printf("TODO\n");
-    //TODO
+    linkaddr_copy(&addrNext, &n->nextAddr);
   }
   // printf("era %u enviando %u %u\n", finalReceiver->u8[0], addrNext.u8[0], addrNext.u8[1]);
 
@@ -253,14 +253,81 @@ send_DIO(void *ptr)
   create_DIO_msg(&linkaddr_null);
 }
 
+/*---------------------------------------------------------------------------*/
+static void
+sendDAOToSink(void *ptr)
+{
+  struct neighbor_queue *n = ptr;
+  PRINTF("DAO to sink\n");
+
+  // //Address null is Broadcast
+
+  sprintf((char *)gRoutingMsg, "#DAO");
+  gRoutingMsg[0] = n->addr.u8[0];
+
+  packetbuf_copyfrom(gRoutingMsg, 4);
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gRPLTreeRoot);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK;
+  } else {
+    PRINTF("Failed to create packet");
+    return;
+  }
+
+  packetbuf_compact();
+  rpllikenet_output();
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+sendPeriodicDAO(void *ptr)
+{
+  PRINTF("DAO to sink\n");
+
+  // //Address null is Broadcast
+
+  sprintf((char *)gRoutingMsg, "#DAO");
+  gRoutingMsg[0] = linkaddr_node_addr.u8[0];
+
+  packetbuf_copyfrom(gRoutingMsg, 4);
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gRPLTreeRoot);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK;
+  } else {
+    PRINTF("Failed to create packet");
+    return;
+  }
+
+  packetbuf_compact();
+  rpllikenet_output();
+
+  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+  ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
+}
+
 /*---------------------------------------------------------------------*/
 static void
 receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
 {
   struct neighbor_queue *n;
   linkaddr_t sourceAddr;
+  uint8_t weAreRoot = 0;
   linkaddr_copy(&sourceAddr, packetbuf_addr(PACKETBUF_ADDR_SENDER));
-  
+  // printf("addresses1 %u %u | %u %u\n", gRPLTreeRoot.u8[0], gRPLTreeRoot.u8[1], linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1]);
+  if(linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
+    weAreRoot = 1;
+  }
+
+
   if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIO_BROADCAST) {
     if(gTreeStatus == TREE_STATUS_CONNECTED) {
       //Ignore msg
@@ -274,7 +341,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         // printf("Time ok\n");
         uint8_t *data = packetbuf_dataptr();
         uint8_t sourceNodeRank = data[0];
-        printf("heard RPL rank %u\n", sourceNodeRank);
+        // printf("heard RPL rank %u\n", sourceNodeRank);
 
         if(linkaddr_cmp(&gBestNode, &linkaddr_null)) {
           linkaddr_copy(&gBestNode, &sourceAddr);
@@ -388,6 +455,14 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
     }
 
     if(n != NULL) {
+
+      //If not the sink node... Continue this DAO to sink
+      // printf("addresses %u %u | %u %u\n", gRPLTreeRoot.u8[0], gRPLTreeRoot.u8[1], linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1]);
+      if(weAreRoot == 0) {
+        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_FOLLOW_DELAY;//ms
+        ctimer_set(&sendDaoAckTimer, backoff, sendDAOToSink, n);
+      }
+
       //make resquest
       packetbuf_copyfrom("DACK", 4);
       packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &sourceAddr);
@@ -409,10 +484,10 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
     }
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
     PRINTF("DAO ACK from %u\n", sourceAddr.u8[0]);
-    linkaddr_copy(&treeFather, &gBestNode);
+    linkaddr_copy(&gRPLTreeFather, &gBestNode);
 
     /* Look for the neighbor entry */
-    struct neighbor_queue *n = neighbor_queue_from_addr(&treeFather);
+    struct neighbor_queue *n = neighbor_queue_from_addr(&gRPLTreeFather);
     if(n == NULL) {
       /* Allocate a new neighbor entry */
       n = memb_alloc(&neighbor_memb);
@@ -426,20 +501,74 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
     }
 
     if(n != NULL) {
-      gPersonalTreeRank = gBestNodeRank + 1;
-      gTreeStatus = TREE_STATUS_CONNECTED;
-      NETSTACK_MAC.on();
-      leds_off(LEDS_RED);
-      leds_on(LEDS_BLUE);
-
-      //Now continue routing operation in the case of a router device
-      if(treeRouter) {
-        PRINTF("our RPL rank %u\n", gPersonalTreeRank);
-
-        backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
-        ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
+      n = neighbor_queue_from_addr(&gRPLTreeRoot);
+      if(n == NULL) {
+        /* Allocate a new neighbor entry */
+        n = memb_alloc(&neighbor_memb);
+        if(n != NULL) {
+          /* Init neighbor entry */
+          linkaddr_copy(&n->addr, &gRPLTreeRoot);
+          list_add(neighbor_list, n);
+          n->treeRank = 1;
+          linkaddr_copy(&n->nextAddr, &gBestNode);
+        }
       }
+
+      if(n != NULL) {
+        gPersonalTreeRank = gBestNodeRank + 1;
+        gTreeStatus = TREE_STATUS_CONNECTED;
+        NETSTACK_MAC.on();
+        leds_off(LEDS_RED);
+        leds_on(LEDS_BLUE);
+
+        //Now continue routing operation in the case of a router device
+        if(treeRouter) {
+          PRINTF("our RPL rank %u\n", gPersonalTreeRank);
+
+          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+          ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
+        }
+
+        //Start our periodic DAO sends
+        if(weAreRoot == 0) {
+          PRINTF("Start DAO periodic\n");
+          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+          ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
+        }
+      }
+    }
+  } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
+    uint8_t DAOsender = ((uint8_t *)packetbuf_dataptr())[0];
+    if(finalDestAddr == linkaddr_node_addr.u8[0]) {
+      uint8_t DAOsender = ((uint8_t *)packetbuf_dataptr())[0];
+      printf("Got relayed DAO %u\n", DAOsender);
+
+      //TODO add this node to the list...
+    } else {
+      PRINTF("Foward DAO");
+
+      sprintf((char *)gRoutingMsg, "#DAO");
+      gRoutingMsg[0] = DAOsender;
+
+      packetbuf_copyfrom(gRoutingMsg, 4);
+      static linkaddr_t addrFinal;
+      addrFinal.u8[0] = finalDestAddr;
+      addrFinal.u8[1] = 0;
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
+      packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+      if(packetbuf_hdralloc(1)) {
+        uint8_t *buf = packetbuf_hdrptr();
+        buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK;
+      } else {
+        PRINTF("Failed to create packet");
+        return;
+      }
+
+      rpllikenet_output();
     }
   }
 }
@@ -460,22 +589,22 @@ input(void)
 
   packetbuf_hdrreduce(2);
   if(packetbuf_holds_broadcast()) {
-    receive_nd_frames(finalDestAddr, routingCommand);
+    //nothing
   } else if(finalDestAddr == linkaddr_node_addr.u8[0]) {
     if(routingCommand == EDYTEE_COMMAND_TYPE_DATA) {
       up_msg_input(packetbuf_addr(PACKETBUF_ADDR_SENDER));
-    } else {
-      receive_nd_frames(finalDestAddr, routingCommand);
+      return;
     }
-  } else {
-    static linkaddr_t addrFinal;
-    addrFinal.u8[0] = finalDestAddr;
-    addrFinal.u8[1] = 0;
-    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
-    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-
-    rpllikenet_output();
   }
+  
+  receive_nd_frames(finalDestAddr, routingCommand);
+    // static linkaddr_t addrFinal;
+    // addrFinal.u8[0] = finalDestAddr;
+    // addrFinal.u8[1] = 0;
+    // packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
+    // packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+    // rpllikenet_output();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -493,7 +622,7 @@ check_data_link_connection(void *ptr)
   if(NETSTACK_MAC.channel_check_interval() != 0) {
       gData_link_is_on = 1;
     if(treeRouter &&
-       linkaddr_cmp(&treeRoot, &linkaddr_node_addr)) {
+       linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
       gPersonalTreeRank = 1;
 
       backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
@@ -523,8 +652,8 @@ init(void)
 
   linkaddr_copy(&gBestNode, &linkaddr_null);
   uint8_t tempAddr[] = STATIC_ROOT_ADDRESS;
-  treeRoot.u8[0] = tempAddr[0];
-  treeRoot.u8[1] = tempAddr[1];
+  gRPLTreeRoot.u8[0] = tempAddr[0];
+  gRPLTreeRoot.u8[1] = tempAddr[1];
   
   uint8_t i=0;
   for(; i<STATIC_COORDINATORS_NUM; i++) {
