@@ -80,7 +80,7 @@ send_msg(void *ptr)
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 #endif
-  staticnet_output();
+  rpllikenet_output();
 }
 
 PROCESS_THREAD(hello_world_process, ev, data) {
@@ -89,7 +89,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
     //leds_init();
     //leds_off(LEDS_ALL);
 
-    staticnet_signup(msg_confirm, msg_input);
+    rpllikenet_signup(msg_confirm, msg_input);
 
     static uint8_t selfAddrValue;
 

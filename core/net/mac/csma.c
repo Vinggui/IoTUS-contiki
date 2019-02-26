@@ -663,6 +663,8 @@ csma_control_frame_receive(void)
     } else {
       //Nothing to do
     }
+  } else {
+    NETSTACK_LLSEC.input();
   }
 }
 #endif
@@ -693,6 +695,9 @@ off(int keep_radio_on)
 static unsigned short
 channel_check_interval(void)
 {
+  if(gConnectionStatus != DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
+    return 0;
+  }
   if(NETSTACK_RDC.channel_check_interval) {
     return NETSTACK_RDC.channel_check_interval();
   }
@@ -726,6 +731,7 @@ init(void)
      linkaddr_node_addr.u8[0] == 1) {
     //This is the root...
     treePersonalRank = 1;
+    gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
 
     NETSTACK_RDC.on();
 

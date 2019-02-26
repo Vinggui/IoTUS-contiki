@@ -19,6 +19,7 @@
 #include "net/rime/rime.h"
 #include "net/mac/mac.h"
 #include "random.h"
+#include "rpl-like-net.h"
 #include "sys/ctimer.h"
 #include "aggregation.h"
 
@@ -55,17 +56,73 @@
   #endif
 #endif
 
+#define NUMARGS(...)  (sizeof((uint8_t[]){0, ##__VA_ARGS__})/sizeof(uint8_t)-1)
+#define STATIC_COORDINATORS_NUM       NUMARGS(STATIC_COORDINATORS)
+
+#define RPL_DAO_PERIOD_TIME                   CONTIKIMAC_ND_PERIOD_TIME
+#define RPL_ND_BACKOFF_TIME                   CONTIKIMAC_ND_BACKOFF_TIME
+#define RPL_ND_SCAN_TIME                      CONTIKIMAC_ND_SCAN_TIME
+#define RPL_DAO_PERIOD                        CONTIKIMAC_DAO_PERIOD
+#define RPL_DAO_PERIOD_BACKOFF                CONTIKIMAC_DAO_PERIOD_BACKOFF
+
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer;
+static struct ctimer sendNDTimer, sendDaoAckTimer, sendDaoTimer;
+static struct timer NDScanTimer;
 rtimer_clock_t packetBuildingTime;
 // uint8_t ticTocFlag = 0;
 static clock_time_t backOffDifference;
 
-static uint8_t private_keep_alive[12];
+static uint8_t gRoutingMsg[12];
 static uint8_t gPkt_created = 0;
 
 static void (* up_msg_confirm)(int status, int num_tx) = NULL;
 static void (* up_msg_input)(const linkaddr_t *source) = NULL;
+
+//RPL tree stuff
+static uint8_t gPersonalTreeRank = 0xFF;
+static tree_manager_conn_status gTreeStatus;
+
+static uint8_t treeRouter = 0;
+static uint8_t treeRouterNodes[] = {STATIC_COORDINATORS};
+static linkaddr_t treeRoot;
+static linkaddr_t treeFather;
+static uint8_t treeFatherRank = 0xFF;
+static linkaddr_t gBestNode;
+static uint8_t gBestNodeRank = 0xFF;
+
+static uint8_t gData_link_is_on = 0;
+
+/* Every neighbor has its own packet queue */
+struct neighbor_queue {
+  struct neighbor_queue *next;
+  linkaddr_t addr;
+  linkaddr_t nextAddr;
+  uint8_t treeRank;
+};
+
+/* The maximum number of co-existing neighbor queues */
+#ifdef RPL_CONF_MAX_NEIGHBOR_QUEUES
+#define RPL_MAX_NEIGHBOR_QUEUES CSMA_CONF_MAX_NEIGHBOR_QUEUES
+#else
+#define RPL_MAX_NEIGHBOR_QUEUES 2
+#endif /* CSMA_CONF_MAX_NEIGHBOR_QUEUES */
+
+MEMB(neighbor_memb, struct neighbor_queue, RPL_MAX_NEIGHBOR_QUEUES);
+LIST(neighbor_list);
+
+/*---------------------------------------------------------------------------*/
+static struct neighbor_queue *
+neighbor_queue_from_addr(const linkaddr_t *addr)
+{
+  struct neighbor_queue *n = list_head(neighbor_list);
+  while(n != NULL) {
+    if(linkaddr_cmp(&n->addr, addr)) {
+      return n;
+    }
+    n = list_item_next(n);
+  }
+  return NULL;
+}
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -84,7 +141,7 @@ packet_sent(void *ptr, int status, int num_tx)
   default:
     PRINTF("rpllikenet: error %d after %d tx\n", status, num_tx);
   }
-  up_msg_confirm(status,num_tx);
+  up_msg_confirm(status, num_tx);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -93,7 +150,7 @@ rpllikenet_output(void)
 {
   RIMESTATS_ADD(tx);
 
-  linkaddr_t const *finalReceiver = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
+  linkaddr_t *finalReceiver = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
   if(packetbuf_hdralloc(1)) {
     uint8_t *buf = packetbuf_hdrptr();
     buf[0] = finalReceiver->u8[0];
@@ -101,12 +158,21 @@ rpllikenet_output(void)
     PRINTF("Failed to create packet");
     return 0;
   }
-
+  
   static linkaddr_t addrNext;
 
-  // addrNext.u8[0] = routing_table[linkaddr_node_addr.u8[0]][finalReceiver->u8[0]];
+  /* Look for the neighbor entry */
+  struct neighbor_queue *n = neighbor_queue_from_addr(finalReceiver);
+  if(n == NULL) {
+    //Nothing found.... try to send to this address anyway
+    // printf("aquui\n");
+    linkaddr_copy(&addrNext, finalReceiver);
+  } else {
+    // printf("TODO\n");
+    //TODO
+  }
+  // printf("era %u enviando %u %u\n", finalReceiver->u8[0], addrNext.u8[0], addrNext.u8[1]);
 
-  addrNext.u8[1] = 0;
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrNext);
 
   packetbuf_compact();
@@ -115,17 +181,295 @@ rpllikenet_output(void)
 }
 
 /*---------------------------------------------------------------------------*/
+void
+RPL_like_register_process(void *ptr){
+  //ready to request asnwer from router
+  if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+    //make resquest
+
+    packetbuf_copyfrom("DIS#", 4);
+
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+    if(packetbuf_hdralloc(1)) {
+      uint8_t *buf = packetbuf_hdrptr();
+      buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIS;
+    } else {
+      PRINTF("Failed to create packet");
+      return;
+    }
+
+    packetbuf_compact();
+    // send_packet(control_frames_nd_cb, NULL);
+
+    // contikiMAC_back_on();
+    gTreeStatus = TREE_STATUS_WAITING_CONFIRM;
+  } else {
+    PRINTF("No router found");
+  }
+}
+
+
+/*---------------------------------------------------------------------------*/
+static void
+create_DIO_msg(linkaddr_t *addrToSend)
+{
+  //DIO packets have 12 bytes of base size
+  sprintf((char *)gRoutingMsg, "#Rank_&_data");
+  gRoutingMsg[0] = gPersonalTreeRank;
+
+  packetbuf_copyfrom(gRoutingMsg, 12);
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIO_BROADCAST;
+  } else {
+    PRINTF("Failed to create packet");
+    return;
+  }
+
+  //Address null is Broadcast
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, addrToSend);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  rpllikenet_output();
+ 
+  PRINTF("DIO Broadcast created\n");
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+send_DIO(void *ptr)
+{
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifference;//ms
+  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+  backoff += backOffDifference;
+
+  ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
+
+  //Address null is Broadcast
+  create_DIO_msg(&linkaddr_null);
+}
+
+/*---------------------------------------------------------------------*/
+static void
+receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
+{
+  struct neighbor_queue *n;
+  linkaddr_t sourceAddr;
+  linkaddr_copy(&sourceAddr, packetbuf_addr(PACKETBUF_ADDR_SENDER));
+  
+  if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIO_BROADCAST) {
+    if(gTreeStatus == TREE_STATUS_CONNECTED) {
+      //Ignore msg
+    } else if(gTreeStatus == TREE_STATUS_WAITING_ASNWER) {
+      //Nothing to do      
+    } else if(gTreeStatus == TREE_STATUS_WAITING_CONFIRM) {
+      //Nothing to do now
+    } else {
+      // printf("disco\n");
+      if(!timer_expired(&NDScanTimer)) {
+        // printf("Time ok\n");
+        uint8_t *data = packetbuf_dataptr();
+        uint8_t sourceNodeRank = data[0];
+        printf("heard RPL rank %u\n", sourceNodeRank);
+
+        if(linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+          linkaddr_copy(&gBestNode, &sourceAddr);
+          gBestNodeRank = sourceNodeRank;
+          // printf("found neighbor\n");
+        } else if(sourceNodeRank < gBestNodeRank) {
+            linkaddr_copy(&gBestNode, &sourceAddr);
+            gBestNodeRank = sourceNodeRank;
+            // printf("changing\n");
+        } else {
+        // printf("keeping\n");
+        }
+      } else {
+        // printf("Time over\n");
+        //Select the best rank node and make a request
+        if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
+          // printf("Have option %u %u\n", gBestNode.u8[1], gBestNode.u8[0]);
+          //make resquest
+
+          // printf("Creating DIS msg\n");
+          //DIS packets have 4 bytes of base size
+          packetbuf_copyfrom("DIS#", 4);
+
+          //Address null is Broadcast
+          packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+          packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+          if(packetbuf_hdralloc(1)) {
+            uint8_t *buf = packetbuf_hdrptr();
+            buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIS;
+          } else {
+            PRINTF("Failed to create packet");
+            return;
+          }
+          packetbuf_compact();
+          rpllikenet_output();
+
+          gTreeStatus = TREE_STATUS_WAITING_ASNWER;
+
+          // backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          // clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+          // ctimer_set(&sendNDTimer, backoff, RPL_like_register_process, NULL);
+        } else {
+          // printf("No option returng\n");
+          //Nothing found. Start over...
+          timer_set(&NDScanTimer, CLOCK_SECOND*RPL_ND_SCAN_TIME);
+          leds_on(LEDS_RED);
+          PRINTF("No router found");
+        }
+      }
+    }
+  } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIS) {
+    PRINTF("DIS cmm from %u\n", sourceAddr.u8[0]);
+    //make resquest
+    sprintf((char *)gRoutingMsg, "#Rank_&_data");
+    gRoutingMsg[0] = gPersonalTreeRank;
+
+    packetbuf_copyfrom(gRoutingMsg, 12);
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &sourceAddr);
+    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+    if(packetbuf_hdralloc(1)) {
+      uint8_t *buf = packetbuf_hdrptr();
+      buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIO;
+    } else {
+      PRINTF("Failed to create packet");
+      return;
+    }
+
+    packetbuf_compact();
+    rpllikenet_output();
+  } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIO) {
+    PRINTF("DIO cmm from %u\n", sourceAddr.u8[0]);
+    // //Address null is Broadcast
+
+    sprintf((char *)gRoutingMsg, "#DAO");
+    gRoutingMsg[0] = linkaddr_node_addr.u8[0];
+
+    packetbuf_copyfrom(gRoutingMsg, 4);
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
+    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+    if(packetbuf_hdralloc(1)) {
+      uint8_t *buf = packetbuf_hdrptr();
+      buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO;
+    } else {
+      PRINTF("Failed to create packet");
+      return;
+    }
+
+    packetbuf_compact();
+    rpllikenet_output();
+
+  } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
+    PRINTF("DAO cmm from %u\n", sourceAddr.u8[0]);
+    
+    /* Look for the neighbor entry */
+    struct neighbor_queue *n = neighbor_queue_from_addr(&sourceAddr);
+    if(n == NULL) {
+      /* Allocate a new neighbor entry */
+      n = memb_alloc(&neighbor_memb);
+      if(n != NULL) {
+        /* Init neighbor entry */
+        linkaddr_copy(&n->addr, &sourceAddr);
+        list_add(neighbor_list, n);
+        n->treeRank = gPersonalTreeRank + 1;
+        linkaddr_copy(&n->nextAddr, &sourceAddr);
+      }
+    }
+
+    if(n != NULL) {
+      //make resquest
+      packetbuf_copyfrom("DACK", 4);
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &sourceAddr);
+      packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+
+      if(packetbuf_hdralloc(1)) {
+        uint8_t *buf = packetbuf_hdrptr();
+        buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK;
+      } else {
+        PRINTF("Failed to create packet");
+        return;
+      }
+
+      packetbuf_compact();
+      rpllikenet_output();
+    } else {
+      printf("No neighbor slot...\n");
+    }
+  } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
+    PRINTF("DAO ACK from %u\n", sourceAddr.u8[0]);
+    linkaddr_copy(&treeFather, &gBestNode);
+
+    /* Look for the neighbor entry */
+    struct neighbor_queue *n = neighbor_queue_from_addr(&treeFather);
+    if(n == NULL) {
+      /* Allocate a new neighbor entry */
+      n = memb_alloc(&neighbor_memb);
+      if(n != NULL) {
+        /* Init neighbor entry */
+        linkaddr_copy(&n->addr, &gBestNode);
+        list_add(neighbor_list, n);
+        n->treeRank = gBestNodeRank;
+        linkaddr_copy(&n->nextAddr, &gBestNode);
+      }
+    }
+
+    if(n != NULL) {
+      gPersonalTreeRank = gBestNodeRank + 1;
+      gTreeStatus = TREE_STATUS_CONNECTED;
+      NETSTACK_MAC.on();
+      leds_off(LEDS_RED);
+      leds_on(LEDS_BLUE);
+
+      //Now continue routing operation in the case of a router device
+      if(treeRouter) {
+        PRINTF("our RPL rank %u\n", gPersonalTreeRank);
+
+        backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+        ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
+      }
+    }
+  }
+}
+
+/*---------------------------------------------------------------------------*/
 static void
 input(void)
 {
   uint8_t *data = packetbuf_dataptr();
+  uint8_t finalDestAddr = data[0];
+  uint8_t routingCommand = data[1];
+  // printf("commands %u %u\n", finalDestAddr, routingCommand);
 
-  packetbuf_hdrreduce(1);
-  if(data[0] == linkaddr_node_addr.u8[0]) {
-    up_msg_input(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+  if(gData_link_is_on == 0) {
+    //Data link is still connecting
+    return;
+  }
+
+  packetbuf_hdrreduce(2);
+  if(packetbuf_holds_broadcast()) {
+    receive_nd_frames(finalDestAddr, routingCommand);
+  } else if(finalDestAddr == linkaddr_node_addr.u8[0]) {
+    if(routingCommand == EDYTEE_COMMAND_TYPE_DATA) {
+      up_msg_input(packetbuf_addr(PACKETBUF_ADDR_SENDER));
+    } else {
+      receive_nd_frames(finalDestAddr, routingCommand);
+    }
   } else {
     static linkaddr_t addrFinal;
-    addrFinal.u8[0] = *data;
+    addrFinal.u8[0] = finalDestAddr;
     addrFinal.u8[1] = 0;
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
     packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
@@ -144,58 +488,28 @@ rpllikenet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_inpu
 
 /*---------------------------------------------------------------------------*/
 static void
-create_keep_alive_full_packet(void *ptr, int status, int num_tx)
+check_data_link_connection(void *ptr)
 {
-  // packetbuf_copyfrom("123456789012345678901234567890", 30);
-  packetbuf_copyfrom(private_keep_alive, 12);
-  linkaddr_t addr;
-  addr.u8[0] = 1;
-  addr.u8[1] = 0;
-  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addr);
-  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+  if(NETSTACK_MAC.channel_check_interval() != 0) {
+      gData_link_is_on = 1;
+    if(treeRouter &&
+       linkaddr_cmp(&treeRoot, &linkaddr_node_addr)) {
+      gPersonalTreeRank = 1;
 
-  rpllikenet_output();
+      backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+      clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+      ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
+    } else {
+      NETSTACK_MAC.off(1);
+      gTreeStatus = TREE_STATUS_SCANNING;
+      timer_set(&NDScanTimer, CLOCK_SECOND*RPL_ND_SCAN_TIME);
+    }
+  } else {
+    clock_time_t backoff = CLOCK_SECOND;//ms
+    ctimer_set(&sendNDTimer, backoff, check_data_link_connection, NULL);
+  }
 }
 
-/*---------------------------------------------------------------------------*/
-static void
-send_keep_alive(void *ptr)
-{
-  if(gPkt_created >= MAX_GENERATED_KA) {
-      return;
-  }
-  gPkt_created++;
-
-
-#if USE_NEW_FEATURES == 1
-  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
-  backOffDifference = 0;
-  backoff += backOffDifference;
-  ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-
-
-  //A slightly cheat
-  linkaddr_t addr;
-  addr.u8[1] = 0;
-
-  // addr.u8[0] = routing_table[linkaddr_node_addr.u8[0]][1];
-
-
-  if(!create_aggregation_frame(private_keep_alive, 12, &addr, create_keep_alive_full_packet, ROUTING_PACKETS_TIMEOUT)) {
-    PRINTF("Failed creating KA!\n");
-  }
-
-#else
-  clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
-  backoff += backOffDifference;
-  ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
-
-  create_keep_alive_full_packet(NULL,0,1);
-#endif
-
-  printf("Net sending to 1\n");
-}
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -203,25 +517,25 @@ init(void)
 {
   PRINTF("rpl-like-net started\n");
   queuebuf_init();
+  memb_init(&neighbor_memb);
 
   packetbuf_clear();
 
-  linkaddr_t addrThis;
-  addrThis.u8[0] = 1;
-  addrThis.u8[1] = 0;
-
-  if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-    // backOffDifference = (CLOCK_SECOND*((random_rand()%BACKOFF_TIME)))/1000;
-    // clock_time_t backoff = CLOCK_SECOND*KEEP_ALIVE_INTERVAL + backOffDifference;//ms
-    // ctimer_set(&sendNDTimer, backoff, send_keep_alive, NULL);
+  linkaddr_copy(&gBestNode, &linkaddr_null);
+  uint8_t tempAddr[] = STATIC_ROOT_ADDRESS;
+  treeRoot.u8[0] = tempAddr[0];
+  treeRoot.u8[1] = tempAddr[1];
+  
+  uint8_t i=0;
+  for(; i<STATIC_COORDINATORS_NUM; i++) {
+    if(linkaddr_node_addr.u8[0] == treeRouterNodes[i]) {
+      treeRouter = 1;
+      PRINTF("I'm router!\n");
+    }
   }
 
-
-  static uint8_t selfAddrValue;
-
-  selfAddrValue = linkaddr_node_addr.u8[0];
-  sprintf((char *)private_keep_alive, "### %02u %02u###", selfAddrValue,
-                                                        selfAddrValue);
+  gTreeStatus = TREE_STATUS_DISCONNECTED;
+  check_data_link_connection(NULL);
 }
 
 
