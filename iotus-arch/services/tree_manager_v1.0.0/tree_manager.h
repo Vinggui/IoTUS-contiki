@@ -33,7 +33,7 @@ typedef enum {
   TREE_PKT_ASSOCIANTION_ANS,      //Data info ("DIO")
   TREE_PKT_ADVERTISEMENT,         //Data Advertisement
   TREE_PKT_ADVERTISEMENT_ACK,     //Data Advertisement Ack ("DAO-ACK")
-  TREE_PKT_ADVERTISEMENT_to_root, //Data Advertisement - to the root
+  TREE_PKT_ADVERTISEMENT_TO_ROOT, //Data Advertisement - to the root
 
   //Do not erase this last option
   TREE_PKT_MAX_VALUE
@@ -47,6 +47,7 @@ typedef enum {
   TREE_STATUS_SCANNING,
   TREE_STATUS_WAITING_CONFIRM,
   TREE_STATUS_BUILDING,
+  TREE_STATUS_CONNECTING,
   TREE_STATUS_CONNECTED,
   TREE_STATUS_RECONNECTING
 } tree_manager_conn_status;

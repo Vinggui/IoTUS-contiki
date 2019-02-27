@@ -57,7 +57,7 @@
 #include <stdio.h>
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contCSMA"
 #include "safe-printer.h"
 
@@ -167,7 +167,7 @@ schedule_transmission(iotus_packet_t *packet)
   int backoff_exponent; /* BE in IEEE 802.15.4 */
 
   // backoff_exponent = MIN(packet->collisions, CSMA_MAX_BE);
-  backoff_exponent = random_rand()%CSMA_MAX_BE;
+  backoff_exponent = CSMA_MAX_BE;
 
   /* Compute max delay as per IEEE 802.15.4: 2^BE-1 backoff periods  */
   delay = ((1 << backoff_exponent) - 1) * backoff_period();
@@ -315,7 +315,7 @@ csma_send_packet(iotus_packet_t *packet)
     seqno++;
   }
   // packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, seqno++);
-  packet_set_sequence_number(packet, seqno++);  
+  packet_set_sequence_number(packet, seqno++); 
 
   schedule_transmission(packet);
 

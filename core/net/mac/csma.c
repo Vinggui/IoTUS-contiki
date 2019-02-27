@@ -222,7 +222,8 @@ schedule_transmission(struct neighbor_queue *n)
   clock_time_t delay;
   int backoff_exponent; /* BE in IEEE 802.15.4 */
 
-  backoff_exponent = MIN(n->collisions, CSMA_MAX_BE);
+  // backoff_exponent = MIN(n->collisions, CSMA_MAX_BE);
+  backoff_exponent = CSMA_MAX_BE;
 
   /* Compute max delay as per IEEE 802.15.4: 2^BE-1 backoff periods  */
   delay = ((1 << backoff_exponent) - 1) * backoff_period();

@@ -134,7 +134,7 @@ sendDAOToSink(void *ptr)
   packetForward = iotus_initiate_packet(
                       4,
                       daoMsg,
-                      PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                      PACKET_PARAMETERS_ALLOW_PIGGYBACK | PACKET_PARAMETERS_WAIT_FOR_ACK,
                       IOTUS_PRIORITY_ROUTING,
                       ROUTING_PACKETS_TIMEOUT,
                       rootNode,
@@ -172,7 +172,7 @@ continue_dao_msg(iotus_packet_t *packet)
   packetForward = iotus_initiate_packet(
                       4,
                       (uint8_t *)"DACK",
-                      PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                      PACKET_PARAMETERS_ALLOW_PIGGYBACK | PACKET_PARAMETERS_WAIT_FOR_ACK,
                       IOTUS_PRIORITY_ROUTING,
                       ROUTING_PACKETS_TIMEOUT,
                       source,
@@ -217,14 +217,13 @@ sendPeriodicDAO(void *ptr)
 /*---------------------------------------------------------------------------*/
 static iotus_netstack_return
 input_packet(iotus_packet_t *packet)
-{
-  
+{  
   iotus_node_t *finalDestNode = NULL;
   uint8_t finalDestAddr = packet_unwrap_pushed_byte(packet);
+  uint8_t netCommand = packet_unwrap_pushed_byte(packet);
 
   if(finalDestAddr == addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0]) {
     //This is for us...
-    uint8_t netCommand = packet_unwrap_pushed_byte(packet);
     if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
       continue_dao_msg(packet);
       return RX_PROCESSED;
@@ -253,6 +252,7 @@ input_packet(iotus_packet_t *packet)
   //search for the next node...
   // uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
 
+  // printf("relaying %u %u\n", packet_get_payload_size(packet), packet_get_payload_data(packet)[0]);
   uint8_t address2[2] = {finalDestAddr,0};
   finalDestNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
   if(finalDestNode != NULL) {
@@ -269,6 +269,12 @@ input_packet(iotus_packet_t *packet)
       SAFE_PRINTF_LOG_INFO("Packet failed");
       return RX_ERR_DROPPED;
     }
+
+    //Define this commands as
+    // printf("command was %u\n", netCommand);
+    packet_push_bit_header(8, &netCommand, packetForward);
+
+    // printf("relaying size %u\n", packet_get_payload_size(packetForward));
 
     packetForward->nextDestinationNode = fatherNode;
 
@@ -373,59 +379,56 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
   if(type == ND_PKT_BEACONS) {
     SAFE_PRINTF_LOG_INFO("Got DIO BROADCAST");
 
-    if(tree_connection_status == TREE_STATUS_DISCONNECTED) {
-      //TODO Find a better logic for timing selection!!!
-      timer_set(&NDScanTimer, nd_association_scan_duration/2);
-      tree_connection_status = TREE_STATUS_SCANNING;
-    }
+    if(tree_connection_status == TREE_STATUS_CONNECTED) {
+      return;
+    } else if(tree_connection_status == TREE_STATUS_SCANNING) {
+      if(!timer_expired(&NDScanTimer)) {
+        uint8_t sourceNodeRank = data[0];
 
-    if(!timer_expired(&NDScanTimer)) {
-      uint8_t sourceNodeRank = data[0];
+        uint8_t *rankPointer = pieces_modify_additional_info_var(
+                                    source->additionalInfoList,
+                                    IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
+                                    1,
+                                    TRUE);
 
-      uint8_t *rankPointer = pieces_modify_additional_info_var(
-                                  source->additionalInfoList,
-                                  IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK,
-                                  1,
-                                  TRUE);
+        if(!rankPointer) {
+          SAFE_PRINTF_LOG_ERROR("Rank ptr null");
+        }
 
-      if(!rankPointer) {
-        SAFE_PRINTF_LOG_ERROR("Rank ptr null");
-      }
+        *rankPointer = sourceNodeRank;
 
-      *rankPointer = sourceNodeRank;
-
-      if(gBestNode == NULL) {
-        gBestNode = source;
-        // printf("found %p\n", gBestNode);
-      } else {
-        rankPointer = pieces_get_additional_info_var(
-                                source->additionalInfoList,
-                                IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
-        if(*rankPointer < sourceNodeRank) {
+        if(gBestNode == NULL) {
           gBestNode = source;
-          // printf("changing\n");
+          // printf("found %p\n", gBestNode);
         } else {
-        // printf("keeping\n");
-        }
-      }
-    } else {
-      //Select the best rank node and make a request
-      // printf("t expired %p\n", gBestNode);
-      if(gBestNode != NULL) {
-        tree_connection_status = TREE_STATUS_BUILDING;
-
-
-        if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-          randomAddTime = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
-          ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
-        } else {
-          RPL_like_DIS_process(NULL);
+          rankPointer = pieces_get_additional_info_var(
+                                  source->additionalInfoList,
+                                  IOTUS_NODES_ADD_INFO_TYPE_TOPOL_TREE_RANK);
+          if(*rankPointer < sourceNodeRank) {
+            gBestNode = source;
+            // printf("changing\n");
+          } else {
+          // printf("keeping\n");
+          }
         }
       } else {
-        //Nothing found. Start over...
-        timer_set(&NDScanTimer, nd_association_scan_duration);
-        SAFE_PRINTF_LOG_INFO("No router found");
+        //Select the best rank node and make a request
+        // printf("t expired %p\n", gBestNode);
+        if(gBestNode != NULL) {
+          tree_connection_status = TREE_STATUS_BUILDING;
+
+          if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+            randomAddTime = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+            clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
+            ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
+          } else {
+            RPL_like_DIS_process(NULL);
+          }
+        } else {
+          //Nothing found. Start over...
+          timer_set(&NDScanTimer, nd_association_scan_duration);
+          SAFE_PRINTF_LOG_INFO("No router found");
+        }
       }
     }
   } else {
@@ -472,7 +475,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
         send(packet);
       }
     } else if(type == ND_PKT_ASSOCIANTION_ANS) {
-      printf("DIO from %u\n", nodeSourceAddress);
+      SAFE_PRINTF_LOG_INFO("DIO from %u\n", nodeSourceAddress);
 
       fatherNode = gBestNode;
       uint8_t *rankPointer = pieces_get_additional_info_var(
@@ -481,7 +484,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
 
 
       treePersonalRank = *rankPointer + 1;
-      tree_connection_status = TREE_STATUS_CONNECTED;
+      tree_connection_status = TREE_STATUS_CONNECTING;
 
 
       //TODO SEND DAO using tree manager
@@ -564,7 +567,7 @@ post_start(void)
   //   SAFE_PRINTF_LOG_INFO("Network assign ND");
   // }
 
-  #if EXP_CONTIKIMAC_802_15_4 == 1
+#if EXP_CONTIKIMAC_802_15_4 == 1
   if(treeRouter &&
      addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] == 1) {
     //This is the root...
@@ -586,6 +589,9 @@ post_start(void)
       gRoutingMsg[0] = treePersonalRank;
       nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_BEACONS, 12, gRoutingMsg);
     }
+  } else {
+    tree_connection_status = TREE_STATUS_SCANNING;
+    timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
   }
 #endif /* EXP_CONTIKIMAC_802_15_4 */
 }
