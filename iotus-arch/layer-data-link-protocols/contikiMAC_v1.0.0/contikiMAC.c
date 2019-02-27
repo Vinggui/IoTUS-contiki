@@ -1185,30 +1185,30 @@ input_packet(iotus_packet_t *packet)
   }
 }
 // /*---------------------------------------------------------------------------*/
-// static int
-// turn_on(void)
-// {
-//   if(contikimac_is_on == 0) {
-//     contikimac_is_on = 1;
-//     contikimac_keep_radio_on = 0;
-//     rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
-//   }
-//   return 1;
-// }
+int
+contikiMAC_turn_on(void)
+{
+  if(contikimac_is_on == 0) {
+    contikimac_is_on = 1;
+    contikimac_keep_radio_on = 0;
+    rtimer_set(&rt, RTIMER_NOW() + CYCLE_TIME, 1, powercycle_wrapper, NULL);
+  }
+  return 1;
+}
 // ---------------------------------------------------------------------------
-// static int
-// turn_off(int keep_radio_on)
-// {
-//   contikimac_is_on = 0;
-//   contikimac_keep_radio_on = keep_radio_on;
-//   if(keep_radio_on) {
-//     radio_is_on = 1;
-//     return active_radio_driver->on();
-//   } else {
-//     radio_is_on = 0;
-//     return active_radio_driver->off();
-//   }
-// }
+int
+contikiMAC_turn_off(int keep_radio_on)
+{
+  contikimac_is_on = 0;
+  contikimac_keep_radio_on = keep_radio_on;
+  if(keep_radio_on) {
+    radio_is_on = 1;
+    return active_radio_driver->on();
+  } else {
+    radio_is_on = 0;
+    return active_radio_driver->off();
+  }
+}
 /*---------------------------------------------------------------------------*/
 void
 contikiMAC_back_on(void)

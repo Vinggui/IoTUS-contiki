@@ -68,11 +68,11 @@
 #define RPL_CONN_WATCHDOG                     CONTIKIMAC_WATCHDOG_TIME
 
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer, sendDaoAckTimer, sendDaoTimer, connectionWathdog;
+static struct ctimer sendNDTimer, sendDAOAckTimer, sendDAOTimer, connectionWathdog;
 static struct timer NDScanTimer;
 rtimer_clock_t packetBuildingTime;
 // uint8_t ticTocFlag = 0;
-static clock_time_t backOffDifference, backOffDifferenceDIO, backOffDifferenceDAO, randomAddTime;
+static clock_time_t backOffDifferenceDIO, backOffDifferenceDAO, randomAddTime;
 
 static uint8_t gRoutingMsg[12];
 static uint8_t gPkt_created = 0;
@@ -133,8 +133,8 @@ reset_connection(void)
 {
   // printf("Reseting conn\n");
   ctimer_stop(&sendNDTimer);
-  ctimer_stop(&sendDaoAckTimer);
-  ctimer_stop(&sendDaoTimer);
+  ctimer_stop(&sendDAOAckTimer);
+  ctimer_stop(&sendDAOTimer);
   ctimer_stop(&connectionWathdog);
 
   leds_off(LEDS_BLUE);
@@ -142,7 +142,7 @@ reset_connection(void)
   gTreeStatus = TREE_STATUS_DISCONNECTED;
 
   gPersonalTreeRank = 0xFF;
-  treeRouter = 0;
+
   gRPLTreeFatherRank = 0xFF;
   linkaddr_copy(&gRPLTreeRoot, &linkaddr_null);
   linkaddr_copy(&gRPLTreeFather, &linkaddr_null);
@@ -218,8 +218,9 @@ rpllikenet_output(void)
 }
 
 /*---------------------------------------------------------------------------*/
-void
-RPL_like_DIS_process(void *ptr){
+static void
+RPL_like_DIS_process(void *ptr)
+{
   // printf("Creating DIS msg\n");
   //DIS packets have 4 bytes of base size
   packetbuf_copyfrom("DIS#", 4);
@@ -341,7 +342,7 @@ sendPeriodicDAO(void *ptr)
 
   backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
   clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
-  ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
+  ctimer_set(&sendDAOTimer, backoff, sendPeriodicDAO, NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -473,7 +474,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
       // printf("addresses %u %u | %u %u\n", gRPLTreeRoot.u8[0], gRPLTreeRoot.u8[1], linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1]);
       if(weAreRoot == 0) {
         clock_time_t backoff = CLOCK_SECOND*RPL_DAO_FOLLOW_DELAY;//ms
-        ctimer_set(&sendDaoAckTimer, backoff, sendDAOToSink, n);
+        ctimer_set(&sendDAOAckTimer, backoff, sendDAOToSink, n);
       }
 
       //make resquest
@@ -549,7 +550,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
           PRINTF("Start DAO periodic\n");
           backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
           clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
-          ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
+          ctimer_set(&sendDAOTimer, backoff, sendPeriodicDAO, NULL);
         }
       }
     }

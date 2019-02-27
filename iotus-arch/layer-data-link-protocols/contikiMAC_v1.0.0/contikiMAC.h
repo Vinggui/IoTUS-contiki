@@ -46,6 +46,12 @@
 void
 contikiMAC_back_on(void);
 
+int
+contikiMAC_turn_on(void);
+
+int
+contikiMAC_turn_off(int keep_radio_on);
+
 int8_t
 contikimac_send_packet(iotus_packet_t *packet);
 

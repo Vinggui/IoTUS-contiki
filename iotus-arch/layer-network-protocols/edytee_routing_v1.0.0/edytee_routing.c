@@ -33,7 +33,7 @@
 #endif
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "edyteeRouting"
 #include "safe-printer.h"
 
@@ -42,13 +42,14 @@
 #define RPL_ND_SCAN_TIME                      CONTIKIMAC_ND_SCAN_TIME
 #define RPL_DAO_PERIOD                        CONTIKIMAC_DAO_PERIOD
 #define RPL_DAO_PERIOD_BACKOFF                CONTIKIMAC_DAO_PERIOD_BACKOFF
+#define RPL_DAO_FOLLOW_DELAY                  2//sec
+#define RPL_CONN_WATCHDOG                     CONTIKIMAC_WATCHDOG_TIME
 
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer, sendDAOTimer, replyDAOACKTimer;
+static struct ctimer sendNDTimer, sendDAOAckTimer, sendDAOTimer, connectionWathdog;
 static struct timer NDScanTimer;
-static clock_time_t backOffDifference;
-iotus_node_t *rootNode;
-iotus_node_t *fatherNode;
+static clock_time_t backOffDifferenceDIO, backOffDifferenceDAO, randomAddTime;
+
 static uint8_t gRoutingMsg[12];
 static uint8_t gPkt_created = 0;
 
@@ -83,12 +84,41 @@ send(iotus_packet_t *packet)
 
 /*---------------------------------------------------------------------------*/
 static void
+reset_connection(void)
+{
+  // printf("Reseting conn\n");
+  ctimer_stop(&sendNDTimer);
+  ctimer_stop(&sendDAOAckTimer);
+  ctimer_stop(&sendDAOTimer);
+  ctimer_stop(&connectionWathdog);
+
+  leds_off(LEDS_BLUE);
+
+  fatherNode = NULL;
+  tree_connection_status = TREE_STATUS_DISCONNECTED;
+  treePersonalRank = 0xFF;
+
+  gBestNode = NULL;
+
+  printf("fuck this shit\n");
+  // CSMA_reset();
+}
+
+/*---------------------------------------------------------------------------*/
+static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
   SAFE_PRINTF_LOG_INFO("Frame %p processed %u", packet, returnAns);
   // if(returnAns == MAC_TX_OK) {
     packet_destroy(packet);
   // }
+
+  if(returnAns != MAC_TX_OK) {
+    if(tree_connection_status == TREE_STATUS_WAITING_CONFIRM) {
+      reset_connection();
+      return;
+    }
+  }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -150,7 +180,7 @@ continue_dao_msg(iotus_packet_t *packet)
 
   if(NULL == packetForward) {
     SAFE_PRINTF_LOG_INFO("Packet failed");
-    return RX_ERR_DROPPED;
+    return;
   }
 
   //Define this commands as
@@ -169,7 +199,7 @@ continue_dao_msg(iotus_packet_t *packet)
   //If not the sink node...
   if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] != 1) {
     clock_time_t backoff = CLOCK_SECOND*EDYTEE_RPL_DAOACK_DELAY;//ms
-    ctimer_set(&replyDAOACKTimer, backoff, sendDAOToSink, source);
+    ctimer_set(&sendDAOAckTimer, backoff, sendDAOToSink, source);
   }
 }
 
@@ -179,9 +209,9 @@ sendPeriodicDAO(void *ptr)
 {
   sendDAOToSink(NODES_SELF);
 
-  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
-  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
-  ctimer_set(&sendDAOTimer, backoff, sendDAOToSink, NULL);
+  backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
+  ctimer_set(&sendDAOTimer, backoff, sendPeriodicDAO, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -199,13 +229,14 @@ input_packet(iotus_packet_t *packet)
       continue_dao_msg(packet);
       return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
+      ctimer_stop(&connectionWathdog);
       SAFE_PRINTF_LOG_INFO("Got DAO-ACK");
       tree_connection_status = TREE_STATUS_CONNECTED;
       leds_on(LEDS_BLUE);
       //Start our periodic DAO sends
       if(addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] != 1) {
-        backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
-        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+        backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+        clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
         ctimer_set(&sendDAOTimer, backoff, sendPeriodicDAO, NULL);
       }
       return RX_PROCESSED;
@@ -247,13 +278,6 @@ input_packet(iotus_packet_t *packet)
     send(packetForward);
     #endif
     SAFE_PRINTF_LOG_INFO("Packet %u forwarded %u stats %u\n", packet->pktID, packetForward->pktID, status);
-    // // if (!(MAC_TX_OK == status ||
-    // //     MAC_TX_DEFERRED == status)) {
-    // if (MAC_TX_DEFERRED != status) {
-    //   send_cb(packetForward, status);
-    //   // printf("Packet fwd del %u\n", packetForward->pktID);
-    //   // packet_destroy(packetForward);
-    // }
   }
   return RX_PROCESSED;
 }
@@ -270,10 +294,10 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 static void
 send_beacon(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifferenceDIO;//ms
+  backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
 
-  backoff += backOffDifference;
+  backoff += backOffDifferenceDIO;
   ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
 
   //DIO packets have 12 bytes of base size
@@ -298,6 +322,45 @@ send_beacon(void *ptr)
  
   SAFE_PRINTF_LOG_INFO("DIO nd %u \n", packet->pktID);
   send(packet);
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+RPL_like_DIS_process(void *ptr)
+{
+  uint8_t nextType[1];
+  SAFE_PRINTF_LOG_INFO("Creating DIS\n");
+  nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_GET, 4, (uint8_t *)"DIS#");
+  tree_connection_status = TREE_STATUS_WAITING_CONFIRM;
+
+  if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
+    //make resquest
+    uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_GET);
+
+    iotus_packet_t *packet = iotus_initiate_packet(
+                              msg[0],
+                              msg,
+                              PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                              IOTUS_PRIORITY_ROUTING,
+                              5000,
+                              gBestNode,
+                              control_frames_nd_cb);
+
+    if(NULL == packet) {
+      SAFE_PRINTF_LOG_INFO("Packet failed");
+      return;
+    }
+
+    packet->nextDestinationNode = gBestNode;
+   
+    //Define this commands as
+    nextType[0] = ND_PKT_ASSOCIANTION_REQ;
+    packet_push_bit_header(8, nextType, packet);
+
+    // active_data_link_protocol->send(packet);
+    send(packet);
+  }
+  ctimer_set(&connectionWathdog, CLOCK_SECOND*RPL_CONN_WATCHDOG, reset_connection, NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -349,40 +412,15 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       //Select the best rank node and make a request
       // printf("t expired %p\n", gBestNode);
       if(gBestNode != NULL) {
-        SAFE_PRINTF_LOG_INFO("Creating DIS\n");
         tree_connection_status = TREE_STATUS_BUILDING;
-        nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_GET, 4, (uint8_t *)"DIS#");
+
 
         if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-          //make resquest
-          uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_GET);
-
-          iotus_packet_t *packet = iotus_initiate_packet(
-                                    msg[0],
-                                    msg,
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                                    IOTUS_PRIORITY_ROUTING,
-                                    5000,
-                                    gBestNode,
-                                    control_frames_nd_cb);
-
-          if(NULL == packet) {
-            SAFE_PRINTF_LOG_INFO("Packet failed");
-            return;
-          }
-
-          packet->nextDestinationNode = gBestNode;
-         
-          //Define this commands as
-          nextType[0] = ND_PKT_ASSOCIANTION_REQ;
-          packet_push_bit_header(8, nextType, packet);
-
-          // active_data_link_protocol->send(packet);
-          send(packet);
-          
-          // backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          // clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
-          // ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
+          randomAddTime = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
+          ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
+        } else {
+          RPL_like_DIS_process(NULL);
         }
       } else {
         //Nothing found. Start over...
@@ -434,7 +472,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
         send(packet);
       }
     } else if(type == ND_PKT_ASSOCIANTION_ANS) {
-      SAFE_PRINTF_LOG_INFO("DIO from %u\n", nodeSourceAddress);
+      printf("DIO from %u\n", nodeSourceAddress);
 
       fatherNode = gBestNode;
       uint8_t *rankPointer = pieces_get_additional_info_var(
@@ -472,7 +510,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       // active_data_link_protocol->send(packet);
       send(packet);
       
-
+      ctimer_restart(&connectionWathdog);
 
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
@@ -483,8 +521,8 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
         nd_set_operation_msg(IOTUS_PRIORITY_ROUTING, ND_PKT_BEACONS, 12, gRoutingMsg);
 
         if(IOTUS_PRIORITY_ROUTING == iotus_get_layer_assigned_for(IOTUS_CHORE_NEIGHBOR_DISCOVERY)) {
-          backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifferenceDIO;//ms
           ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
         }
       }
@@ -539,8 +577,8 @@ post_start(void)
       SAFE_PRINTF_LOG_INFO("Network assign ND");
 
       //Start beacons in ND for deployment of DIO msg
-      backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-      clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+      backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+      clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifferenceDIO;//ms
       ctimer_set(&sendNDTimer, backoff, send_beacon, NULL);
     } else {
       //Set DIO msg right away

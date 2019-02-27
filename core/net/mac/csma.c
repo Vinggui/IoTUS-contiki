@@ -566,7 +566,7 @@ csma_802like_register_process(void *ptr){
   
 
   randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + randomAddTime;//ms
+  clock_time_t backoff = CLOCK_SECOND + randomAddTime;//ms
   ctimer_set(&sendNDTimer, backoff, csma_802like_answer_process, NULL);
   ctimer_set(&connectionWathdog, CLOCK_SECOND*CONTIKIMAC_WATCHDOG_TIME, reset_connection, NULL);
 }
@@ -649,7 +649,7 @@ csma_control_frame_receive(void)
           gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER;
           
           randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = (random_rand()%CONTIKIMAC_ND_PERIOD_TIME)*CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + randomAddTime;//ms
+          clock_time_t backoff = randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
           // printf("No option returng\n");

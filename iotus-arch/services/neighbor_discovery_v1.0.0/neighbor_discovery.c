@@ -175,9 +175,9 @@ nd_build_packet_type(nd_pkt_types operation) {
 
   //Fix the total size now...
   gMsgPayload[0] = totalSize;
-  if(operation != ND_PKT_BEACONS) {
-    clean_pieces(operation);
-  }
+  // if(operation != ND_PKT_BEACONS) {
+  //   clean_pieces(operation);
+  // }
   ndLastOperation = operation;
   return gMsgPayload;
 }
@@ -218,7 +218,7 @@ nd_unwrap_msg(nd_pkt_types type, iotus_packet_t *packet)
       // printf("tava %u %p\n", skippedLayerPtr[1], skippedLayerPtr);
 
     } else if(gNDOperations[type] & (1<<layer) ||
-       gLayersCB[layer] != NULL) {
+              gLayersCB[layer] != NULL) {
       /*
        * This layer is really operating here
        * Call this cb function

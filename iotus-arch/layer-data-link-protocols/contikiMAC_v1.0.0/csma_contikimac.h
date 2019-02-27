@@ -51,6 +51,9 @@
 void
 csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions);
 
+// void
+// CSMA_reset(void);
+
 void
 csma_control_frame_receive(iotus_packet_t *packet);
 

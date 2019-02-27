@@ -99,8 +99,8 @@ static uint8_t isCoordinator = 0;
 // static uint8_t private_nd_control[12];
 
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer;
-static clock_time_t backOffDifference;
+static struct ctimer sendNDTimer, connectionWathdog;
+static clock_time_t backOffDifference, randomAddTime;
 static iotus_node_t *gBestNode = NULL;
 static gCoordinatorRank = 0xFF;
 
@@ -108,6 +108,7 @@ static struct timer NDScanTimer;
 typedef enum {
   DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED,
   DATA_LINK_ND_CONNECTION_STATUS_CONNECTED,
+  DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER,
   DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER,
   DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION
 } csma_connection_status;
@@ -165,7 +166,8 @@ schedule_transmission(iotus_packet_t *packet)
   clock_time_t delay;
   int backoff_exponent; /* BE in IEEE 802.15.4 */
 
-  backoff_exponent = MIN(packet->collisions, CSMA_MAX_BE);
+  // backoff_exponent = MIN(packet->collisions, CSMA_MAX_BE);
+  backoff_exponent = random_rand()%CSMA_MAX_BE;
 
   /* Compute max delay as per IEEE 802.15.4: 2^BE-1 backoff periods  */
   delay = ((1 << backoff_exponent) - 1) * backoff_period();
@@ -223,6 +225,7 @@ collision(iotus_packet_t *packet, int num_transmissions)
     rexmit(packet);
   }
 }
+
 /*---------------------------------------------------------------------------*/
 static void
 noack(iotus_packet_t *packet, int num_transmissions)
@@ -244,6 +247,30 @@ tx_ok(iotus_packet_t *packet, int num_transmissions)
   packet->collisions = CSMA_MIN_BE;
   packet->transmissions += num_transmissions;
   tx_done(MAC_TX_OK, packet);
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+reset_connection(void)
+{
+  ctimer_stop(&sendNDTimer);
+  ctimer_stop(&connectionWathdog);
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
+
+
+  leds_off(LEDS_ALL);
+  gCoordinatorRank = 0xFF;
+  gBestNode = NULL;
+
+  contikiMAC_turn_off(1);
+  timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+}
+
+/*---------------------------------------------------------------------------*/
+void
+CSMA_reset(void)
+{
+  reset_connection();
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -304,6 +331,12 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
   SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
   // if(returnAns == MAC_TX_OK) {
   packet_destroy(packet);
+
+  if(returnAns != MAC_TX_OK) {
+    if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
+      reset_connection();
+    }
+  }
   // }
 }
 /*---------------------------------------------------------------------------*/
@@ -340,7 +373,7 @@ send_beacon(void *ptr)
 
 /*---------------------------------------------------------------------------*/
 static void
-csma_802like_register_process(void *ptr){
+csma_802like_answer_process(void *ptr){
   //ready to request asnwer from router
   if(gBestNode != NULL) {
     uint8_t nextType[1];
@@ -375,10 +408,54 @@ csma_802like_register_process(void *ptr){
     csma_send_packet(packet);
 
     contikiMAC_back_on();
+    // contikiMAC_turn_on();
+    ctimer_restart(&connectionWathdog);
     gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
   } else {
     SAFE_PRINTF_LOG_WARNING("No router found");
   }
+}
+
+/*---------------------------------------------------------------------------*/
+static void
+csma_802like_register_process(void *ptr)
+{
+  uint8_t nextType[1];
+  nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ, 8, (uint8_t *)"register");
+
+  //make resquest
+  uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_REQ);
+
+  iotus_packet_t *packet = iotus_initiate_packet(
+                            msg[0],
+                            msg,
+                            PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                            IOTUS_PRIORITY_DATA_LINK,
+                            5000,
+                            gBestNode,
+                            control_frames_nd_cb);
+
+  if(NULL == packet) {
+    SAFE_PRINTF_LOG_INFO("Packet failed");
+    return;
+  }
+
+  packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
+  packet->nextDestinationNode = gBestNode;
+ 
+  //Define this commands as
+  nextType[0] = ND_PKT_ASSOCIANTION_REQ;
+  packet_push_bit_header(8, nextType, packet);
+
+  gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+
+  // active_data_link_protocol->send(packet);
+  csma_send_packet(packet);
+
+  randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND + randomAddTime;//ms
+  ctimer_set(&sendNDTimer, backoff, csma_802like_answer_process, NULL);
+  ctimer_set(&connectionWathdog, CLOCK_SECOND*CONTIKIMAC_WATCHDOG_TIME, reset_connection, NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -389,7 +466,8 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
   uint8_t nextType[1];
   nd_node_nogotiating = source;
 
-  if(type == ND_PKT_BEACONS) {
+  if(type == ND_PKT_BEACONS &&
+    addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0] != 1) {
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_CONNECTED) {
       //Ignore msg
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
@@ -397,6 +475,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
     } else if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION) {
       //Nothing to do now
     } else {
+    // printf("getting\n");
       if(!timer_expired(&NDScanTimer)) {
         uint8_t sourceNodeRank = data[0];
 
@@ -415,44 +494,17 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
         //Select the best rank node and make a request
         // printf("t expired %p\n", gBestNode);
         if(gBestNode != NULL) {
-          nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ, 8, (uint8_t *)"register");
 
-          //make resquest
-          uint8_t *msg = nd_build_packet_type(ND_PKT_ASSOCIANTION_REQ);
-
-          iotus_packet_t *packet = iotus_initiate_packet(
-                                    msg[0],
-                                    msg,
-                                    PACKET_PARAMETERS_WAIT_FOR_ACK|PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                                    IOTUS_PRIORITY_DATA_LINK,
-                                    5000,
-                                    gBestNode,
-                                    control_frames_nd_cb);
-
-          if(NULL == packet) {
-            SAFE_PRINTF_LOG_INFO("Packet failed");
-            return;
-          }
-
-          packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_COMMAND);
-          packet->nextDestinationNode = gBestNode;
-         
-          //Define this commands as
-          nextType[0] = ND_PKT_ASSOCIANTION_REQ;
-          packet_push_bit_header(8, nextType, packet);
-
-          // active_data_link_protocol->send(packet);
-          csma_send_packet(packet);
-
-          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
+          gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER;
           
-          backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
           //Nothing found. Start over...
           timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
           leds_on(LEDS_RED);
+
           SAFE_PRINTF_LOG_INFO("No router found");
         }
       }
@@ -494,6 +546,7 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       // active_data_link_protocol->send(packet);
       csma_send_packet(packet);
     } else if(type == ND_PKT_ASSOCIANTION_ANS) {
+      ctimer_stop(&connectionWathdog);
       SAFE_PRINTF_LOG_INFO("join cmm from %u\n", nodeSourceAddress);
 
       fatherNode = gBestNode;
@@ -506,7 +559,8 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
       gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_CONNECTED;
       leds_off(LEDS_RED);
       leds_on(LEDS_GREEN);
-      contikiMAC_back_on();
+      // contikiMAC_back_on();
+      contikiMAC_turn_on();
 
       //Now continue routing operation in the case of a router device
       if(treeRouter) {
