@@ -65,13 +65,14 @@
 #define RPL_DAO_PERIOD                        CONTIKIMAC_DAO_PERIOD
 #define RPL_DAO_PERIOD_BACKOFF                CONTIKIMAC_DAO_PERIOD_BACKOFF
 #define RPL_DAO_FOLLOW_DELAY                  2//sec
+#define RPL_CONN_WATCHDOG                     CONTIKIMAC_WATCHDOG_TIME
 
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer, sendDaoAckTimer, sendDaoTimer;
+static struct ctimer sendNDTimer, sendDaoAckTimer, sendDaoTimer, connectionWathdog;
 static struct timer NDScanTimer;
 rtimer_clock_t packetBuildingTime;
 // uint8_t ticTocFlag = 0;
-static clock_time_t backOffDifference;
+static clock_time_t backOffDifference, backOffDifferenceDIO, backOffDifferenceDAO, randomAddTime;
 
 static uint8_t gRoutingMsg[12];
 static uint8_t gPkt_created = 0;
@@ -128,10 +129,38 @@ neighbor_queue_from_addr(const linkaddr_t *addr)
 
 /*---------------------------------------------------------------------------*/
 static void
+reset_connection(void)
+{
+  // printf("Reseting conn\n");
+  ctimer_stop(&sendNDTimer);
+  ctimer_stop(&sendDaoAckTimer);
+  ctimer_stop(&sendDaoTimer);
+  ctimer_stop(&connectionWathdog);
+
+  leds_off(LEDS_BLUE);
+
+  gTreeStatus = TREE_STATUS_DISCONNECTED;
+
+  gPersonalTreeRank = 0xFF;
+  treeRouter = 0;
+  gRPLTreeFatherRank = 0xFF;
+  linkaddr_copy(&gRPLTreeRoot, &linkaddr_null);
+  linkaddr_copy(&gRPLTreeFather, &linkaddr_null);
+  linkaddr_copy(&gBestNode, &linkaddr_null);
+   gBestNodeRank = 0xFF;
+
+  gData_link_is_on = 0;
+
+  check_data_link_connection(NULL);
+}
+
+/*---------------------------------------------------------------------------*/
+static void
 packet_sent(void *ptr, int status, int num_tx)
 {
   if(status != MAC_TX_OK) {
-    if(gTreeStatus == TREE_STATUS_WAITING_ASNWER) {
+    if(gTreeStatus == TREE_STATUS_WAITING_ASNWER ||
+       gTreeStatus == TREE_STATUS_WAITING_CONFIRM) {
       reset_connection();
       return;
     }
@@ -189,30 +218,6 @@ rpllikenet_output(void)
 }
 
 /*---------------------------------------------------------------------------*/
-static void
-reset_connection(void)
-{
-  ctimer_stop(&sendNDTimer);
-  ctimer_stop(&sendDaoAckTimer);
-  ctimer_stop(&sendDaoTimer);
-
-
-  gTreeStatus = TREE_STATUS_DISCONNECTED;
-
-  gPersonalTreeRank = 0xFF;
-  treeRouter = 0;
-  gRPLTreeFatherRank = 0xFF;
-  linkaddr_copy(&gRPLTreeRoot, &linkaddr_null);
-  linkaddr_copy(&gRPLTreeFather, &linkaddr_null);
-  linkaddr_copy(&gBestNode, &linkaddr_null);
-   gBestNodeRank = 0xFF;
-
-  gData_link_is_on = 0;
-
-  check_data_link_connection(NULL);
-}
-
-/*---------------------------------------------------------------------------*/
 void
 RPL_like_DIS_process(void *ptr){
   // printf("Creating DIS msg\n");
@@ -234,39 +239,8 @@ RPL_like_DIS_process(void *ptr){
   rpllikenet_output();
 
   gTreeStatus = TREE_STATUS_WAITING_ASNWER;
+  ctimer_set(&connectionWathdog, CLOCK_SECOND*RPL_CONN_WATCHDOG, reset_connection, NULL);
 }
-
-/*---------------------------------------------------------------------------*/
-void
-RPL_like_register_process(void *ptr){
-  //ready to request asnwer from router
-  if(!linkaddr_cmp(&gBestNode, &linkaddr_null)) {
-    //make resquest
-
-    packetbuf_copyfrom("DIS#", 4);
-
-    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &gBestNode);
-    packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
-
-
-    if(packetbuf_hdralloc(1)) {
-      uint8_t *buf = packetbuf_hdrptr();
-      buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIS;
-    } else {
-      PRINTF("Failed to create packet");
-      return;
-    }
-
-    packetbuf_compact();
-    // send_packet(control_frames_nd_cb, NULL);
-
-    // contikiMAC_back_on();
-    gTreeStatus = TREE_STATUS_WAITING_CONFIRM;
-  } else {
-    PRINTF("No router found");
-  }
-}
-
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -299,9 +273,9 @@ create_DIO_msg(linkaddr_t *addrToSend)
 static void
 send_DIO(void *ptr)
 {
-  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifference;//ms
-  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-  backoff += backOffDifference;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME - backOffDifferenceDIO;//ms
+  backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+  backoff += backOffDifferenceDIO;
 
   ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
 
@@ -365,8 +339,8 @@ sendPeriodicDAO(void *ptr)
   packetbuf_compact();
   rpllikenet_output();
 
-  backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
-  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+  backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
   ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
 }
 
@@ -417,8 +391,8 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
           // printf("Have option %u %u\n", gBestNode.u8[1], gBestNode.u8[0]);
           //make resquest
 
-          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = (random_rand()%RPL_DAO_PERIOD_TIME)*CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+          randomAddTime = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = (random_rand()%RPL_DAO_PERIOD_TIME)*CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
         } else {
           // printf("No option returng\n");
@@ -470,6 +444,9 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
       return;
     }
 
+    gTreeStatus = TREE_STATUS_WAITING_CONFIRM;
+
+    ctimer_restart(&connectionWathdog);
     packetbuf_compact();
     rpllikenet_output();
 
@@ -551,6 +528,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
       }
 
       if(n != NULL) {
+        ctimer_stop(&connectionWathdog);
         gPersonalTreeRank = gBestNodeRank + 1;
         gTreeStatus = TREE_STATUS_CONNECTED;
         NETSTACK_MAC.on();
@@ -561,16 +539,16 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         //Now continue routing operation in the case of a router device
         if(treeRouter) {
 
-          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+          backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifferenceDIO;//ms
           ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
         }
 
         //Start our periodic DAO sends
         if(weAreRoot == 0) {
           PRINTF("Start DAO periodic\n");
-          backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
-          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifference;//ms
+          backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
+          clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD + backOffDifferenceDAO;//ms
           ctimer_set(&sendDaoTimer, backoff, sendPeriodicDAO, NULL);
         }
       }
@@ -661,8 +639,8 @@ check_data_link_connection(void *ptr)
        linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
       gPersonalTreeRank = 1;
 
-      backOffDifference = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
-      clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifference;//ms
+      backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
+      clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifferenceDIO;//ms
       ctimer_set(&sendNDTimer, backoff, send_DIO, NULL);
     } else {
       NETSTACK_MAC.off(1);

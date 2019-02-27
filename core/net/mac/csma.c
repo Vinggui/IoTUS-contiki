@@ -150,10 +150,10 @@ static uint8_t treeFatherRank = 0xFF;
 
 static uint8_t private_nd_control[12];
 //Timer for sending neighbor discovery
-static struct ctimer sendNDTimer;
+static struct ctimer sendNDTimer, connectionWathdog;
 static linkaddr_t gBestNode;
 static uint8_t gBestNodeRank = 0xFF;
-static clock_time_t backOffDifference;
+static clock_time_t backOffDifference, randomAddTime;
 
 static struct timer NDScanTimer;
 typedef enum {
@@ -506,8 +506,11 @@ static void
 reset_connection(void)
 {
   ctimer_stop(&sendNDTimer);
+  ctimer_stop(&connectionWathdog);
   gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;
 
+
+  leds_off(LEDS_ALL);
   treeRouter = 0;
   treePersonalRank = 0xFF;
   linkaddr_copy(&treeRoot, &linkaddr_null);
@@ -538,6 +541,7 @@ csma_802like_answer_process(void *ptr){
 
     // contikiMAC_back_on();
     gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
+    ctimer_restart(&connectionWathdog);
   } else {
     PRINTF("No router found");
   }
@@ -561,9 +565,10 @@ csma_802like_register_process(void *ptr){
   gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER;
   
 
-  backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+  randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+  clock_time_t backoff = CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + randomAddTime;//ms
   ctimer_set(&sendNDTimer, backoff, csma_802like_answer_process, NULL);
+  ctimer_set(&connectionWathdog, CLOCK_SECOND*CONTIKIMAC_WATCHDOG_TIME, reset_connection, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -643,8 +648,8 @@ csma_control_frame_receive(void)
           //make resquest
           gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_REGISTER;
           
-          backOffDifference = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
-          clock_time_t backoff = (random_rand()%CONTIKIMAC_ND_PERIOD_TIME)*CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + backOffDifference;//ms
+          randomAddTime = (CLOCK_SECOND*((random_rand()%CONTIKIMAC_ND_BACKOFF_TIME)))/1000;
+          clock_time_t backoff = (random_rand()%CONTIKIMAC_ND_PERIOD_TIME)*CLOCK_SECOND*CONTIKIMAC_ND_PERIOD_TIME + randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, csma_802like_register_process, NULL);
         } else {
           // printf("No option returng\n");
@@ -679,6 +684,7 @@ csma_control_frame_receive(void)
       PRINTF("confirm cmm from %u\n", sourceAddr.u8[0]);
 
     } else if(commandType == 'j') {
+      ctimer_stop(&connectionWathdog);
       PRINTF("join cmm from %u\n", sourceAddr.u8[0]);
       linkaddr_copy(&treeRoot, &gBestNode);
 
