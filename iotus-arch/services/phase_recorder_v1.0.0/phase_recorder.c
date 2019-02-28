@@ -38,7 +38,7 @@
 
 #define PHASE_DEFER_THRESHOLD 1
 
-#define MAX_NOACKS            8
+#define MAX_NOACKS            4
 
 #define MAX_NOACKS_TIME       CLOCK_SECOND * 60
 

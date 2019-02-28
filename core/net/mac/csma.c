@@ -506,6 +506,10 @@ send_packet(mac_callback_t sent, void *ptr)
 static void
 reset_connection(void)
 {
+  if(treeRouter &&
+     linkaddr_node_addr.u8[0] == 1) {
+    return;
+  }
   ctimer_stop(&sendNDTimer);
   ctimer_stop(&connectionWathdog);
   gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_DISCONNECTED;

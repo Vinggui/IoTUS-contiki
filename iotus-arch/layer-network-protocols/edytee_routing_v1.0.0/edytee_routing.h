@@ -30,6 +30,9 @@ typedef enum {
 
 #define EDYTEE_RPL_DAOACK_DELAY         1//sec
 
+void
+edytee_reset_connection(void);
+
 PROCESS_NAME(edytee_routing_process);
 extern const struct iotus_network_protocol_struct edytee_routing_protocol;
 

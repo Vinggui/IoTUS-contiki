@@ -105,6 +105,13 @@ reset_connection(void)
 }
 
 /*---------------------------------------------------------------------------*/
+void
+edytee_reset_connection(void)
+{
+  printf("Reset requested\n");
+  reset_connection();
+}
+/*---------------------------------------------------------------------------*/
 static void
 send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 {
@@ -240,7 +247,8 @@ input_packet(iotus_packet_t *packet)
       }
       return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
-      SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
+      // SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
+      printf("Got DAO-followed %u\n", packet_get_payload_data(packet)[0]);
     } else {
       active_transport_protocol->receive(packet);
     }

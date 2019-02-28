@@ -175,9 +175,11 @@ nd_build_packet_type(nd_pkt_types operation) {
 
   //Fix the total size now...
   gMsgPayload[0] = totalSize;
-  // if(operation != ND_PKT_BEACONS) {
-  //   clean_pieces(operation);
-  // }
+#if ND_STATIC_REQUESTS == 0
+  if(operation != ND_PKT_BEACONS) {
+    clean_pieces(operation);
+  }
+#endif
   ndLastOperation = operation;
   return gMsgPayload;
 }

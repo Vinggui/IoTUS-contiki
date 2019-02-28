@@ -264,6 +264,8 @@ reset_connection(void)
 
   contikiMAC_turn_off(1);
   timer_set(&NDScanTimer, CLOCK_SECOND*CONTIKIMAC_ND_SCAN_TIME);
+
+  edytee_reset_connection();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -376,6 +378,9 @@ static void
 csma_802like_answer_process(void *ptr){
   //ready to request asnwer from router
   if(gBestNode != NULL) {
+    // contikiMAC_turn_on();
+    contikiMAC_back_on();
+    
     uint8_t nextType[1];
     //make resquest
     nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET, 6, (uint8_t *)"answer");
@@ -407,8 +412,6 @@ csma_802like_answer_process(void *ptr){
     //active_data_link_protocol->send(packet);
     csma_send_packet(packet);
 
-    contikiMAC_back_on();
-    // contikiMAC_turn_on();
     ctimer_restart(&connectionWathdog);
     gConnectionStatus = DATA_LINK_ND_CONNECTION_STATUS_WAITING_CONFIRMATION;
   } else {
@@ -421,6 +424,7 @@ static void
 csma_802like_register_process(void *ptr)
 {
   uint8_t nextType[1];
+  // contikiMAC_turn_off(0);
   nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_REQ, 8, (uint8_t *)"register");
 
   //make resquest

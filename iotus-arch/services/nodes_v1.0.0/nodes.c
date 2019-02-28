@@ -229,7 +229,8 @@ nodes_update_by_address(iotus_address_type addressType, uint8_t *address)
 void
 nodes_destroy(iotus_node_t *node)
 {
-  SAFE_PRINTF_LOG_INFO("Node destroyed!");
+  // SAFE_PRINTF_LOG_INFO("Node destroyed!");
+  printf("Node destroyed!");;
   pieces_clean_additional_info_list(node->additionalInfoList);
   list_remove(gNodesList,node);
   memb_free(&iotus_nodes_mem, node);

@@ -86,7 +86,8 @@
 
 #define EXP_CONTIKIMAC_802_15_4           1
 
-#define STATIC_COORDINATORS               1,2,3,4,5,6//Use comma to add more routers
+// #define STATIC_COORDINATORS               1,2,3,4,5,6//Use comma to add more routers
+#define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,13,14,10,11,12,38,15,16,17,18,19,20,21,33,23,26,24,25,39,27,30,35,36//Use comma to add more routers
 #define STATIC_ROOT_ADDRESS               {1,0}//two bytes address (short)
 
 #define CONTIKIMAC_ND_PERIOD_TIME         4//sec
@@ -106,6 +107,8 @@
 #define KEEP_ALIVE_INTERVAL               30//sec
 
 #define ROUTING_PACKETS_TIMEOUT           19000UL//msec
+
+#define ND_STATIC_REQUESTS                1
 
 
 extern uint16_t gPkt_tx_successful;
