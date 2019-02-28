@@ -885,8 +885,11 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
 
   if(!is_broadcast) {
     if(collisions == 0 && is_receiver_awake == 0) {
-      phase_recorder_update(packet_get_next_destination(packet),
-		   encounter_time, ret);
+      iotus_node_t *nextNodeToPhase = packet_get_next_destination(packet);
+      if(nextNodeToPhase != NULL) {
+        phase_recorder_update(nextNodeToPhase,
+  		   encounter_time, ret);
+      }
     }
   }
 #endif /* WITH_PHASE_OPTIMIZATION */

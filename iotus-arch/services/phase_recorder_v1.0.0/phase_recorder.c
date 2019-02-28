@@ -104,7 +104,12 @@ phase_recorder_update(iotus_node_t *neighbor, rtimer_clock_t time,
       memcpy(&tempTimer, &(phasePointer->noacks_timer), sizeof(struct timer));
       if(phasePointer->noAcks >= MAX_NOACKS || timer_expired(&tempTimer)) {
         SAFE_PRINTF_LOG_INFO("dropped\n");
-        nodes_destroy(neighbor);
+        // nodes_destroy(neighbor);
+
+        iotus_additional_info_t *addInfoToDestroy = pieces_get_additional_info(
+                                                      neighbor->additionalInfoList,
+                                                      IOTUS_NODES_ADD_INFO_TYPE_WAKEUP_PHASE);
+        pieces_destroy_additional_info(neighbor->additionalInfoList, addInfoToDestroy);
         return;
       }
     } else if(mac_status == MAC_TX_OK) {

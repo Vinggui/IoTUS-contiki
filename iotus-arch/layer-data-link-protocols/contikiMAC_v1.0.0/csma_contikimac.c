@@ -370,7 +370,8 @@ send_beacon(void *ptr)
   packet_set_type(packet, IOTUS_PACKET_TYPE_IEEE802154_BEACON);
  
   SAFE_PRINTF_LOG_INFO("Beacon nd %u \n", packet->pktID);
-  active_data_link_protocol->send(packet);
+  //active_data_link_protocol->send(packet);
+  csma_send_packet(packet);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -380,7 +381,7 @@ csma_802like_answer_process(void *ptr){
   if(gBestNode != NULL) {
     // contikiMAC_turn_on();
     contikiMAC_back_on();
-    
+
     uint8_t nextType[1];
     //make resquest
     nd_set_operation_msg(IOTUS_PRIORITY_DATA_LINK, ND_PKT_ASSOCIANTION_GET, 6, (uint8_t *)"answer");
