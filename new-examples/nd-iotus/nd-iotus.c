@@ -39,6 +39,7 @@
 
 #include <stdio.h> /* For printf() */
 #include "contiki.h"
+#include "core/dev/serial-line.h"
 #include "powertrace.h"
 #include "iotus-api.h"
 #include "random.h"
@@ -143,6 +144,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         //if(linkaddr_node_addr.u8[0] == 1) {
             //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
         //}
+
+        if(ev == serial_line_event_message) {
+            // printf("got %s\n", (uint8_t *)data);
+            powertrace_stop();
+            powertrace_print("PT");
+            break;
+        }
         
 #if SINGLE_NODE_NULL == 0
         if(selfAddrValue != 1)
@@ -161,7 +169,6 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           // clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
           // ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
         }
-
 
         PROCESS_WAIT_EVENT();
         etimer_reset(&timer);

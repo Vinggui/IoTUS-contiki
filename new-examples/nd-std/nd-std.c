@@ -38,6 +38,7 @@
  */
 
 #include "contiki.h"
+#include "core/dev/serial-line.h"
 #include "dev/leds.h"
 #include "powertrace.h"
 #include "rpl-like-net.h"
@@ -133,6 +134,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
     for(;;) {
         //uint8_t nodeToSend = n%7 + 2;
+      
+        if(ev == serial_line_event_message) {
+            // printf("got %s\n", (uint8_t *)data);
+            powertrace_stop();
+            powertrace_print("PT");
+            break;
+        }
 
 #if SINGLE_NODE_NULL == 0
         if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {

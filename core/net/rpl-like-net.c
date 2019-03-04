@@ -396,7 +396,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
           clock_time_t backoff = (random_rand()%RPL_DAO_PERIOD_TIME)*CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
         } else {
-          // printf("No option returng\n");
+          // printf("No option returng2\n");
           //Nothing found. Start over...
           timer_set(&NDScanTimer, CLOCK_SECOND*RPL_ND_SCAN_TIME);
           leds_on(LEDS_RED);
@@ -639,6 +639,7 @@ check_data_link_connection(void *ptr)
     if(treeRouter &&
        linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
       gPersonalTreeRank = 1;
+      gTreeStatus = TREE_STATUS_CONNECTED;
 
       backOffDifferenceDIO = (CLOCK_SECOND*((random_rand()%RPL_ND_BACKOFF_TIME)))/1000;
       clock_time_t backoff = CLOCK_SECOND*RPL_DAO_PERIOD_TIME + backOffDifferenceDIO;//ms
