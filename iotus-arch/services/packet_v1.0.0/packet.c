@@ -62,7 +62,7 @@ packet_destroy(iotus_packet_t *piece) {
   }
   //Try to remove in every list...
   // list_remove(gPacketReadyList, piece);
-  SAFE_PRINTF_LOG_INFO("Del pkt %u", piece->pktID);
+  SAFE_PRINTF_LOG_INFO("Del pkt %u %p", piece->pktID, piece);
   list_remove(gPacketList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
   //destroy attached piggyback
@@ -460,7 +460,7 @@ packet_create_msg(uint16_t payloadSize, const uint8_t* payload,
     newMsg->nextDestinationNode = NODES_BROADCAST;
     //newMsg->iotusHeader |= PACKET_IOTUS_HDR_IS_BROADCAST;
   }
-  SAFE_PRINTF_LOG_INFO("Created pktID %u", newMsg->pktID);
+  SAFE_PRINTF_LOG_INFO("Created pktID %u %p", newMsg->pktID, newMsg);
   //Link the message into the list, sorting...
   pieces_insert_timeout_priority(gPacketList, newMsg);
   return newMsg;
@@ -609,6 +609,10 @@ packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 
   /* This operation is only allowed to packets going down the stack (to be transmitted) */
   if(packetPiece->priority == IOTUS_PRIORITY_RADIO) {
+    return 0;
+  } else if(headerToAppend == NULL ||
+     packetPiece == NULL) {
+    printf("NULL pointer\n");
     return 0;
   }
 

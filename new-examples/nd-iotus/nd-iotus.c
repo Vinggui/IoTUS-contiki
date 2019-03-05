@@ -148,7 +148,7 @@ PROCESS_THREAD(hello_world_process, ev, data) {
         if(ev == serial_line_event_message) {
             // printf("got %s\n", (uint8_t *)data);
             powertrace_stop();
-            powertrace_print("PT");
+            powertrace_print("ND");
             break;
         }
         

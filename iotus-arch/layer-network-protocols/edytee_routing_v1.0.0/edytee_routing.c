@@ -33,7 +33,7 @@
 #endif
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "edyteeRouting"
 #include "safe-printer.h"
 
@@ -260,14 +260,20 @@ input_packet(iotus_packet_t *packet)
   //search for the next node...
   // uint8_t ourAddr = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
 
-  // printf("relaying %u %u\n", packet_get_payload_size(packet), packet_get_payload_data(packet)[0]);
+  // printf("relaying %u %u %p\n", packet_get_payload_size(packet), packet_get_payload_data(packet)[0], packet);
+  SAFE_PRINTF_LOG_INFO("relaying %u %u %p", packet_get_payload_size(packet), packet_get_payload_data(packet)[0], packet);
+
   uint8_t address2[2] = {finalDestAddr,0};
   finalDestNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
   if(finalDestNode != NULL) {
+    /*
+     * TODO this parameters were packet->params, not PACKET_PARAMETERS_ALLOW_PIGGYBACK.
+     * This is a temp solution, since every packet has the same params so far.
+     */
     packetForward = iotus_initiate_packet(
                         packet_get_payload_size(packet),
                         packet_get_payload_data(packet),
-                        packet->params | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                        PACKET_PARAMETERS_ALLOW_PIGGYBACK | PACKET_PARAMETERS_WAIT_FOR_ACK,
                         IOTUS_PRIORITY_ROUTING,
                         ROUTING_PACKETS_TIMEOUT,
                         finalDestNode,

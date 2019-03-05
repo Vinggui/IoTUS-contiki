@@ -64,7 +64,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -660,6 +660,8 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
       ret = phase_recorder_wait(packet_get_next_destination(packet),
                                CYCLE_TIME, GUARD_TIME, packet, amount_to_send);
     if(ret == PHASE_DEFERRED) {
+      SAFE_PRINTF_LOG_INFO("Pkt deferred %p", packet);
+      // printf("Pkt deferred %p\n", packet);
       return MAC_TX_DEFERRED;
     }
     if(ret != PHASE_UNKNOWN) {
@@ -936,8 +938,9 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
 
   if(packet == NULL) {
     SAFE_PRINTF_LOG_ERROR("Packet was null!");
+    return MAC_TX_ERR;
   }
-
+  // printf("I`m sending %p\n", packet);
   /* Do not send during reception of a burst */
   if(we_are_receiving_burst) {
     /* Return COLLISION so the MAC may try again later */

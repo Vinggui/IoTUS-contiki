@@ -57,7 +57,7 @@
 #include <stdio.h>
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contCSMA"
 #include "safe-printer.h"
 
@@ -184,16 +184,19 @@ static void
 tx_done(int status, iotus_packet_t *packet)
 {
   if(status == MAC_TX_OK) {
-    PRINTF("csma: rexmit ok %d\n", packet->transmissions);
+    PRINTF("csma: rexmit ok %d %p\n", packet->transmissions, packet);
   }
   else if(status == MAC_TX_COLLISION ||
      status == MAC_TX_NOACK) {
-    PRINTF("csma: drop %u with status %d after %d transmissions, %d collisions\n",
-                 packet->pktID ,status, packet->transmissions, packet->collisions);
+    PRINTF("csma: drop %u %p with status %d after %d transmissions, %d collisions\n",
+                 packet, packet->pktID ,status, packet->transmissions, packet->collisions);
   }
   else {
-    PRINTF("csma: rexmit failed %d: %d\n", packet->transmissions, status);
+    PRINTF("csma: rexmit failed %d %p: %d\n", packet->transmissions, packet, status);
   }
+
+  //remove any future timer or so
+  ctimer_stop(&packet->transmit_timer);
 
   packet_confirm_transmission(packet, status);
 }
@@ -205,6 +208,7 @@ rexmit(iotus_packet_t *packet)
   /* This is needed to correctly attribute energy that we spent
      transmitting this packet. */
   // queuebuf_update_attr_from_packetbuf(q->buf);
+  // COPY PAKET FOR RTx
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -221,7 +225,7 @@ collision(iotus_packet_t *packet, int num_transmissions)
   if(packet->transmissions >= CSMA_MAX_MAX_FRAME_RETRIES + 1) {
     tx_done(MAC_TX_COLLISION, packet);
   } else {
-    PRINTF("csma: rexmit collision %d\n", packet->transmissions);
+    PRINTF("csma: rexmit collision %d %p\n", packet->transmissions, packet);
     rexmit(packet);
   }
 }
@@ -236,7 +240,7 @@ noack(iotus_packet_t *packet, int num_transmissions)
   if(packet->transmissions >= CSMA_MAX_MAX_FRAME_RETRIES + 1) {
     tx_done(MAC_TX_NOACK, packet);
   } else {
-    PRINTF("csma: rexmit noack %d\n", packet->transmissions);
+    PRINTF("csma: rexmit noack %d %p\n", packet->transmissions, packet);
     rexmit(packet);
   }
 }
