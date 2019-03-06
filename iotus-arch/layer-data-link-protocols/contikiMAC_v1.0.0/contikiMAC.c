@@ -64,7 +64,7 @@
 
 #include <string.h>
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "contikiMAC"
 #include "safe-printer.h"
 
@@ -1003,6 +1003,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
         piggyback_confirm_sent(curr, ret);
       }
+      phase_recorder_stop_packet_timer(packet);
 #if USE_CSMA_MODULE == 1
     // printf("Sent from Pkt_list");
       csma_packet_sent(curr, ret, 1);

@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "list.h"
 #include "iotus-core.h"
 #include "iotus-netstack.h"
 #include "nodes.h"
@@ -46,10 +47,12 @@
 
 
 struct phase_queueitem {
+  struct phase_queueitem *next;
   struct ctimer timer;
   uint8_t pkt_queue_size;
   iotus_packet_t *packetPhased;
 };
+LIST(phaseQueuedItemsList);
 
 /**
  * This struct is necessary to work with additionalInfo system
@@ -144,7 +147,8 @@ static void
 send_packet(void *ptr)
 {
   struct phase_queueitem *p = ptr;
-  SAFE_PRINTF_LOG_INFO("sending phased pkt %u\n", packet_get_sequence_number(p->packetPhased));
+  SAFE_PRINTF_LOG_INFO("sending phased pkt %u %p", packet_get_sequence_number(p->packetPhased), p->packetPhased);
+  // printf("sending phased pkt %u %p\n", packet_get_sequence_number(p->packetPhased), p->packetPhased);
   
   // packet_continue_deferred_packet(p->packetPhased);
   iotus_netstack_return returnAns = 255;
@@ -153,6 +157,7 @@ send_packet(void *ptr)
   packet_clear_parameter(p->packetPhased, PACKET_PARAMETERS_WAS_DEFFERED);
   // packet_confirm_transmission(p->packetPhased, returnAns);
 
+  list_remove(phaseQueuedItemsList, p);
   memb_free(&phased_packets_memb, p);
 }
 
@@ -228,6 +233,7 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
         
         p = memb_alloc(&phased_packets_memb);
         if(p != NULL) {
+          list_push(phaseQueuedItemsList, p);
           p->packetPhased = packet;
           p->pkt_queue_size = pkt_queue_size;
           SAFE_PRINTF_LOG_INFO("saved for later!\n");
@@ -251,6 +257,24 @@ phase_recorder_wait(const iotus_node_t *neighbor, rtimer_clock_t cycle_time,
   return PHASE_UNKNOWN;
 }
 
+/*---------------------------------------------------------------------------*/
+void
+phase_recorder_stop_packet_timer(const iotus_packet_t *packet)
+{
+  struct phase_queueitem *item;
+  for(item=list_head(phaseQueuedItemsList); item != NULL; item=list_item_next(item)) {
+    if(item->packetPhased == packet) {
+      SAFE_PRINTF_LOG_INFO("Found paket");
+      break;
+    }
+  }
+  if(item != NULL) {
+    ctimer_stop(&item->timer);
+    list_remove(phaseQueuedItemsList, item);
+    memb_free(&phased_packets_memb, item);
+  }
+}
+
 /*---------------------------------------------------------------------*/
 /*
  * Default function required from IoTUS, to initialize, run and finish this service
@@ -259,6 +283,9 @@ void iotus_signal_handler_phase_recorder(iotus_service_signal signal, void *data
 {
   if(IOTUS_START_SERVICE == signal) {
     SAFE_PRINT("\tService Phase recorder\n");
+    
+    // Initiate the lists of module
+    list_init(phaseQueuedItemsList);
   }
   /* else if (IOTUS_RUN_SERVICE == signal){
   } else if (IOTUS_END_SERVICE == signal){

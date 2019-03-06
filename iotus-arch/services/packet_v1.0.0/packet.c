@@ -35,7 +35,7 @@
 #include "sys/timer.h"
 
 
-#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "packet"
 #include "safe-printer.h"
 
@@ -66,6 +66,9 @@ packet_destroy(iotus_packet_t *piece) {
   list_remove(gPacketList, piece);
   pieces_clean_additional_info_list(piece->additionalInfoList);
   //destroy attached piggyback
+
+  //remove any future timer or so
+  ctimer_stop(&piece->transmit_timer);
 
   return pieces_destroy(&iotus_packet_struct_mem, piece);
 }
