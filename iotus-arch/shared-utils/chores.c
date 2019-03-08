@@ -39,7 +39,7 @@ iotus_subscribe_for_chore(iotus_layer_priority priority,
 {
   uint8_t posByte = chore/4;
   uint8_t posBit = (chore%4)*2;
-  uint8_t layerPriorityForChore = default_layers_chores_header[posByte] & (11<<posBit);
+  uint8_t layerPriorityForChore = default_layers_chores_header[posByte] & (0b00000011<<posBit);
 
   uint8_t posByteRequested = chore/8;
   uint8_t posBitRequested = chore%8;
@@ -51,11 +51,12 @@ iotus_subscribe_for_chore(iotus_layer_priority priority,
       //This request has lower priority (higher value)
       return FAILURE;
     }
-    default_layers_chores_header[posByte] &= ~(11<<posBit);
+    default_layers_chores_header[posByte] &= ~(0b00000011<<posBit);
   }
   //This request has higher priority (lower value)
   //substitute this chore to this request
   default_layers_chores_header[posByte] |= (priority<<posBit);
+
   default_chores_requested[posByteRequested] |= (1<<posBitRequested);
   return SUCCESS;
 }

@@ -52,6 +52,7 @@ typedef enum iotus_chores {
   IOTUS_CHORE_SET_ADDR_IPV6,
 
   IOTUS_CHORE_APPLY_PIGGYBACK,
+  IOTUS_CHORE_MSG_TO_SINK,
 
   /* Do not change this last option */
   IOTUS_FINAL_NUMBER_CHORE

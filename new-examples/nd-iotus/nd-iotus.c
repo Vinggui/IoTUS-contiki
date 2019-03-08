@@ -82,23 +82,29 @@ send_app_msg(void *ptr) {
     gPkt_created++;
 
     uint8_t address2[2] = {1,0};
-    rootNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
+    iotus_node_t *targetNode = nodes_get_node_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
     
 
-    printf("App sending to 1\n");
 TIC();
 #if BROADCAST_EXAMPLE == 0
     // uint8_t dest[2];
     // dest[0] = nodeAddr;
     // dest[1] = 0;
     //iotus_node_t *destNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, dest);
-    if(rootNode != NULL) {
-        iotus_initiate_msg(
-                20,
-                selfMsg,
-                PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-                5000,
-                rootNode);
+    if(iotus_get_layer_assigned_for(IOTUS_CHORE_MSG_TO_SINK) != 0) {
+      //Create piggyback instead
+      printf("App sending to 1 (piggyback)\n");
+      piggyback_create_piece(20, selfMsg, IOTUS_PRIORITY_APPLICATION, targetNode, 29000);
+    } else {
+      printf("App sending to 1\n");
+      if(targetNode != NULL) {
+          iotus_initiate_msg(
+                  20,
+                  selfMsg,
+                  PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
+                  5000,
+                  targetNode);
+      }
     }
 #else
     iotus_initiate_msg(
@@ -166,8 +172,10 @@ PROCESS_THREAD(hello_world_process, ev, data) {
           continue;
         }
 #endif
-          // clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
-          // ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
+          if(tree_connection_status == TREE_STATUS_CONNECTED) {
+            clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
+            ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
+          }
         }
 
         PROCESS_WAIT_EVENT();

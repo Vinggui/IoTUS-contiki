@@ -52,6 +52,13 @@ typedef enum {
   TREE_STATUS_RECONNECTING
 } tree_manager_conn_status;
 
+/**
+ * This struct is necessary to work with additionalInfo system
+ */
+typedef struct __attribute__ ((__packed__)) next_addr_to_node_t {
+  iotus_node_t *nextNode;
+} tree_next_addr_to_node_t;
+
 
 typedef void (*tree_cb_func)(struct packet_piece *packet, uint8_t type, uint8_t size, uint8_t *data);
 

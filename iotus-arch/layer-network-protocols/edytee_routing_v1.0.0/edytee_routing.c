@@ -33,7 +33,7 @@
 #endif
 
 
-#define DEBUG IOTUS_PRINT_IMMEDIATELY//IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
+#define DEBUG IOTUS_DONT_PRINT//IOTUS_PRINT_IMMEDIATELY
 #define THIS_LOG_FILE_NAME_DESCRITOR "edyteeRouting"
 #include "safe-printer.h"
 
@@ -65,6 +65,21 @@ send(iotus_packet_t *packet)
     //Get the final static destination
     uint8_t *finalDestLastAddress = nodes_get_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT,
                                           packet->finalDestinationNode);
+
+    if(rootNode == packet->finalDestinationNode &&
+       tree_connection_status == TREE_STATUS_CONNECTED) {
+      //Get next address
+      tree_next_addr_to_node_t *nextTreeNode = pieces_get_additional_info_var(
+                                                    rootNode->additionalInfoList,
+                                                    IOTUS_NODES_ADD_INFO_TYPE_NEXT_ADDR_TO_NODE);
+
+      if(nextTreeNode != NULL) {
+        packet->nextDestinationNode = nextTreeNode->nextNode;
+      } else {
+        printf("No path to root node!\n");
+        return MAC_TX_ERR;
+      }
+    }
     // uint8_t address[2] = {1,0};
     // fatherNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address);
 
@@ -80,6 +95,16 @@ send(iotus_packet_t *packet)
 #else
   return active_data_link_protocol->send(packet);
 #endif
+}
+
+/*---------------------------------------------------------------------------*/
+static iotus_netstack_return
+send_from_up_layer(iotus_packet_t *packet)
+{
+  uint8_t nextType[1];
+  nextType[0] = EDYTEE_COMMAND_TYPE_DATA;
+  packet_push_bit_header(8, nextType, packet);
+  send(packet);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -99,8 +124,6 @@ reset_connection(void)
   treePersonalRank = 0xFF;
 
   gBestNode = NULL;
-
-  printf("fuck this shit\n");
   // CSMA_reset();
 }
 
@@ -237,6 +260,21 @@ input_packet(iotus_packet_t *packet)
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
       ctimer_stop(&connectionWathdog);
       SAFE_PRINTF_LOG_INFO("Got DAO-ACK");
+
+      tree_next_addr_to_node_t *nextNodePointer = pieces_modify_additional_info_var(
+                          rootNode->additionalInfoList,
+                          IOTUS_NODES_ADD_INFO_TYPE_NEXT_ADDR_TO_NODE,
+                          sizeof(tree_next_addr_to_node_t),
+                          TRUE);
+      if(NULL == nextNodePointer) {
+        SAFE_PRINTF_LOG_ERROR("Set");
+        return;
+      }
+      tree_next_addr_to_node_t tempNode;
+      tempNode.nextNode = fatherNode;
+      memcpy(nextNodePointer, &tempNode, sizeof(tree_next_addr_to_node_t));
+
+
       tree_connection_status = TREE_STATUS_CONNECTED;
       leds_on(LEDS_BLUE);
       //Start our periodic DAO sends
@@ -248,7 +286,7 @@ input_packet(iotus_packet_t *packet)
       return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
       // SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
-      printf("Got DAO-followed %u\n", packet_get_payload_data(packet)[0]);
+      printf("Got DAO-followed %u > %s\n", packet_get_payload_data(packet)[0],packet_get_payload_data(packet)+4);
     } else {
       active_transport_protocol->receive(packet);
     }
@@ -559,6 +597,7 @@ start(void)
   // iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_ONEHOP_BROADCAST);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_FLOODING);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_TREE_BUILDING);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_MSG_TO_SINK);
 
 
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_BEACONS);
@@ -620,7 +659,7 @@ const struct iotus_network_protocol_struct edytee_routing_protocol = {
   start,
   post_start,
   close,
-  send,
+  send_from_up_layer,
   send_cb,
   input_packet
 };
