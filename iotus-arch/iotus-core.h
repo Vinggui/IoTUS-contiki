@@ -26,7 +26,10 @@ typedef int8_t Status;
 #define FAILURE         0
 
 
-/* This PRIORITY can have only 4 value, since it uses only 2 bits in the system. */
+/* 
+ * This PRIORITY can have only 4 value, since it uses only 2 bits in the system.
+ * Anything bigger than that is for other uses only
+ */
 typedef enum IOTUS_LAYER_PRIORITY {
   IOTUS_PRIORITY_RADIO = 0,
   IOTUS_PRIORITY_DATA_LINK,
@@ -36,7 +39,6 @@ typedef enum IOTUS_LAYER_PRIORITY {
   IOTUS_PRIORITY_APPLICATION_SUB_1,
   IOTUS_PRIORITY_APPLICATION_SUB_2,
   IOTUS_PRIORITY_APPLICATION_SUB_3,
-  IOTUS_PRIORITY_APPLICATION_SUB_4,
 
   IOTUS_MAX_LAYER_NUM
 } iotus_layer_priority;

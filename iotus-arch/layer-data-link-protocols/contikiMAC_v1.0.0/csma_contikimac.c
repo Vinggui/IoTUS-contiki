@@ -41,6 +41,7 @@
 #include "contiki.h"
 #include "contikiMAC.h"
 #include "csma_contikimac.h"
+#include "edytee_routing.h"
 #include "dev/leds.h"
 #include "iotus-api.h"
 #include "iotus-core.h"
@@ -102,7 +103,7 @@ static uint8_t isCoordinator = 0;
 static struct ctimer sendNDTimer, connectionWathdog;
 static clock_time_t backOffDifference, randomAddTime;
 static iotus_node_t *gBestNode = NULL;
-static gCoordinatorRank = 0xFF;
+static uint8_t gCoordinatorRank = 0xFF;
 
 static struct timer NDScanTimer;
 typedef enum {
@@ -255,7 +256,7 @@ tx_ok(iotus_packet_t *packet, int num_transmissions)
 
 /*---------------------------------------------------------------------------*/
 static void
-reset_connection(void)
+reset_connection(void *ptr)
 {
   ctimer_stop(&sendNDTimer);
   ctimer_stop(&connectionWathdog);
@@ -272,12 +273,6 @@ reset_connection(void)
   edytee_reset_connection();
 }
 
-/*---------------------------------------------------------------------------*/
-void
-CSMA_reset(void)
-{
-  reset_connection();
-}
 /*---------------------------------------------------------------------------*/
 void
 csma_packet_sent(iotus_packet_t *packet, int status, int num_transmissions)
@@ -340,7 +335,7 @@ control_frames_nd_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 
   if(returnAns != MAC_TX_OK) {
     if(gConnectionStatus == DATA_LINK_ND_CONNECTION_STATUS_WAITING_ANSWER) {
-      reset_connection();
+      reset_connection(NULL);
     }
   }
   // }

@@ -37,6 +37,11 @@ Status
 iotus_subscribe_for_chore(iotus_layer_priority priority,
                            iotus_chores chore)
 {
+  if(priority > 0b00000011) {
+    // printf("priority bigger than expected\n");
+    return FAILURE;
+  }
+
   uint8_t posByte = chore/4;
   uint8_t posBit = (chore%4)*2;
   uint8_t layerPriorityForChore = default_layers_chores_header[posByte] & (0b00000011<<posBit);

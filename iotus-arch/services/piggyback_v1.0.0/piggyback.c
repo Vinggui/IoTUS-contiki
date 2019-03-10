@@ -43,6 +43,7 @@ LIST(gPiggybackFramesList);
 LIST(gPiggybackFramesInsertedList);
 
 static struct ctimer piggyback_timeout_ctimer;
+static piggy_cb_func gLayersCB[IOTUS_MAX_LAYER_NUM-1] = {NULL};
 
 static void
 update_piggy_timeout_timer(void);
@@ -149,19 +150,91 @@ piggyback_timeout_handler(void *ptr) {
  */
 void
 piggyback_unwrap_payload(iotus_packet_t *packet) {
-  // printf("got here\n");
+    uint8_t piggyHeader, numberOfPieces, pieceHdr;
+    uint8_t piggyLayer, extPieceHdr, removedPieces;
+    uint8_t oldPosReader;
+    uint16_t piggyDataSize;
+
   if(packet_get_parameter(packet, PACKET_PARAMETERS_IS_NEW_PACKET_SYSTEM)) {
+    uint16_t posReader = 0;
+
     //Get the first byte of the pigyback payload
+    piggyHeader = packet_read_byte_backward(posReader++, packet);
+    // packet_unwrap_appended_byte(packet, &piggyHeader, 1);
 
-    uint8_t piggyHeader=0;
-    packet_unwrap_appended_byte(packet, &piggyHeader, 1);
+    numberOfPieces = piggyHeader & PIGGYBACK_MAX_ATTACHED_PIECES;
 
-    uint8_t numberOfPieces = piggyHeader & PIGGYBACK_MAX_ATTACHED_PIECES;
-    uint8_t i = 0;    
+    uint8_t i = 0;
+    removedPieces = 0;
     for(; i < numberOfPieces; i++) {
-      SAFE_PRINTF_LOG_INFO("got piggy");
+      piggyDataSize = 0;
+      extPieceHdr = 0;
+      oldPosReader = posReader;
+
+      pieceHdr = packet_read_byte_backward(posReader++, packet);
+
+      piggyDataSize = IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK & pieceHdr;
+
+      if(IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE & pieceHdr) {
+        extPieceHdr = 1;
+        piggyDataSize = piggyDataSize<<8;
+        piggyDataSize |= packet_read_byte_backward(posReader++, packet);
+      }
+ 
+      //Radio layer never uses piggyback, so we ignore it by saying DATA LINK is 0
+      piggyLayer = ((pieceHdr & IOTUS_PIGGYBACK_LAYER)>>6) + 1;
+
+      //Now we need to verify if this node should unwraped
+      if(!(piggyHeader & IOTUS_PIGGYBACK_GENERAL_HDR_IS_FINAL_DEST) &&
+         pieceHdr & IOTUS_PIGGYBACK_ATTACHMENT_TYPE_FINAL_DEST) {
+        /*
+         * This is a final destination piggyback piece, leave it here..
+         * since this is not the destination node.
+         */
+        posReader += piggyDataSize;
+        continue;
+      }
+
+      //Otherwise, proceed with this piggyback piece and deliver...
+      uint8_t tempBuffForPiece[piggyDataSize+2];
+
+      uint16_t correctedPos = packet_get_payload_size(packet)-posReader-piggyDataSize;
+
+      //+1 to leave space to correct direction
+      packet_extract_data_bytes(tempBuffForPiece, correctedPos, piggyDataSize+extPieceHdr+1, packet);
+
+      
+      //Fix direction of bytes
+      uint8_t i, olderByte;
+      for(i=0; i<piggyDataSize/2; i++) {
+        olderByte = tempBuffForPiece[i];
+        tempBuffForPiece[i] = tempBuffForPiece[piggyDataSize-i-1];
+        tempBuffForPiece[piggyDataSize-i-1] = olderByte;
+      }
+      tempBuffForPiece[piggyDataSize] = '\0';
+      tempBuffForPiece[piggyDataSize+1] = '\0';
+
+      if(gLayersCB[piggyLayer] != NULL) {
+        //There is a cb and we will call it
+        gLayersCB[piggyLayer](packet, piggyDataSize, tempBuffForPiece);
+      }
+
+      //As we extract this from the packet, then we has to return to original value
+      posReader = oldPosReader;
+      removedPieces++;
     }
 
+    numberOfPieces -= removedPieces;
+    if(numberOfPieces > 0) {
+      packet_set_parameter(packet, PACKET_PARAMETERS_ALREADY_WITH_PIGGYBACK);
+    } else {
+      packet_clear_parameter(packet, PACKET_PARAMETERS_ALREADY_WITH_PIGGYBACK);
+    }
+
+
+    numberOfPieces &= IOTUS_PIGGYBACK_GENERAL_HDR_NUMBER_PIECES;
+    //Indicates that this packet has some piggyback already
+    packet_set_byte_backward(numberOfPieces, 0, packet);
   }
 }
 
@@ -191,7 +264,7 @@ update_piggy_timeout_timer(void) {
  */
 iotus_piggyback_t *
 piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
-    uint8_t targetLayer, iotus_node_t *destinationNode, int16_t timeout)
+    iotus_layer_priority targetLayer, iotus_node_t *destinationNode, int16_t timeout)
 {
   if(piggyPayloadSize > PIGGYBACK_MAX_FRAME_SIZE) {
     SAFE_PRINTF_LOG_ERROR("Piggy hdr too large");
@@ -213,8 +286,10 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
   
   timestamp_delay(&(newPiece->timeout), timeout);
 
-  newPiece->priority = targetLayer;
-  uint8_t params = IOTUS_PIGGYBACK_LAYER & targetLayer;
+  //Radio layer never uses piggyback, so we ignore it by saying DATA LINK is 0
+  newPiece->priority = (targetLayer-1);
+
+  uint8_t params = IOTUS_PIGGYBACK_LAYER & (newPiece->priority<<6);
   /* Encode parameters 
    * 0b11000000 - 2 bits indicates to which layer this frame is supposed to be sent
    * 0b00100000 - 1 bit indicate if this frame is to the next node or stick to final destination
@@ -223,7 +298,8 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
    *                most significant byte of the size (if bigger).
    */
   if(piggyPayloadSize > PIGGYBACK_SINGLE_HEADER_FRAME) {
-    params |= (uint8_t)(piggyPayloadSize&0x000F) | IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE;
+    params |= (uint8_t)(piggyPayloadSize>>8) & IOTUS_PIGGYBACK_ATTACHMENT_SIZE_MASK;
+    params |= IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE;
     newPiece->extendedSize = (uint8_t)(piggyPayloadSize & 0x00FF);
   } else {
     params |= (uint8_t)(piggyPayloadSize & 0x000F);
@@ -246,7 +322,9 @@ piggyback_create_piece(uint16_t piggyPayloadSize, const uint8_t* piggyPayload,
 /*---------------------------------------------------------------------*/
 static Boolean
 insert_piggyback_to_packet(iotus_packet_t *packet_piece,
-                    iotus_piggyback_t *piggyback_piece, Boolean stick, uint16_t availableSpace)
+                    iotus_piggyback_t *piggyback_piece, Boolean stick,
+                    uint16_t availableSpace,
+                    Boolean hasOneFreeByte)
 {
   /*
   if(packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALLOW_FRAGMENTATION)) {
@@ -262,12 +340,17 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
   */
   SAFE_PRINT("No frag\n");
 
+  if(hasOneFreeByte) {
+    hasOneFreeByte = 1;
+  }
+
   uint16_t packetOldSize = packet_get_size(packet_piece);
   uint16_t piggyback_with_ext_size;
   
   piggyback_with_ext_size = (piggyback_piece->params & IOTUS_PIGGYBACK_ATTACHMENT_WITH_EXTENDED_SIZE);
 
-  if((availableSpace - packetOldSize) >= (pieces_get_data_size(piggyback_piece) +
+  if((availableSpace - packetOldSize) >= (pieces_get_data_size(piggyback_piece) -
+                                          hasOneFreeByte +
                                           member_size(iotus_piggyback_t,params) +
                                           member_size(iotus_piggyback_t,extendedSize))) {
     //This piggyback will fit...
@@ -280,7 +363,8 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
     //Insert the header at the end of the data buffer of this piggyback
     uint8_t tempBuffer[pieces_get_data_size(piggyback_piece) +
                        member_size(iotus_piggyback_t,params) +
-                       member_size(iotus_piggyback_t,extendedSize)];
+                       member_size(iotus_piggyback_t,extendedSize) - 
+                       hasOneFreeByte];
     uint8_t *tempBuffPointer = tempBuffer;
 
     *tempBuffPointer = piggyback_piece->params;
@@ -291,7 +375,15 @@ insert_piggyback_to_packet(iotus_packet_t *packet_piece,
     }
     memcpy(tempBuffPointer, pieces_get_data_pointer(piggyback_piece), pieces_get_data_size(piggyback_piece));
 
-    if(0 == packet_append_last_header((uint16_t)(tempBuffPointer-tempBuffer + pieces_get_data_size(piggyback_piece)),
+    if(hasOneFreeByte) {
+      //Use this free space and reduce buffer creation for piggybacks
+      uint8_t lastByte = pieces_get_data_pointer(piggyback_piece)[pieces_get_data_size(piggyback_piece)-1];
+      packet_set_byte_backward(lastByte, 0, packet_piece);
+    }
+
+    if(0 == packet_append_last_header((uint16_t)(tempBuffPointer-tempBuffer +
+                                                 pieces_get_data_size(piggyback_piece) -
+                                                 hasOneFreeByte),
                                       tempBuffer,
                                       packet_piece)) {
       SAFE_PRINTF_LOG_ERROR("Append");
@@ -335,15 +427,32 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   //Look for header pieces that match this packet conditions
   iotus_piggyback_t *h;
   iotus_piggyback_t *nextH;
-  uint8_t piggyPiecesInserted = 0;
+  uint8_t piggyFinalGeneralHdr = 0;
   uint16_t packetOldSize;
+  Boolean hasOneFreeByte = FALSE;
+  //Save the original size of this pkt
   packetOldSize = packet_get_size(packet_piece);
+
+  //Check if this packet already had another pigyback inserted, like rexmit
+  if(packet_get_parameter(packet_piece, PACKET_PARAMETERS_ALREADY_WITH_PIGGYBACK)) {
+    //Get the first byte of the pigyback payload
+    piggyFinalGeneralHdr = packet_read_byte_backward(0, packet_piece);
+
+    hasOneFreeByte = TRUE;
+    //update oldsize
+    packetOldSize--;
+  }
+
 
   h = list_head(gPiggybackFramesList);
   if(h == NULL) {
     SAFE_PRINTF_LOG_ERROR("Piggy search NULL");
   }
   while(h != NULL) {
+    if(piggyFinalGeneralHdr >= PIGGYBACK_MAX_ATTACHED_PIECES) {
+      break;
+    }
+
     nextH = list_item_next(h);
     SAFE_PRINTF_LOG_INFO("Piggy search ok");
     Boolean toFinalDestination = (h->finalDestinationNode == packet_get_final_destination(packet_piece));
@@ -353,8 +462,10 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
       if(TRUE == insert_piggyback_to_packet(packet_piece,
                                              h,
                                              toFinalDestination,
-                                             availableSpace)) {
-        piggyPiecesInserted++;
+                                             availableSpace,
+                                             hasOneFreeByte)) {
+        piggyFinalGeneralHdr++;
+        hasOneFreeByte = FALSE;
         //TODO remove this break to add more pieces...
         break;
       }
@@ -362,13 +473,36 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
     h = nextH;
   }
 
-  if(0 == packet_append_last_header(1,
-                                    &piggyPiecesInserted,
-                                    packet_piece)) {
-    SAFE_PRINTF_LOG_ERROR("Append");
+  if(piggyFinalGeneralHdr > 0) {
+    packet_set_parameter(packet_piece, PACKET_PARAMETERS_ALREADY_WITH_PIGGYBACK);
+  }
+
+  //So far, piggyFinalGeneralHdr has the number of pieces attached
+  piggyFinalGeneralHdr &= IOTUS_PIGGYBACK_GENERAL_HDR_NUMBER_PIECES;
+
+  //Verify if this is our last transmission
+  if(packet_get_next_destination(packet_piece) == packet_get_final_destination(packet_piece)){
+    piggyFinalGeneralHdr |= IOTUS_PIGGYBACK_GENERAL_HDR_IS_FINAL_DEST;
+  }
+
+  if(hasOneFreeByte == TRUE) {
+    packet_set_byte_backward(piggyFinalGeneralHdr, 0, packet_piece);
+  } else {
+    if(0 == packet_append_last_header(1,
+                                      &piggyFinalGeneralHdr,
+                                      packet_piece)) {
+      SAFE_PRINTF_LOG_ERROR("Append");
+    }
   }
 
   return packet_get_size(packet_piece)-packetOldSize;
+}
+
+/*---------------------------------------------------------------------------*/
+void
+piggyback_subscribe(iotus_layer_priority layer, piggy_cb_func *cbFunc)
+{
+  gLayersCB[layer] = cbFunc;
 }
 
 /*---------------------------------------------------------------------*/

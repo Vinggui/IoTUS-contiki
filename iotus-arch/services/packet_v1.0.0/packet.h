@@ -171,6 +171,15 @@ packet_append_last_header(uint16_t byteSequenceSize, const uint8_t *headerToAppe
 uint8_t
 packet_read_byte(uint16_t bytePos, iotus_packet_t *packet_piece);
 
+uint8_t
+packet_read_byte_backward(uint16_t bytePos, iotus_packet_t *packet_piece);
+
+void
+packet_set_byte_backward(uint8_t byte, uint16_t bytePos, iotus_packet_t *packetPiece);
+
+void
+packet_extract_data_bytes(uint8_t *buff, uint16_t bytePos, uint16_t size, iotus_packet_t *packetPiece);
+
 Status
 packet_unwrap_appended_byte(iotus_packet_t *packetPiece, uint8_t *buf, uint16_t num);
 
@@ -206,9 +215,6 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space);
 
 // void
 // packet_deliver_upstack(iotus_packet_t *packet);
-
-void
-packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace);
 
 void
 packet_set_confirmation_cb(iotus_packet_t *packet, packet_sent_cb func_cb);

@@ -642,7 +642,7 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
     uint16_t freeSpace = get_safe_pdu_for_layer(IOTUS_PRIORITY_DATA_LINK);
     freeSpace -= contikimac_framer.length(packet);
     freeSpace -= packet_get_size(packet);
-    packet_optimize_build(packet, freeSpace);
+    piggyback_apply(packet, freeSpace);
 
     if(contikimac_framer.create(packet) < 0) {
       SAFE_PRINTF_LOG_ERROR("framer failed %u\n", packet->pktID);
@@ -965,7 +965,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       uint16_t freeSpace = get_safe_pdu_for_layer(IOTUS_PRIORITY_DATA_LINK);
       freeSpace -= contikimac_framer.length(curr);
       freeSpace -= packet_get_size(curr);
-      packet_optimize_build(curr, freeSpace);
+      piggyback_apply(curr, freeSpace);
 
       if(contikimac_framer.create(curr) < 0) {
         SAFE_PRINTF_LOG_ERROR("framer failed on list %u\n", curr->pktID);

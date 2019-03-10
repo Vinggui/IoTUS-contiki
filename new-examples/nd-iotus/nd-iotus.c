@@ -42,6 +42,7 @@
 #include "core/dev/serial-line.h"
 #include "powertrace.h"
 #include "iotus-api.h"
+#include "piggyback.h"
 #include "random.h"
 #include "tree_manager.h"
 
@@ -55,6 +56,15 @@ AUTOSTART_PROCESSES(&hello_world_process);
 static uint8_t selfMsg[20];
 static uint8_t gPkt_created = 0;
 /*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+static void
+receive_piggyback_cb(iotus_packet_t *packet, uint8_t size, uint8_t *data)
+{
+  // SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
+  printf("App piggy: %s\n", data);
+}
+
 
 static void
 app_packet_confirm(iotus_packet_t *packet, iotus_netstack_return returnAns)
@@ -141,6 +151,8 @@ PROCESS_THREAD(hello_world_process, ev, data) {
                                                                selfAddrValue,
                                                                selfAddrValue,
                                                                selfAddrValue);
+
+    piggyback_subscribe(IOTUS_PRIORITY_APPLICATION, receive_piggyback_cb);
     
     /* Start powertracing, once every two seconds. */
     powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);

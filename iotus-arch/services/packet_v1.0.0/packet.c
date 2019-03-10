@@ -700,6 +700,89 @@ packet_read_byte(uint16_t bytePos, iotus_packet_t *packetPiece)
 
 /*---------------------------------------------------------------------*/
 /*
+ * \brief  Function to read any byte of a message backward, given its position
+ * \param bytePos The position of the byte
+ * \param packetPiece Packet to be read.
+ * \return Byte read.
+ */
+uint8_t
+packet_read_byte_backward(uint16_t bytePos, iotus_packet_t *packetPiece)
+{
+  if(packet_get_size(packetPiece) <= bytePos) {
+    return 0;
+  }
+
+  int32_t pos;
+  pos = pieces_get_data_size(packetPiece) -bytePos -1 -packetPiece->lastHeaderSize;
+  if(pos < 0) {
+    return 0;
+  }
+
+  return pieces_get_data_pointer(packetPiece)[pos];
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief  Function to set any byte of a message backward, given its position
+ * \param byte The value to set in
+ * \param bytePos The position of the byte
+ * \param packetPiece Packet to be read.
+ * \return Byte read.
+ */
+void
+packet_set_byte_backward(uint8_t byte, uint16_t bytePos, iotus_packet_t *packetPiece)
+{
+  if(packet_get_size(packetPiece) <= bytePos) {
+    return 0;
+  }
+
+  int32_t pos;
+  pos = pieces_get_data_size(packetPiece) -bytePos -1 -packetPiece->lastHeaderSize;
+  if(pos < 0) {
+    return 0;
+  }
+
+  pieces_get_data_pointer(packetPiece)[pos] = byte;
+}
+
+/*---------------------------------------------------------------------*/
+/*
+ * \brief  Function to extract a chunk of bytes from the data buffer
+ * \param buff Buffer to be used to save extracted bytes
+ * \param bytePos The position to start extraction
+ * \param size Size of extraction
+ * \param packetPiece Packet to be read.
+ * \return Byte read.
+ */
+void
+packet_extract_data_bytes(uint8_t *buff, uint16_t bytePos, uint16_t size, iotus_packet_t *packetPiece)
+{
+  if(packet_get_size(packetPiece) <= (bytePos+size)) {
+    return;
+  }
+// printf("Buffer: ");
+  uint8_t i, byteToReplace;
+  for(i=bytePos; i<packet_get_payload_size(packetPiece); i++) {
+    if(i < bytePos + size) {
+      buff[i-bytePos] = packet_get_payload_data(packetPiece)[i];
+      // printf("%c", buff[i-bytePos]);
+    }
+
+    if(i+size < packet_get_payload_size(packetPiece)) {
+      byteToReplace = packet_get_payload_data(packetPiece)[i+size];
+    } else {
+      byteToReplace = 0;
+    }
+
+    packet_get_payload_data(packetPiece)[i] = byteToReplace;
+  }
+
+// printf("\n");
+  packetPiece->lastHeaderSize += size;
+}
+
+/*---------------------------------------------------------------------*/
+/*
  * \brief  Read bytes appended in an incoming packet.
  * \param packetPiece Packet to be read.
  * \param buf         The buf to save the read data into.
@@ -989,41 +1072,6 @@ packet_has_space(iotus_packet_t *packetPiece, uint16_t space)
 
 //   packet_destroy(packet);
 // }
-
-/*---------------------------------------------------------------------------*/
-/**
- * Makes the core optimize the packet building
- * \param time_needed The necessary time needed by this demanding task.
- * \param task        The function to be called whenever possible.
- */
-void
-packet_optimize_build(iotus_packet_t *packet, uint16_t freeSpace)
-{
-  if(packet == NULL) {
-    return;
-  }
-
-  /*
-   * Stages of optimization are:
-   * > Applying piggyback
-   * > Apply the final header to be decoded
-   */
-
-  uint8_t finalHeader[5] = {0xFF};
-  // uint8_t finalHdrSize;
-  // finalHdrSize = 1;
-
-  // printf("PacketServ %u - %u %u\n", packet->pktID, list_length(gPacketList), memb_numfree(&iotus_packet_struct_mem));
-  
-  //First, try to apply the piggyback, if it exists
-  if(0 < piggyback_apply(packet,freeSpace)) {
-    //Piggyback was successfully applied
-    finalHeader[0] |= PACKET_IOTUS_HDR_HAS_PIGGYBACK;
-  }
-
-  //Apply the final header
-  // packet_append_last_header(finalHdrSize, finalHeader, packet);
-}
 
 /*---------------------------------------------------------------------*/
 void

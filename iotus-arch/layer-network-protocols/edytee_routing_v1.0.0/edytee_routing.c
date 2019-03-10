@@ -22,6 +22,7 @@
 #include "layer-packet-manager.h"
 #include "lib/random.h"
 #include "neighbor_discovery.h"
+#include "string.h"
 #include "sys/timer.h"
 #include "sys/rtimer.h"
 #include "sys/ctimer.h"
@@ -105,11 +106,13 @@ send_from_up_layer(iotus_packet_t *packet)
   nextType[0] = EDYTEE_COMMAND_TYPE_DATA;
   packet_push_bit_header(8, nextType, packet);
   send(packet);
+
+  return MAC_TX_OK;
 }
 
 /*---------------------------------------------------------------------------*/
 static void
-reset_connection(void)
+reset_connection(void *ptr)
 {
   // printf("Reseting conn\n");
   ctimer_stop(&sendNDTimer);
@@ -132,7 +135,7 @@ void
 edytee_reset_connection(void)
 {
   printf("Reset requested\n");
-  reset_connection();
+  reset_connection(NULL);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -145,7 +148,7 @@ send_cb(iotus_packet_t *packet, iotus_netstack_return returnAns)
 
   if(returnAns != MAC_TX_OK) {
     if(tree_connection_status == TREE_STATUS_WAITING_CONFIRM) {
-      reset_connection();
+      reset_connection(NULL);
       return;
     }
   }
@@ -172,7 +175,7 @@ sendDAOToSink(void *ptr)
 
   if(NULL == packetForward) {
     SAFE_PRINTF_LOG_INFO("Packet failed");
-    return RX_ERR_DROPPED;
+    return;
   }
 
   //Define this commands as
@@ -268,7 +271,7 @@ input_packet(iotus_packet_t *packet)
                           TRUE);
       if(NULL == nextNodePointer) {
         SAFE_PRINTF_LOG_ERROR("Set");
-        return;
+        return MAC_TX_ERR;
       }
       tree_next_addr_to_node_t tempNode;
       tempNode.nextNode = fatherNode;
@@ -286,7 +289,7 @@ input_packet(iotus_packet_t *packet)
       return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
       // SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
-      printf("Got DAO-followed %u > %s\n", packet_get_payload_data(packet)[0],packet_get_payload_data(packet)+4);
+      printf("Got DAO-followed %u\n", packet_get_payload_data(packet)[0]);
     } else {
       active_transport_protocol->receive(packet);
     }
@@ -304,14 +307,14 @@ input_packet(iotus_packet_t *packet)
   uint8_t address2[2] = {finalDestAddr,0};
   finalDestNode = nodes_update_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
   if(finalDestNode != NULL) {
-    /*
-     * TODO this parameters were packet->params, not PACKET_PARAMETERS_ALLOW_PIGGYBACK.
-     * This is a temp solution, since every packet has the same params so far.
-     */
+    packet_clear_parameter(packet, PACKET_PARAMETERS_PACKET_PENDING);
+    packet->params |= PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK;
+
+    // printf("params were %x\n", packet->params);
     packetForward = iotus_initiate_packet(
                         packet_get_payload_size(packet),
                         packet_get_payload_data(packet),
-                        PACKET_PARAMETERS_ALLOW_PIGGYBACK | PACKET_PARAMETERS_WAIT_FOR_ACK,
+                        packet->params,
                         IOTUS_PRIORITY_ROUTING,
                         ROUTING_PACKETS_TIMEOUT,
                         finalDestNode,
@@ -586,6 +589,15 @@ receive_nd_frames(struct packet_piece *packet, uint8_t type, uint8_t size, uint8
     }
   }
 }
+
+/*---------------------------------------------------------------------------*/
+static void
+receive_piggyback_cb(iotus_packet_t *packet, uint8_t size, uint8_t *data)
+{
+  // SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
+  printf("Net piggy: %s\n", data);
+}
+
 /*---------------------------------------------------------------------------*/
 static void
 start(void)
@@ -598,7 +610,10 @@ start(void)
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_FLOODING);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_TREE_BUILDING);
   iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_MSG_TO_SINK);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_INSERT_PKT_P2P_SRC_ADDRESS);
+  iotus_subscribe_for_chore(IOTUS_PRIORITY_ROUTING, IOTUS_CHORE_INSERT_PKT_P2P_DST_ADDRESS);
 
+  piggyback_subscribe(IOTUS_PRIORITY_ROUTING, receive_piggyback_cb);
 
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_BEACONS);
   nd_set_layer_operations(IOTUS_PRIORITY_ROUTING, ND_PKT_ASSOCIANTION_REQ);
