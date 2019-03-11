@@ -62,7 +62,7 @@ static void
 receive_piggyback_cb(iotus_packet_t *packet, uint8_t size, uint8_t *data)
 {
   // SAFE_PRINTF_LOG_INFO("nd %p sent %u", packet, returnAns);
-  printf("App piggy: %s\n", data);
+  printf("App piggy:%s\n", data);
 }
 
 
@@ -86,16 +86,16 @@ app_packet_handler(iotus_packet_t *packet)
 /*---------------------------------------------------------------------------*/
 static void
 send_app_msg(void *ptr) {
-    if(gPkt_created >= MAX_GENERATED_PKT) {
-        return;
-    }
-    gPkt_created++;
+    // if(gPkt_created >= MAX_GENERATED_PKT) {
+    //     return;
+    // }
+    // gPkt_created++;
 
     uint8_t address2[2] = {1,0};
     iotus_node_t *targetNode = nodes_get_node_by_address(IOTUS_ADDRESSES_TYPE_ADDR_SHORT, address2);
     
 
-TIC();
+// TIC();
 #if BROADCAST_EXAMPLE == 0
     // uint8_t dest[2];
     // dest[0] = nodeAddr;
@@ -128,74 +128,51 @@ TIC();
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
+  PROCESS_BEGIN();
 
-    //leds_init();
-    //leds_off(LEDS_ALL);
-
-
-    static struct ctimer sendTimer;
-    static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
-
-    IOTUS_CORE_START(0,0,0,0);//contikiMAC,0);
-    iotus_set_interface_functions(app_packet_confirm,app_packet_handler);
-
-    static uint8_t selfAddrValue;
-    selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
-
-    sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue);
-
-    piggyback_subscribe(IOTUS_PRIORITY_APPLICATION, receive_piggyback_cb);
-    
-    /* Start powertracing, once every two seconds. */
-    powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
-
-    for(;;) {
-        //leds_toggle(LEDS_ALL);
-        //if(linkaddr_node_addr.u8[0] == 1) {
-            //send_wireless_packet(MESSAGE_TO_ROOT, &addr, NULL, "Oi!", 3);
-        //}
-
-        if(ev == serial_line_event_message) {
-            // printf("got %s\n", (uint8_t *)data);
-            powertrace_stop();
-            powertrace_print("ND");
-            break;
-        }
-        
-#if SINGLE_NODE_NULL == 0
-        if(selfAddrValue != 1)
-        {
-#else
-        {
-#endif
+  //leds_init();
+  //leds_off(LEDS_ALL);
 
 
-#if EXP_ONE_NODE_GEN > 0
-        if(selfAddrValue != EXP_ONE_NODE_GEN) {
-          PROCESS_WAIT_EVENT();
-          continue;
-        }
-#endif
-          if(tree_connection_status == TREE_STATUS_CONNECTED) {
-            clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
-            ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
-          }
-        }
+  static struct ctimer sendTimer;
+  static struct etimer timer;
 
-        PROCESS_WAIT_EVENT();
-        etimer_reset(&timer);
+  IOTUS_CORE_START(0,0,0,0);//contikiMAC,0);
+  iotus_set_interface_functions(app_packet_confirm,app_packet_handler);
+
+  static uint8_t selfAddrValue;
+  selfAddrValue = addresses_self_get_pointer(IOTUS_ADDRESSES_TYPE_ADDR_SHORT)[0];
+
+  sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue);
+
+  piggyback_subscribe(IOTUS_PRIORITY_APPLICATION, receive_piggyback_cb);
+  
+  /* Start powertracing, once every two seconds. */
+  powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
+  // set the etimer module to generate an event in one second.
+  etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
+  for(;;) {
+    if(selfAddrValue != 1) {
+      if(ev == serial_line_event_message) {
+        // printf("got %s\n", (uint8_t *)data);
+        // powertrace_stop();
+        powertrace_print("ND");
+        // break;
+      } else if(tree_connection_status == TREE_STATUS_CONNECTED) {
+        // printf("setting time\n");
+        clock_time_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)))/1000;//ms
+        ctimer_set(&sendTimer, backoff, send_app_msg, NULL);
+      }
     }
 
-
-
-    PROCESS_END();
+    PROCESS_WAIT_EVENT();
+    etimer_restart(&timer);
+  }
+  PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

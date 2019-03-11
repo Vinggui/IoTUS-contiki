@@ -94,6 +94,10 @@ staticnet_signup(void (* msg_confirm)(int status, int num_tx), void (* msg_input
 int
 staticnet_output(void);
 
+//For the application layer
+int
+rpllikenet_send(void);
+
 extern const struct network_driver rpllikenet_driver;
 
 #endif /* STATICNET_H_ */

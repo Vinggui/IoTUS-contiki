@@ -643,7 +643,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       return MAC_TX_ERR_FATAL;
     }
 
-    TOC();
+    // TOC();
   }
 
   transmit_len = packetbuf_totlen();

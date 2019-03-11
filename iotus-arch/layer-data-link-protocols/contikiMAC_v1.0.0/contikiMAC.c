@@ -650,7 +650,7 @@ send_packet_handler(iotus_packet_t *packet, uint8_t is_receiver_awake, uint8_t a
     }
     
     packet_set_parameter(packet,PACKET_PARAMETERS_IS_READY_TO_TRANSMIT);
-    TOC();
+    // TOC();
   }
 
   active_radio_driver->prepare(packet);

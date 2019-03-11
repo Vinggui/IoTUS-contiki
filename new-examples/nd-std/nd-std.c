@@ -66,12 +66,11 @@ void msg_input(const linkaddr_t *source) {
 static void
 send_msg(void *ptr)
 {
-  if(gPkt_created >= MAX_GENERATED_PKT) {
-      return;
-  }
-  gPkt_created++;
-  printf("App sending to 1\n");
-  TIC();
+  // if(gPkt_created >= MAX_GENERATED_PKT) {
+  //     return;
+  // }
+  // gPkt_created++;
+  // TIC();
   packetbuf_copyfrom(selfMsg, 20);
   //addr.u8[0] = nodeToSend;
   //addr.u8[1] = 0;
@@ -81,103 +80,77 @@ send_msg(void *ptr)
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 #endif
-  rpllikenet_output();
+  if(rpllikenet_send()) {
+    printf("App sending to 1\n");
+  }
 }
 
 PROCESS_THREAD(hello_world_process, ev, data) {
-    PROCESS_BEGIN();
+  PROCESS_BEGIN();
 
-    //leds_init();
-    //leds_off(LEDS_ALL);
+  //leds_init();
+  //leds_off(LEDS_ALL);
 
-    rpllikenet_signup(msg_confirm, msg_input);
+  rpllikenet_signup(msg_confirm, msg_input);
 
-    static uint8_t selfAddrValue;
+  static uint8_t selfAddrValue;
 
-    selfAddrValue = linkaddr_node_addr.u8[0];
+  selfAddrValue = linkaddr_node_addr.u8[0];
 
-    sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue,
-                                                               selfAddrValue);
+  sprintf((char *)selfMsg, "%02u  %02u  %02u %02u %02u %02u+", selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue,
+                                                             selfAddrValue);
 
-    // sprintf((char *)selfMsg, "+%u %u %u %u %u %u %u %u %u %u %u %u %u %u +", selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue,
-    //                                                                            selfAddrValue);
+  // sprintf((char *)selfMsg, "+%u %u %u %u %u %u %u %u %u %u %u %u %u %u +", selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue,
+  //                                                                            selfAddrValue);
 
-    // sender addr info...
-    //linkaddr_t addr;
-    //
-    addrThis.u8[0] = 1;
-    addrThis.u8[1] = 0;
+  // sender addr info...
+  //linkaddr_t addr;
+  //
+  addrThis.u8[0] = 1;
+  addrThis.u8[1] = 0;
 
-    /* Start powertracing, once every two seconds. */
-    powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
-    
-    static struct ctimer sendMsgTimer;
-    static struct etimer timer;
-    // set the etimer module to generate an event in one second.
-    etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
+  /* Start powertracing, once every two seconds. */
+  powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
+  
+  static struct ctimer sendMsgTimer;
+  static struct etimer timer;
+  // set the etimer module to generate an event in one second.
+  etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 
-    for(;;) {
-        //uint8_t nodeToSend = n%7 + 2;
-
-        if(ev == serial_line_event_message) {
-            // printf("got %s\n", (uint8_t *)data);
-            powertrace_stop();
-            powertrace_print("ND");
-            break;
-        }
-
-#if SINGLE_NODE_NULL == 0
-        if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-#else
-          {
-#endif
-
-
-#if EXP_ONE_NODE_GEN > 0
-        if(selfAddrValue != EXP_ONE_NODE_GEN) {
-          PROCESS_WAIT_EVENT();
-          continue;
-        }
-#endif
-          // send_msg(NULL);
-          #if SINGLE_NODE_NULL == 1
-            #if DOUBLE_NODE_NULL == 1
-              if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
-                // send_msg(NULL);
-              }
-            #else
-              // send_msg(NULL);
-            #endif
-          #else
-            uint32_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)));
-            backoff /= 1000;//ms
-            // ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
-          #endif
-
-        }
-        
-        PROCESS_WAIT_EVENT();
-        etimer_reset(&timer);
+  for(;;) {
+    if(ev == serial_line_event_message) {
+      // printf("got %s\n", (uint8_t *)data);
+      // powertrace_stop();
+      powertrace_print("ND");
+      // break;
+    } else if(!linkaddr_cmp(&addrThis, &linkaddr_node_addr)) {
+      uint32_t backoff = (CLOCK_SECOND*(2000+(random_rand()%BACKOFF_TIME)));
+      backoff /= 1000;//ms
+      ctimer_set(&sendMsgTimer, backoff, send_msg, NULL);
     }
+    
+    PROCESS_WAIT_EVENT();
+    etimer_restart(&timer);
+  }
 
 
 
-    PROCESS_END();
+  PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

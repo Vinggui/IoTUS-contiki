@@ -240,6 +240,7 @@ continue_dao_msg(iotus_packet_t *packet)
 static void
 sendPeriodicDAO(void *ptr)
 {
+  printf("Net sending to %u\n", 1);
   sendDAOToSink(NODES_SELF);
 
   backOffDifferenceDAO = (CLOCK_SECOND*((random_rand()%RPL_DAO_PERIOD_BACKOFF)))/1000;
@@ -289,7 +290,7 @@ input_packet(iotus_packet_t *packet)
       return RX_PROCESSED;
     } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
       // SAFE_PRINTF_LOG_INFO("Got DAO-followed %u", packet_get_payload_data(packet)[0]);
-      printf("Got DAO-followed %u\n", packet_get_payload_data(packet)[0]);
+      printf("Got DAO-followed:%u\n", packet_get_payload_data(packet)[0]);
     } else {
       active_transport_protocol->receive(packet);
     }

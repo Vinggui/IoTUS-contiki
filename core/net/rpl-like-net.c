@@ -129,7 +129,7 @@ neighbor_queue_from_addr(const linkaddr_t *addr)
 
 /*---------------------------------------------------------------------------*/
 static void
-reset_connection(void)
+reset_connection(void *ptr)
 {
   // printf("Reseting conn\n");
   ctimer_stop(&sendNDTimer);
@@ -161,7 +161,7 @@ packet_sent(void *ptr, int status, int num_tx)
   if(status != MAC_TX_OK) {
     if(gTreeStatus == TREE_STATUS_WAITING_ASNWER ||
        gTreeStatus == TREE_STATUS_WAITING_CONFIRM) {
-      reset_connection();
+      reset_connection(NULL);
       return;
     }
   }
@@ -188,7 +188,7 @@ rpllikenet_output(void)
 {
   RIMESTATS_ADD(tx);
 
-  linkaddr_t *finalReceiver = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
+  linkaddr_t const *finalReceiver = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
   if(packetbuf_hdralloc(1)) {
     uint8_t *buf = packetbuf_hdrptr();
     buf[0] = finalReceiver->u8[0];
@@ -215,6 +215,27 @@ rpllikenet_output(void)
   packetbuf_compact();
   NETSTACK_LLSEC.send(packet_sent, NULL);
   return 1;
+}
+
+
+/*---------------------------------------------------------------------------*/
+int
+rpllikenet_send(void)
+{
+  if(gTreeStatus != TREE_STATUS_CONNECTED) {
+    return MAC_TX_OK;
+  }
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = EDYTEE_COMMAND_TYPE_DATA;
+  } else {
+    PRINTF("Failed to create packet");
+    return MAC_TX_ERR;
+  }
+
+  rpllikenet_output();
+  return MAC_TX_OK;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -245,7 +266,7 @@ RPL_like_DIS_process(void *ptr)
 
 /*---------------------------------------------------------------------------*/
 static void
-create_DIO_msg(linkaddr_t *addrToSend)
+create_DIO_msg(const linkaddr_t *addrToSend)
 {
   //DIO packets have 12 bytes of base size
   sprintf((char *)gRoutingMsg, "#Rank_&_data");
@@ -320,6 +341,7 @@ sendPeriodicDAO(void *ptr)
   PRINTF("DAO to sink\n");
 
   // //Address null is Broadcast
+  printf("Net sending to %u\n", 1);
 
   sprintf((char *)gRoutingMsg, "#DAO");
   gRoutingMsg[0] = linkaddr_node_addr.u8[0];
@@ -346,7 +368,7 @@ sendPeriodicDAO(void *ptr)
 }
 
 /*---------------------------------------------------------------------*/
-static void
+static uint8_t
 receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
 {
   struct neighbor_queue *n;
@@ -404,6 +426,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         }
       }
     }
+    return 1;
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIS) {
     PRINTF("DIS cmm from %u\n", sourceAddr.u8[0]);
     //make resquest
@@ -420,11 +443,12 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
       buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DIO;
     } else {
       PRINTF("Failed to create packet");
-      return;
+      return 1;
     }
 
     packetbuf_compact();
     rpllikenet_output();
+    return 1;
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DIO) {
     PRINTF("DIO cmm from %u\n", sourceAddr.u8[0]);
     // //Address null is Broadcast
@@ -442,7 +466,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
       buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO;
     } else {
       PRINTF("Failed to create packet");
-      return;
+      return 1;
     }
 
     gTreeStatus = TREE_STATUS_WAITING_CONFIRM;
@@ -450,7 +474,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
     ctimer_restart(&connectionWathdog);
     packetbuf_compact();
     rpllikenet_output();
-
+    return 1;
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO) {
     PRINTF("DAO cmm from %u\n", sourceAddr.u8[0]);
     
@@ -488,7 +512,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK;
       } else {
         PRINTF("Failed to create packet");
-        return;
+        return 1;
       }
 
       packetbuf_compact();
@@ -496,6 +520,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
     } else {
       printf("No neighbor slot...\n");
     }
+    return 1;
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_ACK) {
     PRINTF("DAO ACK from %u\n", sourceAddr.u8[0]);
     linkaddr_copy(&gRPLTreeFather, &gBestNode);
@@ -554,11 +579,12 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         }
       }
     }
+    return 1;
   } else if(netCommand == EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK) {
     uint8_t DAOsender = ((uint8_t *)packetbuf_dataptr())[0];
     if(finalDestAddr == linkaddr_node_addr.u8[0]) {
       uint8_t DAOsender = ((uint8_t *)packetbuf_dataptr())[0];
-      printf("Got relayed DAO %u\n", DAOsender);
+      printf("Got DAO-followed:%u\n", DAOsender);
 
       //TODO add this node to the list...
     } else {
@@ -580,12 +606,14 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
         buf[0] = EDYTEE_COMMAND_TYPE_COMMAND_DAO_TO_SINK;
       } else {
         PRINTF("Failed to create packet");
-        return;
+        return 1;
       }
 
       rpllikenet_output();
     }
+    return 1;
   }
+  return 0;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -612,14 +640,25 @@ input(void)
     }
   }
   
-  receive_nd_frames(finalDestAddr, routingCommand);
-    // static linkaddr_t addrFinal;
-    // addrFinal.u8[0] = finalDestAddr;
-    // addrFinal.u8[1] = 0;
-    // packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
-    // packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+  if(receive_nd_frames(finalDestAddr, routingCommand) == 1) {
+    return;
+  }
 
-    // rpllikenet_output();
+  static linkaddr_t addrFinal;
+  addrFinal.u8[0] = finalDestAddr;
+  addrFinal.u8[1] = 0;
+  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrFinal);
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
+
+  if(packetbuf_hdralloc(1)) {
+    uint8_t *buf = packetbuf_hdrptr();
+    buf[0] = routingCommand;
+  } else {
+    PRINTF("Failed to create packet");
+    return;
+  }
+
+  rpllikenet_output();
 }
 
 /*---------------------------------------------------------------------------*/
