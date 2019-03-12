@@ -63,7 +63,7 @@
 #include "safe-printer.h"
 
 #define PRINTF(...)         SAFE_PRINTF_CLEAN(__VA_ARGS__)
-#define PRINTDEBUG(...)     SAFE_PRINTF_CLEAN(__VA_ARGS__)
+// #define PRINTF(...)         printf(__VA_ARGS__)
 
 /* Constants of the IEEE 802.15.4 standard */
 
@@ -189,7 +189,7 @@ tx_done(int status, iotus_packet_t *packet)
   }
   else if(status == MAC_TX_COLLISION ||
      status == MAC_TX_NOACK) {
-    PRINTF("csma: drop %u %p with status %d after %d transmissions, %d collisions\n",
+    PRINTF("csma: drop %p %u with status %d after %d transmissions, %d collisions\n",
                  packet, packet->pktID ,status, packet->transmissions, packet->collisions);
   }
   else {

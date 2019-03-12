@@ -991,6 +991,7 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     ret = send_packet_handler(curr, is_receiver_awake, amount);
     SAFE_PRINTF_LOG_INFO("ret %u\n", ret);
     if(ret != MAC_TX_DEFERRED) {
+      phase_recorder_stop_packet_timer(packet);
       if(0 == gPkt_tx_first_attempts) {
         gPkt_tx_first_attempts = gPkt_tx_attempts;
         gPkt_tx_attempts = 0;
@@ -1003,7 +1004,6 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
       if(IOTUS_PRIORITY_DATA_LINK == iotus_get_layer_assigned_for(IOTUS_CHORE_APPLY_PIGGYBACK)) {
         piggyback_confirm_sent(curr, ret);
       }
-      phase_recorder_stop_packet_timer(packet);
 #if USE_CSMA_MODULE == 1
     // printf("Sent from Pkt_list");
       csma_packet_sent(curr, ret, 1);
@@ -1017,6 +1017,9 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
         /* We're in a burst, no need to wake the receiver up again */
         is_receiver_awake = 1;
         curr = next;
+        
+        //TODO Erase this line, since it stops bursts...
+        next = NULL;
       }
     } else {
       /* The transmission failed, we stop the burst */

@@ -947,6 +947,9 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
       queuebuf_update_from_packetbuf(curr->buf);
     }
     curr = next;
+
+    //TODO Erase this line, since it stops bursts...
+    next = NULL;
   } while(next != NULL);
 
   /* The receiver needs to be awoken before we send */

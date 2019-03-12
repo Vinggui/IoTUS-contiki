@@ -58,6 +58,7 @@ Boolean
 piggyback_destroy(iotus_piggyback_t *piece) {
   list_remove(gPiggybackFramesList, piece);
   list_remove(gPiggybackFramesInsertedList, piece);
+
   return pieces_destroy(&iotus_piggyback_mem, piece);
 }
 
@@ -109,14 +110,6 @@ piggyback_timeout_handler(void *ptr) {
     return;
   }
 
-  // iotus_initiate_msg(
-  //               pieces_get_data_size(h),
-  //               pieces_get_data_pointer(h),
-  //               PACKET_PARAMETERS_WAIT_FOR_ACK | PACKET_PARAMETERS_ALLOW_PIGGYBACK,
-  //               h->priority,
-  //               0,
-  //               h->finalDestinationNode);
-
   iotus_packet_t *packet = iotus_initiate_packet(
                             pieces_get_data_size(h),
                             pieces_get_data_pointer(h),
@@ -137,7 +130,6 @@ piggyback_timeout_handler(void *ptr) {
   // if (!(MAC_TX_OK == status ||
   //     MAC_TX_DEFERRED == status)) {
   if (MAC_TX_DEFERRED != status) {
-
     // printf("Packet piggy del %u\n", packet->pktID);
     packet_destroy(packet);
   }
@@ -452,7 +444,6 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
     if(piggyFinalGeneralHdr >= PIGGYBACK_MAX_ATTACHED_PIECES) {
       break;
     }
-
     nextH = list_item_next(h);
     SAFE_PRINTF_LOG_INFO("Piggy search ok");
     Boolean toFinalDestination = (h->finalDestinationNode == packet_get_final_destination(packet_piece));
@@ -467,11 +458,12 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
         piggyFinalGeneralHdr++;
         hasOneFreeByte = FALSE;
         //TODO remove this break to add more pieces...
-        break;
+        // break;
       }
     }
     h = nextH;
   }
+// leds_toggle(ALL_LEDS);
 
   if(piggyFinalGeneralHdr > 0) {
     packet_set_parameter(packet_piece, PACKET_PARAMETERS_ALREADY_WITH_PIGGYBACK);
@@ -488,11 +480,13 @@ piggyback_apply(iotus_packet_t *packet_piece, uint16_t availableSpace) {
   if(hasOneFreeByte == TRUE) {
     packet_set_byte_backward(piggyFinalGeneralHdr, 0, packet_piece);
   } else {
+// leds_on(LEDS_RED);
     if(0 == packet_append_last_header(1,
                                       &piggyFinalGeneralHdr,
                                       packet_piece)) {
       SAFE_PRINTF_LOG_ERROR("Append");
     }
+// leds_off(LEDS_RED);
   }
 
   return packet_get_size(packet_piece)-packetOldSize;
