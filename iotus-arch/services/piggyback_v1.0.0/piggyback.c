@@ -36,7 +36,8 @@
 #define THIS_LOG_FILE_NAME_DESCRITOR "piggyback"
 #include "safe-printer.h"
 
-#define PIGGYBACK_MAX_ATTACHED_PIECES     ((1<<(PIGGYBACK_MAX_ATTACHED_PIECES_POWER)) -1)
+// #define PIGGYBACK_MAX_ATTACHED_PIECES     ((1<<(PIGGYBACK_MAX_ATTACHED_PIECES_POWER)) -1)
+#define PIGGYBACK_MAX_ATTACHED_PIECES     3
 
 MEMB(iotus_piggyback_mem, iotus_piggyback_t, IOTUS_PIGGYBACK_LIST_SIZE);
 LIST(gPiggybackFramesList);
