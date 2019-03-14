@@ -109,7 +109,7 @@
 // #define STATIC_COORDINATORS               1,2,3,4,5,6//Use comma to add more routers
                                              //8
 // #define STATIC_COORDINATORS               1,2,3
-                                             //12
+                                             //14
 #define STATIC_COORDINATORS               1,2,3,4,5,6,8
                                              //44
 // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,13,14,10,11,12,38,15,16,17,18,19,20,21,33,23,26,24,25,39,27,30,35,36//Use comma to add more routers
