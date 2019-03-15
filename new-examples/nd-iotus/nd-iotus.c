@@ -40,6 +40,7 @@
 #include <stdio.h> /* For printf() */
 #include "contiki.h"
 #include "core/dev/serial-line.h"
+#include "dev/button-sensor.h"
 #include "powertrace.h"
 #include "iotus-api.h"
 #include "piggyback.h"
@@ -155,6 +156,13 @@ PROCESS_THREAD(hello_world_process, ev, data) {
   /* Start powertracing, once every two seconds. */
   powertrace_start(CLOCK_SECOND * POWER_TRACE_RATE);
   // set the etimer module to generate an event in one second.
+
+#if EXP_ND_LINEAR_NODES == 1
+  SENSORS_ACTIVATE(button_sensor);
+  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
+  printf("Button pressed!\n");
+#endif
+
   etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
   for(;;) {
     if(selfAddrValue != 1) {

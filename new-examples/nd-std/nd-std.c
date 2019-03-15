@@ -39,6 +39,7 @@
 
 #include "contiki.h"
 #include "core/dev/serial-line.h"
+#include "dev/button-sensor.h"
 #include "dev/leds.h"
 #include "powertrace.h"
 #include "rpl-like-net.h"
@@ -130,6 +131,14 @@ PROCESS_THREAD(hello_world_process, ev, data) {
   
   static struct ctimer sendMsgTimer;
   static struct etimer timer;
+
+
+#if EXP_ND_LINEAR_NODES == 1
+  SENSORS_ACTIVATE(button_sensor);
+  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
+  printf("Button pressed!\n");
+#endif
+
   // set the etimer module to generate an event in one second.
   etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
 

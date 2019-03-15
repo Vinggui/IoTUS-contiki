@@ -675,6 +675,7 @@ check_data_link_connection(void *ptr)
 {
   if(NETSTACK_MAC.channel_check_interval() != 0) {
       gData_link_is_on = 1;
+      printf("ta conectado!\n");
     if(treeRouter &&
        linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
       gPersonalTreeRank = 1;
@@ -691,6 +692,7 @@ check_data_link_connection(void *ptr)
   } else {
     clock_time_t backoff = CLOCK_SECOND;//ms
     ctimer_set(&sendNDTimer, backoff, check_data_link_connection, NULL);
+    printf("ainda não conectado!\n");
   }
 }
 
