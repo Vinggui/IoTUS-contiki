@@ -106,6 +106,9 @@
 #define ROUTING_PACKETS_TIMEOUT           19000UL//msec
 
 #define ND_STATIC_REQUESTS                1
+
+
+
 #if EXP_ND_LINEAR_NODES == 1
   #pragma message ("USING LINEAR EXP TOPOLOGY!!!")
   #define STATIC_COORDINATORS               1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20//....
