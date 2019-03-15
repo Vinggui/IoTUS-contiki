@@ -80,6 +80,7 @@
 #define EXP_STAR_LIKE                     0
 #define EXP_LINEAR_NODES                  0
 #define EXP_ONE_NODE_GEN                  0 //Only this node # will generate messages
+#define EXP_ND_LINEAR_NODES               1
 
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
@@ -105,21 +106,25 @@
 #define ROUTING_PACKETS_TIMEOUT           19000UL//msec
 
 #define ND_STATIC_REQUESTS                1
-
-                                             //8
-// #define STATIC_COORDINATORS               1,2,3
-                                             //14
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8
-                                             //20
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14
-                                             //26
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20
-                                             //32
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26
-                                             //38
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26,16,27,30,25
-                                             //44
-#define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,13,14,10,11,12,38,15,16,17,18,19,20,21,33,23,26,24,25,39,27,30,35,36//Use comma to add more routers
+#if EXP_ND_LINEAR_NODES == 1
+  #pragma message ("USING LINEAR EXP TOPOLOGY!!!")
+  #define STATIC_COORDINATORS               1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20//....
+#else
+                                               //8
+  // #define STATIC_COORDINATORS               1,2,3
+                                               //14
+  // #define STATIC_COORDINATORS               1,2,3,4,5,6,8
+                                               //20
+  // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14
+                                               //26
+  // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20
+                                               //32
+  // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26
+                                               //38
+  // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26,16,27,30,25
+                                               //44
+  #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,13,14,10,11,12,38,15,16,17,18,19,20,21,33,23,26,24,25,39,27,30,35,36//Use comma to add more routers
+#endif
 
 #define STATIC_ROOT_ADDRESS               {1,0}//two bytes address (short)
 
