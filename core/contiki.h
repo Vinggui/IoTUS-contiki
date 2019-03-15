@@ -111,11 +111,11 @@
                                              //14
 // #define STATIC_COORDINATORS               1,2,3,4,5,6,8
                                              //20
-#define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14
+// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14
                                              //26
 // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20
                                              //32
-// #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26
+#define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26
                                              //38
 // #define STATIC_COORDINATORS               1,2,3,4,5,6,8,9,10,11,12,13,14,15,17,18,20,23,21,24,26,16,27,30,25
                                              //44

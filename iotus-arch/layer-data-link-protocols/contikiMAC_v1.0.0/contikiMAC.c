@@ -72,6 +72,8 @@
 #define PRINTDEBUG(...)     SAFE_PRINTF_CLEAN(__VA_ARGS__)
 
 
+#define NO_BURST_TRANSMISSIONS        1
+
 /* TX/RX cycles are synchronized with neighbor wake periods */
 #ifdef CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
 #define WITH_PHASE_OPTIMIZATION      CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
@@ -955,7 +957,9 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     next = packet_get_queue_by_node(node, curr);
     if(!packet_get_parameter(curr, PACKET_PARAMETERS_IS_READY_TO_TRANSMIT)) {
       if(next != NULL) {
+        #if NO_BURST_TRANSMISSIONS == 0
         packet_set_parameter(curr, PACKET_PARAMETERS_PACKET_PENDING);
+        #endif
       }
       
       packet_set_parameter(curr,PACKET_PARAMETERS_WAIT_FOR_ACK);
@@ -976,7 +980,12 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
     }
 
     curr = next;
-    // if(curr == NULL) printf("foi nulo!!\n");
+
+
+    #if NO_BURST_TRANSMISSIONS == 1
+    //TODO Erase this line, since it stops bursts...
+    next = NULL;
+    #endif
   } while(next != NULL);
   
   /* The receiver needs to be awoken before we send */
@@ -1018,8 +1027,11 @@ contikimac_send_list(iotus_packet_t *packet, uint8_t amount)
         is_receiver_awake = 1;
         curr = next;
         
+
+        #if NO_BURST_TRANSMISSIONS == 1
         //TODO Erase this line, since it stops bursts...
         next = NULL;
+        #endif
       }
     } else {
       /* The transmission failed, we stop the burst */

@@ -61,6 +61,9 @@
 
 #include <string.h>
 
+
+#define NO_BURST_TRANSMISSIONS        1
+
 /* TX/RX cycles are synchronized with neighbor wake periods */
 #ifdef CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
 #define WITH_PHASE_OPTIMIZATION      CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION
@@ -925,7 +928,9 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
     if(!packetbuf_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED)) {
       /* create and secure this frame */
       if(next != NULL) {
+        #if NO_BURST_TRANSMISSIONS == 0
         packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 1);
+        #endif
       }
 #if !NETSTACK_CONF_BRIDGE_MODE
       /* If NETSTACK_CONF_BRIDGE_MODE is set, assume PACKETBUF_ADDR_SENDER is already set. */
@@ -948,8 +953,11 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
     }
     curr = next;
 
+
+    #if NO_BURST_TRANSMISSIONS == 1
     //TODO Erase this line, since it stops bursts...
     next = NULL;
+    #endif
   } while(next != NULL);
 
   /* The receiver needs to be awoken before we send */
