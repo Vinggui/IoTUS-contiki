@@ -80,7 +80,7 @@
 #define EXP_STAR_LIKE                     0
 #define EXP_LINEAR_NODES                  0
 #define EXP_ONE_NODE_GEN                  0 //Only this node # will generate messages
-#define EXP_ND_LINEAR_NODES               1
+
 
 #define SINGLE_NODE_NULL                  0
 #define DOUBLE_NODE_NULL                  0
@@ -107,8 +107,9 @@
 
 #define ND_STATIC_REQUESTS                1
 
-
-#if EXP_ND_LINEAR_NODES == 1
+//Set the exp to be the new linear for ND feature
+#if 0
+  #define EXP_ND_LINEAR_NODES               0
   #pragma message ("USING LINEAR EXP TOPOLOGY!!!")
   #define STATIC_COORDINATORS               1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20//....
 #else

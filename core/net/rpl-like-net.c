@@ -418,7 +418,7 @@ receive_nd_frames(uint8_t finalDestAddr, uint8_t netCommand)
           clock_time_t backoff = (random_rand()%RPL_DAO_PERIOD_TIME)*CLOCK_SECOND*RPL_DAO_PERIOD_TIME + randomAddTime;//ms
           ctimer_set(&sendNDTimer, backoff, RPL_like_DIS_process, NULL);
         } else {
-          // printf("No option returng2\n");
+          // printf("No option returning2\n");
           //Nothing found. Start over...
           timer_set(&NDScanTimer, CLOCK_SECOND*RPL_ND_SCAN_TIME);
           leds_on(LEDS_RED);
@@ -675,7 +675,7 @@ check_data_link_connection(void *ptr)
 {
   if(NETSTACK_MAC.channel_check_interval() != 0) {
       gData_link_is_on = 1;
-      printf("ta conectado!\n");
+      // printf("ta conectado!\n");
     if(treeRouter &&
        linkaddr_cmp(&gRPLTreeRoot, &linkaddr_node_addr)) {
       gPersonalTreeRank = 1;
@@ -692,7 +692,7 @@ check_data_link_connection(void *ptr)
   } else {
     clock_time_t backoff = CLOCK_SECOND;//ms
     ctimer_set(&sendNDTimer, backoff, check_data_link_connection, NULL);
-    printf("ainda não conectado!\n");
+    // printf("ainda nao conectado!\n");
   }
 }
 
