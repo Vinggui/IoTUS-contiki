@@ -81,7 +81,7 @@ send_msg(void *ptr)
   packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &addrThis);
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
 #endif
-  if(rpllikenet_send()) {
+  if(MAC_TX_OK == rpllikenet_send()) {
     printf("App sending to 1\n");
   }
 }
