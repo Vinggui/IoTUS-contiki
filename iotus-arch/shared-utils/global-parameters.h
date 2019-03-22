@@ -77,7 +77,6 @@ typedef struct iotus_QoS_definitions {
 
 extern iotus_QoS_definitions_t iotus_QoS;
 
-
 ///////////////////////////////////////////////
 //           Time parameters                 //
 ///////////////////////////////////////////////

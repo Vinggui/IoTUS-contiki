@@ -159,8 +159,17 @@ PROCESS_THREAD(hello_world_process, ev, data) {
 
 #if EXP_ND_LINEAR_NODES == 1
   SENSORS_ACTIVATE(button_sensor);
-  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
-  printf("Button pressed!\n");
+
+  for(;;){
+    PROCESS_WAIT_EVENT();
+    if(ev == sensors_event && data == &button_sensor) {
+      printf("Button pressed!\n");
+      break;
+    }
+    if(ev == serial_line_event_message) {
+      powertrace_print("ND");
+    }
+  }
 #endif
 
   etimer_set(&timer, CLOCK_CONF_SECOND*MSG_INTERVAL);
