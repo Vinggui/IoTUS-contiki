@@ -1,19 +1,13 @@
-The Contiki Operating System
+The Contiki Operating System - With IoTUS framework
 ============================
 
-[![Build Status](https://travis-ci.org/contiki-os/contiki.svg?branch=master)](https://travis-ci.org/contiki-os/contiki/branches)
+More instrutions will be available soon.
 
-Contiki is an open source operating system that runs on tiny low-power
-microcontrollers and makes it possible to develop applications that
-make efficient use of the hardware while providing standardized
-low-power wireless communication for a range of hardware platforms.
+Brief description
+============================
 
-Contiki is used in numerous commercial and non-commercial systems,
-such as city sound monitoring, street lights, networked electrical
-power meters, industrial monitoring, radiation monitoring,
-construction site monitoring, alarm systems, remote house monitoring,
-and so on.
+IoTUS uses an extensible service layer that facilitates cross-layer sharing. It promotes sharing of both network control information (e.g., number of transmissions, receptions, collisions at the data-link layer) and functionality (e.g., neighbor discovery, aggregation) by different layers of the protocol stack. Additionally, IoTUS can be used by existing network stacks without having to modify the basic operation of their protocols.
 
-For more information, see the Contiki website:
 
+Original Contiki website:
 [http://contiki-os.org](http://contiki-os.org)
